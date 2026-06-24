@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Minimum tablet width for retro Bible theme -->
+    <integer name="min_tablet_width_dp">600</integer>
+    <!-- Minimum width for split-pane -->
+    <integer name="min_expanded_width_dp">840</integer>
+</resources>

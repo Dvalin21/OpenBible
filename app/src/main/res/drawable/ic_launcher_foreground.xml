@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- OpenBible launcher icon foreground — an open book -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Book shape -->
+    <path
+        android:fillColor="#8B4513"
+        android:pathData="M30,30 L30,78 L54,66 L78,78 L78,30 L54,42 Z" />
+    <!-- Pages (white) -->
+    <path
+        android:fillColor="#F5F0E8"
+        android:pathData="M32,33 L32,75 L54,64 L76,75 L76,33 L54,44 Z" />
+    <!-- Spine line -->
+    <path
+        android:fillColor="#8B4513"
+        android:pathData="M54,44 L54,64"
+        android:strokeWidth="1.5"
+        android:strokeColor="#8B4513" />
+    <!-- Cross symbol -->
+    <path
+        android:fillColor="#D4A017"
+        android:pathData="M49,50 L59,50 M54,45 L54,55"
+        android:strokeWidth="2"
+        android:strokeColor="#D4A017" />
+</vector>

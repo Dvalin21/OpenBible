@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Daily Verse Widget — home screen widget configuration -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="40dp"
+    android:minResizeWidth="180dp"
+    android:minResizeHeight="40dp"
+    android:updatePeriodMillis="86400000"
+    android:widgetCategory="home_screen"
+    android:resizeMode="horizontal|vertical"
+    android:initialLayout="@layout/widget_daily_verse"
+    android:description="@string/widget_daily_verse_desc"
+    android:previewLayout="@layout/widget_daily_verse" />
