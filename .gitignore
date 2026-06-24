@@ -22,6 +22,9 @@ local.properties
 /data/*.txt
 /data/*.json
 
+# Generated database from import pipeline (copied to assets manually)
+/data/openbible.db
+
 # Logs
 *.log
 
