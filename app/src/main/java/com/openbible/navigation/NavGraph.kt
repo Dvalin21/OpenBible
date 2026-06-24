@@ -4,11 +4,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Bookmarks
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.Bookmarks
+import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
@@ -28,9 +30,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.openbible.ui.bible.BibleScreen
 import com.openbible.ui.bookmarks.BookmarksScreen
 import com.openbible.ui.home.HomeScreen
+import com.openbible.ui.notes.NoteEditorScreen
+import com.openbible.ui.notes.NotebookListScreen
 import com.openbible.ui.readingplan.ReadingPlanScreen
 import com.openbible.ui.search.SearchScreen
 import com.openbible.ui.settings.SettingsScreen
@@ -45,11 +51,28 @@ object Routes {
     const val SEARCH = "search"
     const val BOOKMARKS = "bookmarks"
     const val SETTINGS = "settings"
-    const val NOTES = "notes"
+    const val NOTES = "notebooks"
+    const val NOTE_EDITOR = "note_editor?noteId={noteId}&translationId={translationId}&bookId={bookId}&chapter={chapter}&verseNumber={verseNumber}"
     const val READING_PLANS = "reading_plans"
 
     fun bibleChapter(translationId: String, bookId: Int, chapter: Int) =
         "bible/$translationId/$bookId/$chapter"
+
+    fun noteEditor(
+        noteId: Long? = null,
+        translationId: String? = null,
+        bookId: Int? = null,
+        chapter: Int? = null,
+        verseNumber: Int? = null
+    ): String {
+        val params = mutableListOf<String>()
+        noteId?.let { params.add("noteId=$it") }
+        translationId?.let { params.add("translationId=$it") }
+        bookId?.let { params.add("bookId=$it") }
+        chapter?.let { params.add("chapter=$it") }
+        verseNumber?.let { params.add("verseNumber=$it") }
+        return if (params.isEmpty()) "note_editor" else "note_editor?${params.joinToString("&")}"
+    }
 }
 
 /**
@@ -67,6 +90,7 @@ val bottomNavItems = listOf(
     BottomNavItem(Routes.BIBLE, "Bible", Icons.Filled.Book, Icons.Outlined.Book),
     BottomNavItem(Routes.SEARCH, "Search", Icons.Filled.Search, Icons.Outlined.Search),
     BottomNavItem(Routes.BOOKMARKS, "Bookmarks", Icons.Filled.Bookmarks, Icons.Outlined.Bookmarks),
+    BottomNavItem(Routes.NOTES, "Notes", Icons.Filled.EditNote, Icons.Outlined.EditNote),
     BottomNavItem(Routes.SETTINGS, "Settings", Icons.Filled.Settings, Icons.Outlined.Settings)
 )
 
@@ -117,6 +141,7 @@ fun OpenBibleNavGraph(
                         navController.navigate(Routes.bibleChapter(translationId, bookId, chapter))
                     },
                     onOpenSearch = { navController.navigate(Routes.SEARCH) },
+                    onOpenNotes = { navController.navigate(Routes.NOTES) },
                     onOpenReadingPlans = { navController.navigate(Routes.READING_PLANS) }
                 )
             }
@@ -125,6 +150,9 @@ fun OpenBibleNavGraph(
                 BibleScreen(
                     onNavigateToChapter = { translationId, bookId, chapter ->
                         navController.navigate(Routes.bibleChapter(translationId, bookId, chapter))
+                    },
+                    onAddNote = { verseNumber ->
+                        navController.navigate(Routes.noteEditor(verseNumber = verseNumber))
                     },
                     isTablet = isTablet
                 )
@@ -140,6 +168,14 @@ fun OpenBibleNavGraph(
                     initialChapter = chapter,
                     onNavigateToChapter = { _, b, c ->
                         navController.navigate(Routes.bibleChapter(translationId, b, c))
+                    },
+                    onAddNote = { verseNumber ->
+                        navController.navigate(Routes.noteEditor(
+                            translationId = translationId,
+                            bookId = bookId,
+                            chapter = chapter,
+                            verseNumber = verseNumber
+                        ))
                     },
                     isTablet = isTablet
                 )
@@ -163,6 +199,36 @@ fun OpenBibleNavGraph(
 
             composable(Routes.SETTINGS) {
                 SettingsScreen()
+            }
+
+            composable(Routes.NOTES) {
+                NotebookListScreen(
+                    onOpenNote = { noteId ->
+                        navController.navigate(Routes.noteEditor(noteId = noteId))
+                    },
+                    onNewNote = {
+                        navController.navigate(Routes.noteEditor())
+                    },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = Routes.NOTE_EDITOR,
+                arguments = listOf(
+                    navArgument("noteId") { type = NavType.LongType; defaultValue = -1L },
+                    navArgument("translationId") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("bookId") { type = NavType.IntType; defaultValue = -1 },
+                    navArgument("chapter") { type = NavType.IntType; defaultValue = -1 },
+                    navArgument("verseNumber") { type = NavType.IntType; defaultValue = -1 }
+                )
+            ) { backStackEntry ->
+                val noteId = backStackEntry.arguments?.getLong("noteId").takeIf { it != -1L }
+
+                NoteEditorScreen(
+                    noteId = noteId,
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
 
             composable(Routes.READING_PLANS) {

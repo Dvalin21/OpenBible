@@ -74,6 +74,7 @@ fun BibleScreen(
     initialChapter: Int? = null,
     onNavigateToChapter: (translationId: String, bookId: Int, chapter: Int) -> Unit,
     isTablet: Boolean,
+    onAddNote: (verseNumber: Int) -> Unit = {},
     viewModel: BibleViewModel = viewModel()
 ) {
     val verses by viewModel.verses.collectAsState()
@@ -451,6 +452,7 @@ private fun StandardBibleContent(
     crossReferenceMap: Map<Long, List<CrossReferenceDisplay>>,
     onBookmarkToggle: (Long) -> Unit,
     onHighlightToggle: (Long, HighlightColor) -> Unit,
+    onAddNote: (verseNumber: Int) -> Unit = {},
     speakingVerseIndex: Int = -1,
     listState: LazyListState = rememberLazyListState(),
     modifier: Modifier = Modifier
@@ -483,7 +485,8 @@ private fun StandardBibleContent(
                     expandedRefs[verse.id] = expandedRefs[verse.id] != true
                 },
                 onBookmarkToggle = { onBookmarkToggle(verse.id) },
-                onHighlightToggle = { color -> onHighlightToggle(verse.id, color) }
+                onHighlightToggle = { color -> onHighlightToggle(verse.id, color) },
+                onAddNote = onAddNote
             )
         }
     }
@@ -502,6 +505,7 @@ private fun RetroBibleContent(
     crossReferenceMap: Map<Long, List<CrossReferenceDisplay>>,
     onBookmarkToggle: (Long) -> Unit,
     onHighlightToggle: (Long, HighlightColor) -> Unit,
+    onAddNote: (verseNumber: Int) -> Unit = {},
     speakingVerseIndex: Int = -1,
     listState: LazyListState = rememberLazyListState(),
     modifier: Modifier = Modifier
@@ -635,7 +639,8 @@ private fun RetroBibleContent(
                         expandedRefs[verse.id] = expandedRefs[verse.id] != true
                     },
                     onBookmarkToggle = { onBookmarkToggle(verse.id) },
-                    onHighlightToggle = { color -> onHighlightToggle(verse.id, color) }
+                    onHighlightToggle = { color -> onHighlightToggle(verse.id, color) },
+                    onAddNote = onAddNote
                 )
             }
         }
@@ -723,7 +728,8 @@ private fun VerseLine(
     isSpeaking: Boolean = false,
     onToggleRefs: () -> Unit = {},
     onBookmarkToggle: () -> Unit = {},
-    onHighlightToggle: (HighlightColor) -> Unit = {}
+    onHighlightToggle: (HighlightColor) -> Unit = {},
+    onAddNote: (verseNumber: Int) -> Unit = {}
 ) {
     val pixelFont = FontFamily(Font(R.font.pixelify_sans))
     var showMenu by remember { mutableStateOf(false) }
@@ -931,6 +937,15 @@ private fun VerseLine(
             }
 
             Spacer(modifier = Modifier.height(4.dp))
+
+            // Add Note
+            DropdownMenuItem(
+                text = { Text("Add Note") },
+                onClick = {
+                    onAddNote(verseNumber)
+                    showMenu = false
+                }
+            )
 
             // Copy verse
             val citationText = "$verseNumber $text"
