@@ -40,6 +40,10 @@ import com.openbible.ui.notes.NotebookListScreen
 import com.openbible.ui.readingplan.ReadingPlanScreen
 import com.openbible.ui.search.SearchScreen
 import com.openbible.ui.settings.SettingsScreen
+import com.openbible.ui.locations.LocationDetailScreen
+import com.openbible.ui.locations.LocationListScreen
+import com.openbible.ui.strongs.StrongDetailScreen
+import com.openbible.ui.strongs.StrongSearchScreen
 
 /**
  * Navigation destinations for OpenBible.
@@ -54,6 +58,10 @@ object Routes {
     const val NOTES = "notebooks"
     const val NOTE_EDITOR = "note_editor?noteId={noteId}&translationId={translationId}&bookId={bookId}&chapter={chapter}&verseNumber={verseNumber}"
     const val READING_PLANS = "reading_plans"
+    const val STRONG_SEARCH = "strongs"
+    const val STRONG_DETAIL = "strongs/{strongNumber}"
+    const val LOCATIONS = "locations"
+    const val LOCATION_DETAIL = "locations/{locationId}"
 
     fun bibleChapter(translationId: String, bookId: Int, chapter: Int) =
         "bible/$translationId/$bookId/$chapter"
@@ -73,6 +81,9 @@ object Routes {
         verseNumber?.let { params.add("verseNumber=$it") }
         return if (params.isEmpty()) "note_editor" else "note_editor?${params.joinToString("&")}"
     }
+
+    fun strongDetail(strongNumber: String) = "strongs/$strongNumber"
+    fun locationDetail(locationId: String) = "locations/$locationId"
 }
 
 /**
@@ -142,7 +153,9 @@ fun OpenBibleNavGraph(
                     },
                     onOpenSearch = { navController.navigate(Routes.SEARCH) },
                     onOpenNotes = { navController.navigate(Routes.NOTES) },
-                    onOpenReadingPlans = { navController.navigate(Routes.READING_PLANS) }
+                    onOpenReadingPlans = { navController.navigate(Routes.READING_PLANS) },
+                    onOpenStrongs = { navController.navigate(Routes.STRONG_SEARCH) },
+                    onOpenLocations = { navController.navigate(Routes.LOCATIONS) }
                 )
             }
 
@@ -154,7 +167,10 @@ fun OpenBibleNavGraph(
                     onAddNote = { verseNumber ->
                         navController.navigate(Routes.noteEditor(verseNumber = verseNumber))
                     },
-                    isTablet = isTablet
+                    isTablet = isTablet,
+                    onOpenStrongDetail = { number ->
+                        navController.navigate(Routes.strongDetail(number))
+                    }
                 )
             }
 
@@ -177,7 +193,10 @@ fun OpenBibleNavGraph(
                             verseNumber = verseNumber
                         ))
                     },
-                    isTablet = isTablet
+                    isTablet = isTablet,
+                    onOpenStrongDetail = { number ->
+                        navController.navigate(Routes.strongDetail(number))
+                    }
                 )
             }
 
@@ -236,6 +255,47 @@ fun OpenBibleNavGraph(
                     onOpenChapter = { translationId, bookId, chapter ->
                         navController.navigate(Routes.bibleChapter(translationId, bookId, chapter))
                     }
+                )
+            }
+
+            composable(Routes.STRONG_SEARCH) {
+                StrongSearchScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onOpenDetail = { number ->
+                        navController.navigate(Routes.strongDetail(number))
+                    }
+                )
+            }
+
+            composable(Routes.LOCATIONS) {
+                LocationListScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onLocationSelected = { locationId ->
+                        navController.navigate(Routes.locationDetail(locationId))
+                    }
+                )
+            }
+
+            composable(
+                route = Routes.LOCATION_DETAIL,
+                arguments = listOf(navArgument("locationId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val locationId = backStackEntry.arguments?.getString("locationId") ?: "jerusalem"
+                LocationDetailScreen(
+                    locationId = locationId,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = Routes.STRONG_DETAIL,
+                arguments = listOf(navArgument("strongNumber") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val strongNumber = backStackEntry.arguments?.getString("strongNumber") ?: "G1"
+                StrongDetailScreen(
+                    strongNumber = strongNumber,
+                    onNavigateBack = { navController.popBackStack() },
+                    onOpenVerse = { _, _, _ -> /* future: navigate to verse */ }
                 )
             }
         }

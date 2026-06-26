@@ -55,6 +55,7 @@ import com.openbible.tts.TtsController
 import com.openbible.tts.TtsState
 import com.openbible.ui.theme.*
 import com.openbible.data.model.HighlightColor
+import com.openbible.ui.strongs.StrongVerseBottomSheet
 import kotlin.math.min
 
 /**
@@ -75,6 +76,7 @@ fun BibleScreen(
     onNavigateToChapter: (translationId: String, bookId: Int, chapter: Int) -> Unit,
     isTablet: Boolean,
     onAddNote: (verseNumber: Int) -> Unit = {},
+    onOpenStrongDetail: (strongNumber: String) -> Unit = {},
     viewModel: BibleViewModel = viewModel()
 ) {
     val verses by viewModel.verses.collectAsState()
@@ -96,6 +98,10 @@ fun BibleScreen(
     val secondaryVerses by viewModel.secondaryVerses.collectAsState()
     val secondaryTranslation by viewModel.secondaryTranslation.collectAsState()
     val isCompareMode = isTablet && secondaryTranslationId != null
+
+    // ── Strong's Concordance ──────────────────────────────────────
+    var strongVerseId by remember { mutableStateOf<Long?>(null) }
+    val onStrongsClick: (Long) -> Unit = { verseId -> strongVerseId = verseId }
 
     // ── Read user preferences for font sizes & toggles ──────────
     val context = LocalContext.current
@@ -254,6 +260,7 @@ fun BibleScreen(
                                 crossReferenceMap = crossReferenceMap,
                                 onBookmarkToggle = { viewModel.toggleBookmark(it) },
                                 onHighlightToggle = { id, color -> viewModel.toggleHighlight(id, color) },
+                                onStrongsClick = onStrongsClick,
                                 speakingVerseIndex = ttsState.currentVerseIndex,
                                 listState = primaryListState,
                                 modifier = Modifier.padding(end = 2.dp)
@@ -269,6 +276,7 @@ fun BibleScreen(
                                 crossReferenceMap = crossReferenceMap,
                                 onBookmarkToggle = { viewModel.toggleBookmark(it) },
                                 onHighlightToggle = { id, color -> viewModel.toggleHighlight(id, color) },
+                                onStrongsClick = onStrongsClick,
                                 speakingVerseIndex = ttsState.currentVerseIndex,
                                 listState = primaryListState,
                                 modifier = Modifier.padding(end = 2.dp)
@@ -327,6 +335,7 @@ fun BibleScreen(
                                 crossReferenceMap = crossReferenceMap,
                                 onBookmarkToggle = { viewModel.toggleBookmark(it) },
                                 onHighlightToggle = { id, color -> viewModel.toggleHighlight(id, color) },
+                                onStrongsClick = onStrongsClick,
                                 speakingVerseIndex = ttsState.currentVerseIndex,
                                 listState = primaryListState
                             )
@@ -341,6 +350,7 @@ fun BibleScreen(
                                 crossReferenceMap = crossReferenceMap,
                                 onBookmarkToggle = { viewModel.toggleBookmark(it) },
                                 onHighlightToggle = { id, color -> viewModel.toggleHighlight(id, color) },
+                                onStrongsClick = onStrongsClick,
                                 speakingVerseIndex = ttsState.currentVerseIndex,
                                 listState = primaryListState
                             )
@@ -359,6 +369,7 @@ fun BibleScreen(
                         crossReferenceMap = crossReferenceMap,
                         onBookmarkToggle = { viewModel.toggleBookmark(it) },
                         onHighlightToggle = { id, color -> viewModel.toggleHighlight(id, color) },
+                        onStrongsClick = onStrongsClick,
                         speakingVerseIndex = ttsState.currentVerseIndex,
                         listState = primaryListState
                     )
@@ -373,6 +384,7 @@ fun BibleScreen(
                         crossReferenceMap = crossReferenceMap,
                         onBookmarkToggle = { viewModel.toggleBookmark(it) },
                         onHighlightToggle = { id, color -> viewModel.toggleHighlight(id, color) },
+                        onStrongsClick = onStrongsClick,
                         speakingVerseIndex = ttsState.currentVerseIndex,
                         listState = primaryListState
                     )
@@ -437,6 +449,16 @@ fun BibleScreen(
             onDismiss = { showComparePicker = false }
         )
     }
+
+    // -- Strong's Concordance Bottom Sheet --
+
+    strongVerseId?.let { verseId ->
+        StrongVerseBottomSheet(
+            verseId = verseId,
+            onOpenStrongDetail = onOpenStrongDetail,
+            onDismiss = { strongVerseId = null }
+        )
+    }
 }
 
 // ── Standard Content (phones and when retro is disabled) ────────
@@ -453,6 +475,7 @@ private fun StandardBibleContent(
     onBookmarkToggle: (Long) -> Unit,
     onHighlightToggle: (Long, HighlightColor) -> Unit,
     onAddNote: (verseNumber: Int) -> Unit = {},
+    onStrongsClick: (verseId: Long) -> Unit = {},
     speakingVerseIndex: Int = -1,
     listState: LazyListState = rememberLazyListState(),
     modifier: Modifier = Modifier
@@ -486,7 +509,8 @@ private fun StandardBibleContent(
                 },
                 onBookmarkToggle = { onBookmarkToggle(verse.id) },
                 onHighlightToggle = { color -> onHighlightToggle(verse.id, color) },
-                onAddNote = onAddNote
+                onAddNote = onAddNote,
+                onStrongsClick = { onStrongsClick(verse.id) }
             )
         }
     }
@@ -506,6 +530,7 @@ private fun RetroBibleContent(
     onBookmarkToggle: (Long) -> Unit,
     onHighlightToggle: (Long, HighlightColor) -> Unit,
     onAddNote: (verseNumber: Int) -> Unit = {},
+    onStrongsClick: (verseId: Long) -> Unit = {},
     speakingVerseIndex: Int = -1,
     listState: LazyListState = rememberLazyListState(),
     modifier: Modifier = Modifier
@@ -638,13 +663,14 @@ private fun RetroBibleContent(
                     onToggleRefs = {
                         expandedRefs[verse.id] = expandedRefs[verse.id] != true
                     },
-                    onBookmarkToggle = { onBookmarkToggle(verse.id) },
-                    onHighlightToggle = { color -> onHighlightToggle(verse.id, color) },
-                    onAddNote = onAddNote
-                )
-            }
+                onBookmarkToggle = { onBookmarkToggle(verse.id) },
+                onHighlightToggle = { color -> onHighlightToggle(verse.id, color) },
+                onAddNote = onAddNote,
+                onStrongsClick = { onStrongsClick(verse.id) }
+            )
         }
     }
+}
 } // end RetroBibleContent
 
 // ── Simple Bible Content (secondary pane, no interactions) ──────
@@ -729,7 +755,8 @@ private fun VerseLine(
     onToggleRefs: () -> Unit = {},
     onBookmarkToggle: () -> Unit = {},
     onHighlightToggle: (HighlightColor) -> Unit = {},
-    onAddNote: (verseNumber: Int) -> Unit = {}
+    onAddNote: (verseNumber: Int) -> Unit = {},
+    onStrongsClick: () -> Unit = {}
 ) {
     val pixelFont = FontFamily(Font(R.font.pixelify_sans))
     var showMenu by remember { mutableStateOf(false) }
@@ -943,6 +970,15 @@ private fun VerseLine(
                 text = { Text("Add Note") },
                 onClick = {
                     onAddNote(verseNumber)
+                    showMenu = false
+                }
+            )
+
+            // Strong's Concordance
+            DropdownMenuItem(
+                text = { Text("Strong's Concordance") },
+                onClick = {
+                    onStrongsClick()
                     showMenu = false
                 }
             )

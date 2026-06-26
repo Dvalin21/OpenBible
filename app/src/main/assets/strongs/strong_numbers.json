@@ -1,0 +1,90 @@
+[
+  {
+    "number": "G1",
+    "lemma": "α",
+    "transliteration": "a",
+    "pronunciation": "al'-fah",
+    "partOfSpeech": "noun",
+    "definition": "alpha; the first letter of the Greek alphabet. Used as a symbol for the first (or beginning).",
+    "derivation": "of Hebrew origin",
+    "usageCount": 4,
+    "language": "Greek"
+  },
+  {
+    "number": "G26",
+    "lemma": "αγαπη",
+    "transliteration": "agapē",
+    "pronunciation": "ag-ah'-pay",
+    "partOfSpeech": "noun",
+    "definition": "love, affection, good will, benevolence; brotherly love. In a spiritual sense: divine love, the love of God for man and of man for God.",
+    "derivation": "from αγαπαω (G25)",
+    "usageCount": 116,
+    "language": "Greek"
+  },
+  {
+    "number": "G3056",
+    "lemma": "λογος",
+    "transliteration": "logos",
+    "pronunciation": "log'-os",
+    "partOfSpeech": "noun",
+    "definition": "a word, speech, discourse, saying, utterance; reason, account, reckoning; the Word (of God), divine expression. In John's Gospel: Christ as the eternal Word of God.",
+    "derivation": "from λεγω (G3004)",
+    "usageCount": 330,
+    "language": "Greek"
+  },
+  {
+    "number": "G4102",
+    "lemma": "πιστις",
+    "transliteration": "pistis",
+    "pronunciation": "pis'-tis",
+    "partOfSpeech": "noun",
+    "definition": "faith, belief, trust, confidence; fidelity, faithfulness. The conviction that God exists and is the creator and ruler of all things.",
+    "derivation": "from πειθω (G3982)",
+    "usageCount": 243,
+    "language": "Greek"
+  },
+  {
+    "number": "G5485",
+    "lemma": "χαρις",
+    "transliteration": "charis",
+    "pronunciation": "khar'-ece",
+    "partOfSpeech": "noun",
+    "definition": "grace, favor, kindness, goodwill; the merciful kindness of God; the divine influence upon the heart and its reflection in the life.",
+    "derivation": "from χαιρω (G5463)",
+    "usageCount": 155,
+    "language": "Greek"
+  },
+  {
+    "number": "H7225",
+    "lemma": "רֵאשִׁית",
+    "transliteration": "rē'šîṯ",
+    "pronunciation": "ray-sheeth'",
+    "partOfSpeech": "noun",
+    "definition": "beginning, first, chief, firstfruits, first part; the first in time, place, order, or rank.",
+    "derivation": "from רֹאשׁ (H7218)",
+    "usageCount": 51,
+    "language": "Hebrew"
+  },
+  {
+    "number": "H430",
+    "lemma": "אֱלֹהִים",
+    "transliteration": "'ĕlōhîm",
+    "pronunciation": "el-o-heem'",
+    "partOfSpeech": "noun",
+    "definition": "God, god, gods, rulers, judges; the supreme God; angelic beings; human rulers or judges.",
+    "derivation": "plural of אֱלוֹהַּ (H433)",
+    "usageCount": 2600,
+    "language": "Hebrew"
+  },
+  {
+    "number": "H3068",
+    "lemma": "יְהֹוָה",
+    "transliteration": "Yahweh",
+    "pronunciation": "yeh-ho-vaw'",
+    "partOfSpeech": "proper noun",
+    "definition": "YHWH, Yahweh, Jehovah; the proper name of the God of Israel; the self-existent, eternal God.",
+    "derivation": "from הָיָה (H1961)",
+    "usageCount": 6519,
+    "language": "Hebrew"
+  }
+]

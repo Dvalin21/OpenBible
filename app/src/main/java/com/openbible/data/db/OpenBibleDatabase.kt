@@ -12,9 +12,12 @@ import com.openbible.data.db.dao.BibleDao
 import com.openbible.data.db.dao.BookmarkDao
 import com.openbible.data.db.dao.CrossReferenceDao
 import com.openbible.data.db.dao.HighlightDao
+import com.openbible.data.db.dao.LocationDao
 import com.openbible.data.db.dao.NoteDao
 import com.openbible.data.db.dao.ReadingHistoryDao
 import com.openbible.data.db.dao.ReadingPlanDao
+import com.openbible.data.db.dao.StrongDao
+import com.openbible.data.db.entity.BibleLocationEntity
 import com.openbible.data.db.entity.BookEntity
 import com.openbible.data.db.entity.BookmarkEntity
 import com.openbible.data.db.entity.CrossReferenceEntity
@@ -27,8 +30,11 @@ import com.openbible.data.db.entity.ReadingHistoryEntity
 import com.openbible.data.db.entity.ReadingPlanDayEntity
 import com.openbible.data.db.entity.ReadingPlanEntity
 import com.openbible.data.db.entity.ReadingProgressEntity
+import com.openbible.data.db.entity.StrongNumberEntity
 import com.openbible.data.db.entity.TranslationEntity
 import com.openbible.data.db.entity.VerseEntity
+import com.openbible.data.db.entity.VerseLocationLinkEntity
+import com.openbible.data.db.entity.VerseStrongLinkEntity
 
 /**
  * OpenBible Room database.
@@ -39,6 +45,9 @@ import com.openbible.data.db.entity.VerseEntity
  *
  * Version 1: initial schema with all 14 entities.
  * Version 2: added cross_references table.
+ * Version 3: added strong_numbers and verse_strong_links tables.
+ * Version 4: added BBE and NKJV translation metadata entries.
+ * Version 5: added locations and verse_location_links tables.
  */
 @Database(
     entities = [
@@ -55,9 +64,13 @@ import com.openbible.data.db.entity.VerseEntity
         ReadingPlanEntity::class,
         ReadingPlanDayEntity::class,
         ReadingProgressEntity::class,
-        ReadingHistoryEntity::class
+        ReadingHistoryEntity::class,
+        StrongNumberEntity::class,
+        VerseStrongLinkEntity::class,
+        BibleLocationEntity::class,
+        VerseLocationLinkEntity::class
     ],
-    version = 2,
+    version = 5,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -70,6 +83,8 @@ abstract class OpenBibleDatabase : RoomDatabase() {
     abstract fun noteDao(): NoteDao
     abstract fun readingPlanDao(): ReadingPlanDao
     abstract fun readingHistoryDao(): ReadingHistoryDao
+    abstract fun strongDao(): StrongDao
+    abstract fun locationDao(): LocationDao
 
     companion object {
         private const val DATABASE_NAME = "openbible.db"
@@ -105,7 +120,7 @@ abstract class OpenBibleDatabase : RoomDatabase() {
             }
 
             // Explicit migrations — never destroy user data.
-            builder.addMigrations(MIGRATION_1_2)
+            builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
 
             return builder.build()
         }
@@ -138,6 +153,92 @@ abstract class OpenBibleDatabase : RoomDatabase() {
             """)
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_cross_refs_from ON cross_references(fromVerseId)")
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_cross_refs_to ON cross_references(toBookId, toChapter, toVerseStart)")
+        }
+
+        /**
+         * Version 3 → 4: Adds BBE and NKJV translation metadata.
+         *
+         * These translations already exist in the prepopulated DB (v2),
+         * so existing installs at v3 will get them added here.
+         * Verse data for BBE/NKJV must be imported separately via
+         * TranslationImporter (from separate SQLite database files in assets).
+         */
+        private val MIGRATION_3_4 = Migration(3, 4) { db ->
+            db.execSQL("""
+                INSERT OR IGNORE INTO translations (id, name, abbreviation, language, copyright, isPublicDomain, isBundled)
+                VALUES ('bbe', 'Bible in Basic English', 'BBE', 'en', 'Public domain', 1, 1)
+            """)
+            db.execSQL("""
+                INSERT OR IGNORE INTO translations (id, name, abbreviation, language, copyright, isPublicDomain, isBundled)
+                VALUES ('nkjv', 'New King James Version', 'NKJV', 'en', 'Copyright © 1982 Thomas Nelson', 0, 1)
+            """)
+        }
+
+        /**
+         * Version 2 → 3: Added strong_numbers and verse_strong_links tables.
+         * These tables support Strong's Concordance lookups.
+         * Safe to run multiple times (CREATE TABLE IF NOT EXISTS).
+         */
+        private val MIGRATION_2_3 = Migration(2, 3) { db ->
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS strong_numbers (
+                    number TEXT NOT NULL PRIMARY KEY,
+                    lemma TEXT NOT NULL,
+                    transliteration TEXT NOT NULL,
+                    pronunciation TEXT,
+                    part_of_speech TEXT,
+                    definition TEXT NOT NULL,
+                    derivation TEXT,
+                    usageCount INTEGER NOT NULL DEFAULT 0,
+                    language TEXT NOT NULL
+                )
+            """)
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_strong_lemma ON strong_numbers(lemma)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_strong_translit ON strong_numbers(transliteration)")
+
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS verse_strong_links (
+                    verseId INTEGER NOT NULL,
+                    strongNumber TEXT NOT NULL,
+                    wordPosition INTEGER NOT NULL,
+                    originalWord TEXT NOT NULL,
+                    transliteration TEXT,
+                    PRIMARY KEY (verseId, strongNumber, wordPosition)
+                )
+            """)
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_vsl_strong ON verse_strong_links(strongNumber)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_vsl_verse ON verse_strong_links(verseId)")
+        }
+
+        /**
+         * Version 4 → 5: Added locations and verse_location_links tables.
+         * These tables support Bible geography features.
+         * Safe to run multiple times (CREATE TABLE IF NOT EXISTS).
+         */
+        private val MIGRATION_4_5 = Migration(4, 5) { db ->
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS locations (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    modern_name TEXT,
+                    latitude REAL NOT NULL,
+                    longitude REAL NOT NULL,
+                    description TEXT NOT NULL,
+                    category TEXT NOT NULL,
+                    significance TEXT
+                )
+            """)
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_locations_category ON locations(category)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_locations_modern ON locations(modern_name)")
+
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS verse_location_links (
+                    locationId TEXT NOT NULL,
+                    verseId INTEGER NOT NULL,
+                    PRIMARY KEY (locationId, verseId)
+                )
+            """)
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_vll_verse ON verse_location_links(verseId)")
         }
     }
 }

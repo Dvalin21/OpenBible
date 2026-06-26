@@ -1,0 +1,17 @@
+[
+  {"locationId":"jerusalem","verseId":1001005},
+  {"locationId":"jerusalem","verseId":1901226},
+  {"locationId":"jerusalem","verseId":4002300},
+  {"locationId":"bethlehem","verseId":5002006},
+  {"locationId":"bethlehem","verseId":4002000},
+  {"locationId":"nazareth","verseId":4002000},
+  {"locationId":"nazareth","verseId":4002000},
+  {"locationId":"sea_of_galilee","verseId":4004000},
+  {"locationId":"sea_of_galilee","verseId":4014000},
+  {"locationId":"jericho","verseId":6006000},
+  {"locationId":"jordan_river","verseId":1003000},
+  {"locationId":"jordan_river","verseId":4003000},
+  {"locationId":"mount_sinai","verseId":2019000},
+  {"locationId":"mount_of_olives","verseId":4024000},
+  {"locationId":"golgotha","verseId":4027000}
+]

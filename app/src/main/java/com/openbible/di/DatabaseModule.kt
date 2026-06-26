@@ -9,6 +9,8 @@ import com.openbible.data.db.dao.HighlightDao
 import com.openbible.data.db.dao.NoteDao
 import com.openbible.data.db.dao.ReadingHistoryDao
 import com.openbible.data.db.dao.ReadingPlanDao
+import com.openbible.data.db.dao.LocationDao
+import com.openbible.data.db.dao.StrongDao
 import com.openbible.data.preferences.UserPreferences
 import dagger.Module
 import dagger.Provides
@@ -38,4 +40,6 @@ object DatabaseModule {
     @Provides fun provideNoteDao(db: OpenBibleDatabase): NoteDao = db.noteDao()
     @Provides fun provideReadingPlanDao(db: OpenBibleDatabase): ReadingPlanDao = db.readingPlanDao()
     @Provides fun provideReadingHistoryDao(db: OpenBibleDatabase): ReadingHistoryDao = db.readingHistoryDao()
+    @Provides fun provideStrongDao(db: OpenBibleDatabase): StrongDao = db.strongDao()
+    @Provides fun provideLocationDao(db: OpenBibleDatabase): LocationDao = db.locationDao()
 }
