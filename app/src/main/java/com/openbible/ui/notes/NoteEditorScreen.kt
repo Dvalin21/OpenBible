@@ -26,7 +26,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.openbible.data.model.PenMode
 import kotlinx.coroutines.launch
 
@@ -43,7 +43,7 @@ fun NoteEditorScreen(
     noteId: Long? = null,
     onNavigateBack: () -> Unit,
     onNotebooksClick: () -> Unit = {},
-    viewModel: NoteEditorViewModel = viewModel()
+    viewModel: NoteEditorViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
 

@@ -9,6 +9,21 @@ import com.openbible.data.db.entity.VerseLocationLinkEntity
 import kotlinx.coroutines.flow.Flow
 
 /**
+ * Join result: a verse that mentions a specific location,
+ * with resolved book abbreviation, chapter, verse number, and text.
+ */
+data class LocationVerseLink(
+    val locationId: String,
+    val verseId: Long,
+    val translationId: String,
+    val bookId: Int,
+    val chapter: Int,
+    val verse: Int,
+    val text: String,
+    val abbreviation: String
+)
+
+/**
  * DAO for Bible geography locations.
  */
 @Dao
@@ -76,6 +91,21 @@ interface LocationDao {
         LIMIT :limit
     """)
     suspend fun getVersesForLocation(locationId: String, limit: Int = 200): List<VerseLocationLinkEntity>
+
+    /** Get all verses that mention a location, with resolved book/verse info (KJV). */
+    @Query("""
+        SELECT vll.locationId, vll.verseId,
+               v.translationId, v.bookId, v.chapter, v.verse, v.text,
+               b.abbreviation
+        FROM verse_location_links vll
+        INNER JOIN verses v ON v.id = vll.verseId
+        INNER JOIN books b ON b.id = v.bookId AND b.translationId = v.translationId
+        WHERE vll.locationId = :locationId
+          AND v.translationId = 'kjv'
+        ORDER BY v.bookId, v.chapter, v.verse
+        LIMIT :limit
+    """)
+    suspend fun getLocationVerseLinks(locationId: String, limit: Int = 100): List<LocationVerseLink>
 
     @Query("SELECT COUNT(*) FROM verse_location_links")
     suspend fun verseLinkCount(): Int

@@ -17,7 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewModelScope
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.openbible.data.db.entity.NoteEntity
 import com.openbible.data.db.entity.NotebookEntity
 import com.openbible.data.repository.NoteRepository
@@ -56,7 +56,7 @@ fun NotebookListScreen(
     onOpenNote: (Long) -> Unit,
     onNewNote: () -> Unit,
     onBack: () -> Unit,
-    viewModel: NotebookListViewModel = viewModel()
+    viewModel: NotebookListViewModel = hiltViewModel()
 ) {
     val notebooks by viewModel.notebooks.collectAsState()
     val allNotes by viewModel.notes.collectAsState()

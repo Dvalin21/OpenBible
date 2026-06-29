@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.openbible.ui.bible.BookChapterSelector
 import com.openbible.ui.bible.BookChapterSelectorState
 
@@ -31,7 +31,7 @@ fun HomeScreen(
     onOpenReadingPlans: () -> Unit = {},
     onOpenStrongs: () -> Unit = {},
     onOpenLocations: () -> Unit = {},
-    viewModel: HomeViewModel = viewModel()
+    viewModel: HomeViewModel = hiltViewModel()
 ) {
     val lastRead by viewModel.lastRead.collectAsState()
 

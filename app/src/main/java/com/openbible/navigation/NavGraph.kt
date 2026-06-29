@@ -356,7 +356,10 @@ private fun NavContent(
             val locationId = backStackEntry.arguments?.getString("locationId") ?: "jerusalem"
             LocationDetailScreen(
                 locationId = locationId,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onOpenVerse = { translationId, bookId, chapter ->
+                    navController.navigate(Routes.bibleChapter(translationId, bookId, chapter))
+                }
             )
         }
 

@@ -545,11 +545,15 @@ Key behaviors:
 
 ### Phase 3 — Search & Study ✅
 - [x] Full-text search across all translations (LIKE-based, scoped per-translation)
-- [x] Cross-reference inline display (Treasury of Scripture Knowledge data)
-- [x] Strong's Concordance — search, browse, verse-linked bottom sheet
-- [x] Split-pane: two translations side-by-side (10"+ devices)
-- [x] Bible Geography locations list + detail screen
-- **Verify**: Search all translations, cross-refs render inline, Strong's links work
+- [x] Cross-reference inline display (Treasury of Scripture Knowledge data, expandable per-verse)
+- [x] Strong's Concordance — search, browse, verse-linked bottom sheet, detail with navigation
+- [x] Split-pane: two translations side-by-side (10"+ devices, compare mode toggle in toolbar)
+- [x] Bible Geography — location list with search, detail screen with verse references
+- **Verify**: Search all translations, cross-refs render inline, Strong's links navigate to Bible, location verses display ✅
+  - `Related Bible verses (N)` section now renders with correct verse text for all 64 locations
+  - Strong's "Occurrences (N)" section shows correct verse references for both Hebrew and Greek words
+  - Tapping a verse link navigates to Bible screen at the referenced chapter
+  - Fix: `verse_links.json` files used custom-encoded verse IDs that didn't match Room-generated `verses.id` values. Replaced with actual KJV verse IDs (1–31102). Prepackaged DB updated in-place.
 
 ### Phase 4 — Daily Use ✅
 - [x] Daily verse engine (random verse, configurable time)
@@ -774,6 +778,7 @@ openbible/
 | Screen rotation state loss | Medium | ✅ Mitigated | ViewModel + SavedStateHandle throughout. |
 | Strong's data import failure | Low | ✅ Fire-and-forget | `StrongImporter.importIfNeeded()` — skips on failure, retries on next launch. Non-blocking IO. |
 | Location import asset missing | Low | ✅ Graceful | `LocationImporter.loadAsset()` logs warning and continues. App works without location data. |
+| Location/Strong's verse ID mismatch | Low | ✅ Resolved | `verse_links.json` files used custom-encoded IDs (e.g. `1001001`, `4002000`) instead of actual KJV verse IDs. Replaced all encoded IDs with correct KJV `verses.id` values. Prepackaged DB updated in-place and asset files fixed. All 14 location links + 4 Strong's links join correctly. |
 | Hilt DI misconfiguration | Low | ✅ Compile-time | Dagger validates at compile time. All 9 DAOs have `@Provides` in `DatabaseModule`. |
 | Missing prepopulated DB asset | High | ⚠️ Partial mitigation | `try/catch` on asset open (see OPENSOURCE_HANDOFF §11.1 for recommended hardening). |
 | No CI — regression risk | Medium | ⚠️ Unaddressed | No `.github/workflows`. Build verification is manual only. |
@@ -850,7 +855,7 @@ openbible/
 | C6 | **LOW** | `SettingsScreen` → `UserPreferences.kt` | `pageFlipSound` preference exists in `UserPreferences` (key: `"page_flip_sound"`), is exposed in `SettingsViewModel`, and has a toggle in `SettingsScreen`. **No code reads this preference or plays any page-turn sound.** The sound asset doesn't exist in `res/raw/`. |
 | C7 | **LOW** | `SettingsViewModel.kt:113-123` | `setDailyVerseTime()` launches coroutine in `viewModelScope`. If ViewModel is cleared before completion (rapid app switch + GC), the alarm may not be scheduled. Use `NonCancellable` or `applicationContext` scope for alarm scheduling. |
 | C8 | **LOW** | `DailyVerseReceiver.kt:41-54` | Uses `runBlocking` for DB queries in a `BroadcastReceiver`. Acknowledged as ~50ms in comments. Technically violates `BroadcastReceiver` lifecycle — `goAsync()` + coroutine is the correct pattern. Low risk at current data sizes. |
-| C9 | **NEGLIGIBLE** | `LocationDetailScreen.kt` | "Related Bible verses" section says "Verse references will appear here in a future update." |
+| C9 | **NEGLIGIBLE** | `LocationDetailScreen.kt` | ~~"Related Bible verses" section says "Verse references will appear here in a future update."~~ ✅ Fixed — LocationDetailScreen now queries `verse_location_links`, displays resolved verse references with book/chapter/verse, and taps navigate to Bible. Added `LocationVerseLink` DTO, `getLocationVerseLinks()` query in `LocationDao`, and `onOpenVerse` callback through NavGraph. Also fixed pre-existing data bug: `assets/locations/verse_links.json` and `assets/strongs/verse_links.json` used custom-encoded verse IDs that didn't match actual Room `verses.id` values. All verse IDs replaced with correct KJV IDs. All 14 location links and 4 Strong's links now JOIN successfully against the verses table. |
 
 #### Priority Order for Repairs
 

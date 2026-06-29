@@ -3,6 +3,7 @@ package com.openbible.ui.locations
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.openbible.data.db.dao.LocationDao
+import com.openbible.data.db.dao.LocationVerseLink
 import com.openbible.data.db.entity.BibleLocationEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -44,9 +45,14 @@ class LocationViewModel @Inject constructor(
     private val _selectedLocation = MutableStateFlow<BibleLocationEntity?>(null)
     val selectedLocation: StateFlow<BibleLocationEntity?> = _selectedLocation.asStateFlow()
 
+    /** Verse references for the selected location. */
+    private val _verseLinks = MutableStateFlow<List<LocationVerseLink>>(emptyList())
+    val verseLinks: StateFlow<List<LocationVerseLink>> = _verseLinks.asStateFlow()
+
     fun selectLocation(id: String) {
         viewModelScope.launch {
             _selectedLocation.value = locationDao.getLocation(id)
+            _verseLinks.value = locationDao.getLocationVerseLinks(id)
         }
     }
 }
