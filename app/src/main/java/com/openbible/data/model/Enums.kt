@@ -12,7 +12,21 @@ enum class Testament {
 enum class ThemeMode {
     LIGHT,
     DARK,
-    SEPIA
+    SEPIA,
+    AUTO_TIME;
+
+    /**
+     * Resolve AUTO_TIME to the effective theme based on current hour.
+     * 6:00–16:59 → LIGHT, 17:00–19:59 → SEPIA, 20:00–5:59 → DARK.
+     */
+    fun resolve(hour: Int): ThemeMode = when (this) {
+        AUTO_TIME -> when (hour) {
+            in 6..16 -> LIGHT
+            in 17..19 -> SEPIA
+            else -> DARK
+        }
+        else -> this
+    }
 }
 
 enum class PenMode {

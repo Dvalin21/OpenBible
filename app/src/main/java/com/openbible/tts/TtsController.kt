@@ -109,7 +109,7 @@ class TtsController(private val appContext: Context) {
             // ponytail: set flag before stop() so onDone() doesn't advance resumeIndex
             intentionalStop = true
             tts?.stop()
-            _state.value = s.copy(isPlaying = false)
+            _state.value = s.copy(isPlaying = false, currentWordRange = null)
         } else {
             // Resume from current position
             if (verses.isNotEmpty() && resumeIndex < verses.size) {
@@ -136,7 +136,7 @@ class TtsController(private val appContext: Context) {
     fun stop() {
         intentionalStop = true
         tts?.stop()
-        _state.value = _state.value.copy(isPlaying = false, currentVerseIndex = -1)
+        _state.value = _state.value.copy(isPlaying = false, currentVerseIndex = -1, currentWordRange = null)
         verses = emptyList()
         resumeIndex = 0
     }
@@ -159,7 +159,16 @@ class TtsController(private val appContext: Context) {
         override fun onStart(utteranceId: String?) {
             val idx = utteranceId?.extractIndex() ?: return
             resumeIndex = idx
-            _state.value = _state.value.copy(currentVerseIndex = idx)
+            _state.value = _state.value.copy(
+                currentVerseIndex = idx,
+                currentWordRange = null  // reset word range on new verse
+            )
+        }
+
+        override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
+            // Word-level sync: called when a new word begins.
+            // 'start' and 'end' are character offsets into the spoken text.
+            _state.value = _state.value.copy(currentWordRange = start until end)
         }
 
         override fun onDone(utteranceId: String?) {
@@ -172,9 +181,12 @@ class TtsController(private val appContext: Context) {
             resumeIndex = idx + 1
             if (idx >= verses.size - 1) {
                 // Last verse finished
-                _state.value = _state.value.copy(isPlaying = false, currentVerseIndex = -1)
+                _state.value = _state.value.copy(isPlaying = false, currentVerseIndex = -1, currentWordRange = null)
                 resumeIndex = 0
                 Log.i(TAG, "TTS finished all verses")
+            } else {
+                // Between verses: clear word highlight
+                _state.value = _state.value.copy(currentWordRange = null)
             }
         }
 
@@ -198,6 +210,10 @@ data class TtsState(
     val isPlaying: Boolean = false,
     val isInitialized: Boolean = false,
     val currentVerseIndex: Int = -1,
+    /** Character range [start, end) of the word currently being spoken within
+     *  the verse text of [currentVerseIndex]. null when no word is active
+     *  (between verses or before first word). */
+    val currentWordRange: IntRange? = null,
     val speed: Float = 1.0f,
     val isAvailable: Boolean = true
 )

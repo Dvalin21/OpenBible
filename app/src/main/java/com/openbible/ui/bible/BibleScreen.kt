@@ -6,6 +6,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -13,6 +15,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -36,7 +39,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.Font
@@ -56,7 +64,11 @@ import com.openbible.tts.TtsState
 import com.openbible.ui.theme.*
 import com.openbible.data.model.HighlightColor
 import com.openbible.ui.strongs.StrongVerseBottomSheet
+import kotlin.math.abs
 import kotlin.math.min
+import kotlinx.coroutines.launch
+import android.media.AudioAttributes
+import android.media.SoundPool
 
 /**
  * Bible reading screen.
@@ -118,6 +130,27 @@ fun BibleScreen(
     // Retro is enabled only when device is a tablet AND user hasn't disabled it
     val retroEffective = retroConfig.enabled && retroEnabledPref
 
+    // ── Page flip sound (SoundPool) ────────────────────────────────
+    val soundPool = remember {
+        SoundPool.Builder().setMaxStreams(1).setAudioAttributes(
+            AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+        ).build()
+    }
+    val pageFlipSoundId = remember {
+        soundPool.load(context, R.raw.page_flip, 1)
+    }
+
+    // ── Haptic feedback for chapter changes ────────────────────────
+    val haptic = LocalHapticFeedback.current
+
+    // ── Swipe navigation state ─────────────────────────────────────
+    val swipeOffset = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    var isSwiping by remember { mutableStateOf(false) }
+
     // ── Text-to-Speech ────────────────────────────────────────────
     val ttsController = remember { TtsController(context.applicationContext) }
     val ttsState by ttsController.state.collectAsState()
@@ -125,9 +158,12 @@ fun BibleScreen(
     // Initialise engine once
     LaunchedEffect(Unit) { ttsController.init() }
 
-    // Release engine when leaving the screen
+    // Release engines when leaving the screen
     DisposableEffect(Unit) {
-        onDispose { ttsController.shutdown() }
+        onDispose {
+            ttsController.shutdown()
+            soundPool.release()
+        }
     }
 
     // Shared LazyListState for TTS auto-scroll
@@ -147,9 +183,17 @@ fun BibleScreen(
         if (initialChapter != null) viewModel.selectChapter(initialChapter)
     }
 
-    // Record reading on chapter change
+    // Record reading + play page flip sound on chapter change
+    var prevChapter by remember { mutableStateOf(selectedChapter) }
     LaunchedEffect(selectedChapter) {
         viewModel.recordReading()
+        if (prevChapter != selectedChapter) {
+            if (pageFlipSoundEnabled && pageFlipSoundId != 0) {
+                soundPool.play(pageFlipSoundId, 0.6f, 0.6f, 1, 0, 1f)
+            }
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            prevChapter = selectedChapter
+        }
     }
 
     // Book/chapter selector + translation picker states
@@ -238,17 +282,72 @@ fun BibleScreen(
             )
         }
     ) { padding ->
+        // ── Swipe gesture state ─────────────────────────────────────
+        var dragAccumulator by remember { mutableStateOf(0f) }
+
         // ── Center content with max width for readability on tablets ──
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
+                .padding(padding)
+                .pointerInput(selectedChapter) {
+                    val chaptersList = chapters
+                    val maxChapter = chaptersList.maxOrNull() ?: selectedChapter
+                    val commitThreshold = size.width.toFloat() * 0.25f // 25% of width
+                    val edgeResistance = 0.3f // rubber-band strength at boundaries
+
+                    detectHorizontalDragGestures(
+                        onDragStart = {
+                            isSwiping = true
+                            dragAccumulator = 0f
+                        },
+                        onDragEnd = {
+                            isSwiping = false
+                            scope.launch {
+                                if (dragAccumulator > commitThreshold && selectedChapter > 1) {
+                                    swipeOffset.snapTo(0f)
+                                    viewModel.previousChapter()
+                                } else if (dragAccumulator < -commitThreshold && selectedChapter < maxChapter) {
+                                    swipeOffset.snapTo(0f)
+                                    viewModel.nextChapter()
+                                } else {
+                                    // Spring back — not enough distance
+                                    swipeOffset.animateTo(
+                                        0f,
+                                        animationSpec = spring(
+                                            dampingRatio = 0.6f,
+                                            stiffness = 500f
+                                        )
+                                    )
+                                }
+                                dragAccumulator = 0f
+                            }
+                        },
+                        onHorizontalDrag = { change, dragAmount ->
+                            change.consume()
+                            val newAccum = dragAccumulator + dragAmount
+                            // Rubber-band at chapter boundaries (Gen 1 / Rev 22 edge)
+                            val clamped = if (newAccum > 0 && selectedChapter <= 1) {
+                                newAccum * edgeResistance
+                            } else if (newAccum < 0 && selectedChapter >= maxChapter) {
+                                newAccum * edgeResistance
+                            } else {
+                                newAccum
+                            }
+                            dragAccumulator = clamped
+                            scope.launch { swipeOffset.snapTo(clamped) }
+                        }
+                    )
+                },
             contentAlignment = androidx.compose.ui.Alignment.TopCenter
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .widthIn(max = 800.dp)  // ponytail: ~72ch at 16sp. Adjust if needed.
+                    .graphicsLayer {
+                        translationX = swipeOffset.value
+                    }
             ) {
             // ── Primary content (verses) ─────────────────────────
             if (isCompareMode) {
@@ -268,6 +367,7 @@ fun BibleScreen(
                                 onHighlightToggle = { id, color -> viewModel.toggleHighlight(id, color) },
                                 onStrongsClick = onStrongsClick,
                                 speakingVerseIndex = ttsState.currentVerseIndex,
+                                wordRange = ttsState.currentWordRange,
                                 listState = primaryListState,
                                 modifier = Modifier.padding(end = 2.dp)
                             )
@@ -284,6 +384,7 @@ fun BibleScreen(
                                 onHighlightToggle = { id, color -> viewModel.toggleHighlight(id, color) },
                                 onStrongsClick = onStrongsClick,
                                 speakingVerseIndex = ttsState.currentVerseIndex,
+                                wordRange = ttsState.currentWordRange,
                                 listState = primaryListState,
                                 modifier = Modifier.padding(end = 2.dp)
                             )
@@ -343,6 +444,7 @@ fun BibleScreen(
                                 onHighlightToggle = { id, color -> viewModel.toggleHighlight(id, color) },
                                 onStrongsClick = onStrongsClick,
                                 speakingVerseIndex = ttsState.currentVerseIndex,
+                                wordRange = ttsState.currentWordRange,
                                 listState = primaryListState
                             )
                         } else {
@@ -358,6 +460,7 @@ fun BibleScreen(
                                 onHighlightToggle = { id, color -> viewModel.toggleHighlight(id, color) },
                                 onStrongsClick = onStrongsClick,
                                 speakingVerseIndex = ttsState.currentVerseIndex,
+                                wordRange = ttsState.currentWordRange,
                                 listState = primaryListState
                             )
                         }
@@ -468,7 +571,7 @@ fun BibleScreen(
     }
 }
 
-// ── Standard Content (phones and when retro is disabled) ────────
+    // ── Standard Content (phones and when retro is disabled) ────────
 
 @Composable
 private fun StandardBibleContent(
@@ -484,6 +587,7 @@ private fun StandardBibleContent(
     onAddNote: (verseNumber: Int) -> Unit = {},
     onStrongsClick: (verseId: Long) -> Unit = {},
     speakingVerseIndex: Int = -1,
+    wordRange: IntRange? = null,
     listState: LazyListState = rememberLazyListState(),
     modifier: Modifier = Modifier
 ) {
@@ -511,6 +615,7 @@ private fun StandardBibleContent(
                 crossRefs = crossReferenceMap[verse.id] ?: emptyList(),
                 isExpanded = expandedRefs[verse.id] == true,
                 isSpeaking = index == speakingVerseIndex,
+                wordRange = if (index == speakingVerseIndex) wordRange else null,
                 onToggleRefs = {
                     expandedRefs[verse.id] = expandedRefs[verse.id] != true
                 },
@@ -539,6 +644,7 @@ private fun RetroBibleContent(
     onAddNote: (verseNumber: Int) -> Unit = {},
     onStrongsClick: (verseId: Long) -> Unit = {},
     speakingVerseIndex: Int = -1,
+    wordRange: IntRange? = null,
     listState: LazyListState = rememberLazyListState(),
     modifier: Modifier = Modifier
 ) {
@@ -667,6 +773,7 @@ private fun RetroBibleContent(
                     crossRefs = crossReferenceMap[verse.id] ?: emptyList(),
                     isExpanded = expandedRefs[verse.id] == true,
                     isSpeaking = index == speakingVerseIndex,
+                    wordRange = if (index == speakingVerseIndex) wordRange else null,
                     onToggleRefs = {
                         expandedRefs[verse.id] = expandedRefs[verse.id] != true
                     },
@@ -759,6 +866,7 @@ private fun VerseLine(
     crossRefs: List<CrossReferenceDisplay> = emptyList(),
     isExpanded: Boolean = false,
     isSpeaking: Boolean = false,
+    wordRange: IntRange? = null,
     onToggleRefs: () -> Unit = {},
     onBookmarkToggle: () -> Unit = {},
     onHighlightToggle: (HighlightColor) -> Unit = {},
@@ -807,16 +915,36 @@ private fun VerseLine(
             append("$verseNumber ")
         }
 
-        // Verse text with optional highlight background
-        withStyle(
-            SpanStyle(
-                fontFamily = if (isRetro) pixelFont else FontFamily.Serif,
-                fontSize = fontSizeText.sp,
-                color = MaterialTheme.colorScheme.onBackground,
-                background = highlightBg ?: Color.Transparent
-            )
-        ) {
-            append(text)
+        // Verse text with optional highlight background and word-level TTS glow
+        val baseTextStyle = SpanStyle(
+            fontFamily = if (isRetro) pixelFont else FontFamily.Serif,
+            fontSize = fontSizeText.sp,
+            color = MaterialTheme.colorScheme.onBackground,
+            background = highlightBg ?: Color.Transparent
+        )
+
+        val wordGlowStyle = SpanStyle(
+            fontFamily = if (isRetro) pixelFont else FontFamily.Serif,
+            fontSize = fontSizeText.sp,
+            color = MaterialTheme.colorScheme.onBackground,
+            background = com.openbible.ui.theme.RetroGold.copy(alpha = 0.45f)
+        )
+
+        val wordStart: Int? = if (wordRange != null && isSpeaking &&
+            wordRange.first >= 0 && wordRange.last < text.length && wordRange.first <= wordRange.last
+        ) wordRange.first else null
+
+        if (wordStart != null) {
+            val wEnd = wordRange!!.last + 1
+            if (wordStart > 0) {
+                withStyle(baseTextStyle) { append(text.substring(0, wordStart)) }
+            }
+            withStyle(wordGlowStyle) { append(text.substring(wordStart, wEnd)) }
+            if (wEnd < text.length) {
+                withStyle(baseTextStyle) { append(text.substring(wEnd)) }
+            }
+        } else {
+            withStyle(baseTextStyle) { append(text) }
         }
     }
 

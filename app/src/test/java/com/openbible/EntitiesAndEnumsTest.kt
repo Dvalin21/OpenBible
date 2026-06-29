@@ -30,11 +30,28 @@ class EntitiesAndEnumsTest {
     }
 
     @Test
-    fun themeMode_has_light_dark_sepia() {
+    fun themeMode_has_light_dark_sepia_auto() {
         assertEquals(ThemeMode.LIGHT, ThemeMode.valueOf("LIGHT"))
         assertEquals(ThemeMode.DARK, ThemeMode.valueOf("DARK"))
         assertEquals(ThemeMode.SEPIA, ThemeMode.valueOf("SEPIA"))
-        assertEquals(3, ThemeMode.entries.size)
+        assertEquals(ThemeMode.AUTO_TIME, ThemeMode.valueOf("AUTO_TIME"))
+        assertEquals(4, ThemeMode.entries.size)
+    }
+
+    @Test
+    fun autoTime_resolves_to_correct_theme_by_hour() {
+        assertEquals(ThemeMode.LIGHT, ThemeMode.AUTO_TIME.resolve(6))
+        assertEquals(ThemeMode.LIGHT, ThemeMode.AUTO_TIME.resolve(12))
+        assertEquals(ThemeMode.LIGHT, ThemeMode.AUTO_TIME.resolve(16))
+        assertEquals(ThemeMode.SEPIA, ThemeMode.AUTO_TIME.resolve(17))
+        assertEquals(ThemeMode.SEPIA, ThemeMode.AUTO_TIME.resolve(19))
+        assertEquals(ThemeMode.DARK, ThemeMode.AUTO_TIME.resolve(20))
+        assertEquals(ThemeMode.DARK, ThemeMode.AUTO_TIME.resolve(23))
+        assertEquals(ThemeMode.DARK, ThemeMode.AUTO_TIME.resolve(0))
+        assertEquals(ThemeMode.DARK, ThemeMode.AUTO_TIME.resolve(5))
+        // Non-auto modes resolve to themselves
+        assertEquals(ThemeMode.LIGHT, ThemeMode.LIGHT.resolve(12))
+        assertEquals(ThemeMode.DARK, ThemeMode.DARK.resolve(12))
     }
 
     @Test

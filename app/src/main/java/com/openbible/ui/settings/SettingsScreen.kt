@@ -295,6 +295,7 @@ private fun ThemeModeSelector(
                             ThemeMode.LIGHT -> "Light"
                             ThemeMode.DARK -> "Dark"
                             ThemeMode.SEPIA -> "Sepia"
+                            ThemeMode.AUTO_TIME -> "Auto"
                         }
                     )
                 },

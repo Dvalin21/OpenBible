@@ -6,6 +6,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -68,10 +69,17 @@ fun OpenBibleTheme(
     themeMode: ThemeMode = ThemeMode.LIGHT,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when (themeMode) {
+    // ponytail: resolve once per themeMode change; live hour-boundary switching deferred
+    val effectiveMode = remember(themeMode) {
+        if (themeMode == ThemeMode.AUTO_TIME) {
+            themeMode.resolve(java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY))
+        } else themeMode
+    }
+    val colorScheme = when (effectiveMode) {
         ThemeMode.LIGHT -> LightColorScheme
         ThemeMode.DARK -> DarkColorScheme
         ThemeMode.SEPIA -> SepiaColorScheme
+        else -> LightColorScheme // unreachable after resolve
     }
 
     // Set status bar colors to match background
@@ -81,7 +89,7 @@ fun OpenBibleTheme(
             val window = (view.context as Activity).window
             window.statusBarColor = colorScheme.background.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars =
-                themeMode != ThemeMode.DARK
+                effectiveMode != ThemeMode.DARK
         }
     }
 
