@@ -1,6 +1,10 @@
 package com.openbible.navigation
 
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Bookmarks
@@ -17,10 +21,13 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -148,196 +155,259 @@ fun OpenBibleNavGraph(
         }
     }
 
-    Scaffold(
-        modifier = modifier,
-        bottomBar = {
-            OpenBibleBottomBar(navController = navController)
-        }
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = Routes.HOME,
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            composable(Routes.HOME) {
-                HomeScreen(
-                    onOpenBible = { navController.navigate(Routes.BIBLE) },
-                    onOpenChapter = { translationId, bookId, chapter ->
-                        navController.navigate(Routes.bibleChapter(translationId, bookId, chapter))
-                    },
-                    onOpenSearch = { navController.navigate(Routes.SEARCH) },
-                    onOpenNotes = { navController.navigate(Routes.NOTES) },
-                    onOpenReadingPlans = { navController.navigate(Routes.READING_PLANS) },
-                    onOpenStrongs = { navController.navigate(Routes.STRONG_SEARCH) },
-                    onOpenLocations = { navController.navigate(Routes.LOCATIONS) }
-                )
-            }
-
-            composable(Routes.BIBLE) {
-                BibleScreen(
-                    onNavigateToChapter = { translationId, bookId, chapter ->
-                        navController.navigate(Routes.bibleChapter(translationId, bookId, chapter))
-                    },
-                    onAddNote = { verseNumber ->
-                        navController.navigate(Routes.noteEditor(verseNumber = verseNumber))
-                    },
+    if (isTablet) {
+        Row(modifier = modifier) {
+            OpenBibleNavRail(navController = navController)
+            Scaffold(modifier = Modifier.weight(1f)) { innerPadding ->
+                NavContent(
+                    navController = navController,
                     isTablet = isTablet,
-                    onOpenStrongDetail = { number ->
-                        navController.navigate(Routes.strongDetail(number))
-                    }
-                )
-            }
-
-            composable(Routes.BIBLE_CHAPTER) { backStackEntry ->
-                val translationId = backStackEntry.arguments?.getString("translationId") ?: "kjv"
-                val bookId = backStackEntry.arguments?.getString("bookId")?.toIntOrNull() ?: 1
-                val chapter = backStackEntry.arguments?.getString("chapter")?.toIntOrNull() ?: 1
-                BibleScreen(
-                    initialTranslationId = translationId,
-                    initialBookId = bookId,
-                    initialChapter = chapter,
-                    onNavigateToChapter = { _, b, c ->
-                        navController.navigate(Routes.bibleChapter(translationId, b, c))
-                    },
-                    onAddNote = { verseNumber ->
-                        navController.navigate(Routes.noteEditor(
-                            translationId = translationId,
-                            bookId = bookId,
-                            chapter = chapter,
-                            verseNumber = verseNumber
-                        ))
-                    },
-                    isTablet = isTablet,
-                    onOpenStrongDetail = { number ->
-                        navController.navigate(Routes.strongDetail(number))
-                    }
-                )
-            }
-
-            composable(Routes.SEARCH) {
-                SearchScreen(
-                    onOpenVerse = { translationId, bookId, chapter ->
-                        navController.navigate(Routes.bibleChapter(translationId, bookId, chapter))
-                    }
-                )
-            }
-
-            composable(Routes.BOOKMARKS) {
-                BookmarksScreen(
-                    onOpenVerse = { translationId, bookId, chapter ->
-                        navController.navigate(Routes.bibleChapter(translationId, bookId, chapter))
-                    }
-                )
-            }
-
-            composable(Routes.SETTINGS) {
-                SettingsScreen()
-            }
-
-            composable(Routes.NOTES) {
-                NotebookListScreen(
-                    onOpenNote = { noteId ->
-                        navController.navigate(Routes.noteEditor(noteId = noteId))
-                    },
-                    onNewNote = {
-                        navController.navigate(Routes.noteEditor())
-                    },
-                    onBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(
-                route = Routes.NOTE_EDITOR,
-                arguments = listOf(
-                    navArgument("noteId") { type = NavType.LongType; defaultValue = -1L },
-                    navArgument("translationId") { type = NavType.StringType; defaultValue = "" },
-                    navArgument("bookId") { type = NavType.IntType; defaultValue = -1 },
-                    navArgument("chapter") { type = NavType.IntType; defaultValue = -1 },
-                    navArgument("verseNumber") { type = NavType.IntType; defaultValue = -1 }
-                )
-            ) { backStackEntry ->
-                val noteId = backStackEntry.arguments?.getLong("noteId").takeIf { it != -1L }
-
-                NoteEditorScreen(
-                    noteId = noteId,
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(
-                route = Routes.BIBLE_WITH_NOTES,
-                arguments = listOf(
-                    navArgument("translationId") { type = NavType.StringType; defaultValue = "kjv" },
-                    navArgument("bookId") { type = NavType.IntType; defaultValue = 1 },
-                    navArgument("chapter") { type = NavType.IntType; defaultValue = 1 },
-                    navArgument("noteId") { type = NavType.LongType; defaultValue = -1L }
-                )
-            ) { backStackEntry ->
-                val translationId = backStackEntry.arguments?.getString("translationId") ?: "kjv"
-                val bookId = backStackEntry.arguments?.getInt("bookId") ?: 1
-                val chapter = backStackEntry.arguments?.getInt("chapter") ?: 1
-                val noteId = backStackEntry.arguments?.getLong("noteId").takeIf { it != -1L }
-
-                BibleWithNotesScreen(
-                    initialTranslationId = translationId,
-                    initialBookId = bookId,
-                    initialChapter = chapter,
-                    noteId = noteId,
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(Routes.READING_PLANS) {
-                ReadingPlanScreen(
-                    onOpenChapter = { translationId, bookId, chapter ->
-                        navController.navigate(Routes.bibleChapter(translationId, bookId, chapter))
-                    }
-                )
-            }
-
-            composable(Routes.STRONG_SEARCH) {
-                StrongSearchScreen(
-                    onNavigateBack = { navController.popBackStack() },
-                    onOpenDetail = { number ->
-                        navController.navigate(Routes.strongDetail(number))
-                    }
-                )
-            }
-
-            composable(Routes.LOCATIONS) {
-                LocationListScreen(
-                    onNavigateBack = { navController.popBackStack() },
-                    onLocationSelected = { locationId ->
-                        navController.navigate(Routes.locationDetail(locationId))
-                    }
-                )
-            }
-
-            composable(
-                route = Routes.LOCATION_DETAIL,
-                arguments = listOf(navArgument("locationId") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val locationId = backStackEntry.arguments?.getString("locationId") ?: "jerusalem"
-                LocationDetailScreen(
-                    locationId = locationId,
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-
-            composable(
-                route = Routes.STRONG_DETAIL,
-                arguments = listOf(navArgument("strongNumber") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val strongNumber = backStackEntry.arguments?.getString("strongNumber") ?: "G1"
-                StrongDetailScreen(
-                    strongNumber = strongNumber,
-                    onNavigateBack = { navController.popBackStack() },
-                    onOpenVerse = { translationId, bookId, chapter ->
-                        navController.navigate(Routes.bibleChapter(translationId, bookId, chapter))
-                    }
+                    modifier = Modifier.padding(innerPadding)
                 )
             }
         }
+    } else {
+        Scaffold(
+            modifier = modifier,
+            bottomBar = { OpenBibleBottomBar(navController = navController) }
+        ) { innerPadding ->
+            NavContent(
+                navController = navController,
+                isTablet = isTablet,
+                modifier = Modifier.padding(innerPadding)
+            )
+        }
+    }
+}
+
+/**
+ * Shared NavHost content used by both phone and tablet layouts.
+ * All composable routes live here to avoid duplication.
+ */
+@Composable
+private fun NavContent(
+    navController: NavHostController,
+    isTablet: Boolean,
+    modifier: Modifier = Modifier
+) {
+    NavHost(
+        navController = navController,
+        startDestination = Routes.HOME,
+        modifier = modifier
+    ) {
+        composable(Routes.HOME) {
+            HomeScreen(
+                onOpenBible = { navController.navigate(Routes.BIBLE) },
+                onOpenChapter = { translationId, bookId, chapter ->
+                    navController.navigate(Routes.bibleChapter(translationId, bookId, chapter))
+                },
+                onOpenSearch = { navController.navigate(Routes.SEARCH) },
+                onOpenNotes = { navController.navigate(Routes.NOTES) },
+                onOpenReadingPlans = { navController.navigate(Routes.READING_PLANS) },
+                onOpenStrongs = { navController.navigate(Routes.STRONG_SEARCH) },
+                onOpenLocations = { navController.navigate(Routes.LOCATIONS) }
+            )
+        }
+
+        composable(Routes.BIBLE) {
+            BibleScreen(
+                onNavigateToChapter = { translationId, bookId, chapter ->
+                    navController.navigate(Routes.bibleChapter(translationId, bookId, chapter))
+                },
+                onAddNote = { verseNumber ->
+                    navController.navigate(Routes.noteEditor(verseNumber = verseNumber))
+                },
+                isTablet = isTablet,
+                onOpenStrongDetail = { number ->
+                    navController.navigate(Routes.strongDetail(number))
+                }
+            )
+        }
+
+        composable(Routes.BIBLE_CHAPTER) { backStackEntry ->
+            val translationId = backStackEntry.arguments?.getString("translationId") ?: "kjv"
+            val bookId = backStackEntry.arguments?.getString("bookId")?.toIntOrNull() ?: 1
+            val chapter = backStackEntry.arguments?.getString("chapter")?.toIntOrNull() ?: 1
+            BibleScreen(
+                initialTranslationId = translationId,
+                initialBookId = bookId,
+                initialChapter = chapter,
+                onNavigateToChapter = { _, b, c ->
+                    navController.navigate(Routes.bibleChapter(translationId, b, c))
+                },
+                onAddNote = { verseNumber ->
+                    navController.navigate(Routes.noteEditor(
+                        translationId = translationId,
+                        bookId = bookId,
+                        chapter = chapter,
+                        verseNumber = verseNumber
+                    ))
+                },
+                isTablet = isTablet,
+                onOpenStrongDetail = { number ->
+                    navController.navigate(Routes.strongDetail(number))
+                }
+            )
+        }
+
+        composable(Routes.SEARCH) {
+            SearchScreen(
+                onOpenVerse = { translationId, bookId, chapter ->
+                    navController.navigate(Routes.bibleChapter(translationId, bookId, chapter))
+                }
+            )
+        }
+
+        composable(Routes.BOOKMARKS) {
+            BookmarksScreen(
+                onOpenVerse = { translationId, bookId, chapter ->
+                    navController.navigate(Routes.bibleChapter(translationId, bookId, chapter))
+                }
+            )
+        }
+
+        composable(Routes.SETTINGS) {
+            SettingsScreen()
+        }
+
+        composable(Routes.NOTES) {
+            NotebookListScreen(
+                onOpenNote = { noteId ->
+                    navController.navigate(Routes.noteEditor(noteId = noteId))
+                },
+                onNewNote = {
+                    navController.navigate(Routes.noteEditor())
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Routes.NOTE_EDITOR,
+            arguments = listOf(
+                navArgument("noteId") { type = NavType.LongType; defaultValue = -1L },
+                navArgument("translationId") { type = NavType.StringType; defaultValue = "" },
+                navArgument("bookId") { type = NavType.IntType; defaultValue = -1 },
+                navArgument("chapter") { type = NavType.IntType; defaultValue = -1 },
+                navArgument("verseNumber") { type = NavType.IntType; defaultValue = -1 }
+            )
+        ) { backStackEntry ->
+            val noteId = backStackEntry.arguments?.getLong("noteId").takeIf { it != -1L }
+
+            NoteEditorScreen(
+                noteId = noteId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Routes.BIBLE_WITH_NOTES,
+            arguments = listOf(
+                navArgument("translationId") { type = NavType.StringType; defaultValue = "kjv" },
+                navArgument("bookId") { type = NavType.IntType; defaultValue = 1 },
+                navArgument("chapter") { type = NavType.IntType; defaultValue = 1 },
+                navArgument("noteId") { type = NavType.LongType; defaultValue = -1L }
+            )
+        ) { backStackEntry ->
+            val translationId = backStackEntry.arguments?.getString("translationId") ?: "kjv"
+            val bookId = backStackEntry.arguments?.getInt("bookId") ?: 1
+            val chapter = backStackEntry.arguments?.getInt("chapter") ?: 1
+            val noteId = backStackEntry.arguments?.getLong("noteId").takeIf { it != -1L }
+
+            BibleWithNotesScreen(
+                initialTranslationId = translationId,
+                initialBookId = bookId,
+                initialChapter = chapter,
+                noteId = noteId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.READING_PLANS) {
+            ReadingPlanScreen(
+                onOpenChapter = { translationId, bookId, chapter ->
+                    navController.navigate(Routes.bibleChapter(translationId, bookId, chapter))
+                }
+            )
+        }
+
+        composable(Routes.STRONG_SEARCH) {
+            StrongSearchScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onOpenDetail = { number ->
+                    navController.navigate(Routes.strongDetail(number))
+                }
+            )
+        }
+
+        composable(Routes.LOCATIONS) {
+            LocationListScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onLocationSelected = { locationId ->
+                    navController.navigate(Routes.locationDetail(locationId))
+                }
+            )
+        }
+
+        composable(
+            route = Routes.LOCATION_DETAIL,
+            arguments = listOf(navArgument("locationId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val locationId = backStackEntry.arguments?.getString("locationId") ?: "jerusalem"
+            LocationDetailScreen(
+                locationId = locationId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route = Routes.STRONG_DETAIL,
+            arguments = listOf(navArgument("strongNumber") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val strongNumber = backStackEntry.arguments?.getString("strongNumber") ?: "G1"
+            StrongDetailScreen(
+                strongNumber = strongNumber,
+                onNavigateBack = { navController.popBackStack() },
+                onOpenVerse = { translationId, bookId, chapter ->
+                    navController.navigate(Routes.bibleChapter(translationId, bookId, chapter))
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun OpenBibleNavRail(navController: NavHostController) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+
+    NavigationRail(
+        modifier = Modifier.fillMaxHeight()
+    ) {
+        Spacer(Modifier.weight(1f))
+        bottomNavItems.forEach { item ->
+            val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
+            NavigationRailItem(
+                selected = selected,
+                onClick = {
+                    navController.navigate(item.route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                icon = {
+                    Icon(
+                        imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                        contentDescription = item.label
+                    )
+                },
+                label = { Text(item.label) }
+            )
+        }
+        Spacer(Modifier.weight(1f))
     }
 }
 

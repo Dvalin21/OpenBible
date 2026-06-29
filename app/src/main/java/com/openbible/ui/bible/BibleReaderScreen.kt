@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontFamily
@@ -32,35 +33,42 @@ fun BibleReaderScreen(
     val listState = rememberLazyListState()
     val expandedRefs = remember { mutableStateMapOf<Long, Boolean>() }
 
-    Column(modifier = modifier.fillMaxSize()) {
-        // Header
-        Text(
-            text = "$bookName $chapter — $translationLabel",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.secondary,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-        )
-
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 12.dp),
-            contentPadding = PaddingValues(vertical = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            items(verses, key = { it.id }) { verse ->
-                VerseLine(
-                    verseNumber = verse.verse,
-                    text = verse.text,
-                    isRetro = false,
-                    verseId = verse.id,
-                    crossRefs = crossReferenceMap[verse.id] ?: emptyList(),
-                    isExpanded = expandedRefs[verse.id] == true,
-                    onToggleRefs = {
-                        expandedRefs[verse.id] = expandedRefs[verse.id] != true
-                    }
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Box(modifier = Modifier.widthIn(max = 800.dp).fillMaxSize()) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Header
+                Text(
+                    text = "$bookName $chapter — $translationLabel",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                 )
+
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 12.dp),
+                    contentPadding = PaddingValues(vertical = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    items(verses, key = { it.id }) { verse ->
+                        VerseLine(
+                            verseNumber = verse.verse,
+                            text = verse.text,
+                            isRetro = false,
+                            verseId = verse.id,
+                            crossRefs = crossReferenceMap[verse.id] ?: emptyList(),
+                            isExpanded = expandedRefs[verse.id] == true,
+                            onToggleRefs = {
+                                expandedRefs[verse.id] = expandedRefs[verse.id] != true
+                            }
+                        )
+                    }
+                }
             }
         }
     }

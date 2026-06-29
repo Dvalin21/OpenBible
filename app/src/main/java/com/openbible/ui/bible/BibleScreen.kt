@@ -238,12 +238,18 @@ fun BibleScreen(
             )
         }
     ) { padding ->
-        // ── Outer wrapper: layers verses + TTS controls overlay ──
+        // ── Center content with max width for readability on tablets ──
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(padding),
+            contentAlignment = androidx.compose.ui.Alignment.TopCenter
         ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .widthIn(max = 800.dp)  // ponytail: ~72ch at 16sp. Adjust if needed.
+            ) {
             // ── Primary content (verses) ─────────────────────────
             if (isCompareMode) {
                 Row(modifier = Modifier.fillMaxSize()) {
@@ -403,7 +409,8 @@ fun BibleScreen(
                     modifier = Modifier.align(Alignment.BottomCenter)
                 )
             }
-        }
+        } // end widthIn Box
+    }
     }
 
     // -- Book/Chapter Selector Dialog --
