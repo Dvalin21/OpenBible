@@ -120,6 +120,14 @@ interface BibleDao {
         limit: Int = 100
     ): List<SearchResult>
 
+    // -- Batch lookups --
+
+    @Query("SELECT * FROM verses WHERE id IN (:verseIds)")
+    suspend fun getVersesByIds(verseIds: List<Long>): List<VerseEntity>
+
+    @Query("SELECT * FROM books WHERE translationId = :translationId AND id IN (:bookIds)")
+    suspend fun getBooksByIds(translationId: String, bookIds: List<Int>): List<BookEntity>
+
     // -- Random verse (for daily verse notification) --
 
     @Query("SELECT * FROM verses WHERE translationId = :translationId ORDER BY RANDOM() LIMIT 1")

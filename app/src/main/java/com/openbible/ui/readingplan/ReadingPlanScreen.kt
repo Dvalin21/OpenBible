@@ -238,8 +238,12 @@ private fun ReadingCard(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val displayText = if (reading.bookName.startsWith("Book "))
+                "${reading.bookName}, Chapter ${reading.chapter}"
+            else
+                "${reading.bookName} ${reading.chapter}"
             Text(
-                text = "Book ${reading.bookId}, Chapter ${reading.chapter}",
+                text = displayText,
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f)
             )

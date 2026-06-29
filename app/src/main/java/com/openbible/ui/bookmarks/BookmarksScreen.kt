@@ -131,14 +131,12 @@ private fun BookmarkCard(
 
                 // Verse text preview (first line)
                 Spacer(modifier = Modifier.height(4.dp))
-                Row {
-                    Text(
-                        text = "${bookmark.verseNumber} ",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                }
+                Text(
+                    text = bookmark.text.take(120) + if (bookmark.text.length > 120) "…" else "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2
+                )
 
                 // Tags
                 if (!bookmark.tags.isNullOrBlank()) {

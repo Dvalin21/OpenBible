@@ -9,6 +9,8 @@ import com.openbible.data.repository.NoteRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import javax.inject.Inject
 
 data class NoteEditorState(
@@ -104,44 +106,46 @@ class NoteEditorViewModel @Inject constructor(
         _state.update { it.copy(linkedVerseIds = it.linkedVerseIds - verseId) }
     }
 
-    /** Save the note. Returns the note ID. */
-    fun save(): Long? {
+    /** Save the note and return the note ID. Suspend — call from a coroutine. */
+    suspend fun save(): Long? {
         val s = _state.value
-        var noteId: Long? = null
-
-        viewModelScope.launch {
-            _state.update { it.copy(isSaving = true) }
-            if (s.isNew) {
-                noteId = noteRepository.createNote(
-                    notebookId = s.activeNotebookId,
-                    title = s.title.ifBlank { "Untitled" },
-                    contentText = s.contentText.ifBlank { null },
-                    penStrokes = s.penStrokes,
-                    penMode = s.penMode
-                )
-            } else {
-                s.note?.let { note ->
-                    noteRepository.updateNote(
-                        note.copy(
-                            title = s.title.ifBlank { "Untitled" },
-                            contentText = s.contentText.ifBlank { null },
-                            penStrokes = s.penStrokes,
-                            penMode = s.penMode,
-                            notebookId = s.activeNotebookId
-                        )
+        _state.update { it.copy(isSaving = true) }
+        return try {
+            withContext(Dispatchers.IO) {
+                val noteId: Long?
+                if (s.isNew) {
+                    noteId = noteRepository.createNote(
+                        notebookId = s.activeNotebookId,
+                        title = s.title.ifBlank { "Untitled" },
+                        contentText = s.contentText.ifBlank { null },
+                        penStrokes = s.penStrokes,
+                        penMode = s.penMode
                     )
-                    noteId = note.id
+                } else {
+                    s.note?.let { note ->
+                        noteRepository.updateNote(
+                            note.copy(
+                                title = s.title.ifBlank { "Untitled" },
+                                contentText = s.contentText.ifBlank { null },
+                                penStrokes = s.penStrokes,
+                                penMode = s.penMode,
+                                notebookId = s.activeNotebookId
+                            )
+                        )
+                    }
+                    noteId = s.note?.id
                 }
+                // Sync verse links
+                noteId?.let { id ->
+                    val existing = noteRepository.getLinkedVerseIds(id)
+                    for (v in s.linkedVerseIds) { if (v !in existing) noteRepository.linkVerse(id, v) }
+                    for (v in existing) { if (v !in s.linkedVerseIds) noteRepository.unlinkVerse(id, v) }
+                }
+                noteId
             }
-            // Sync verse links
-            noteId?.let { id ->
-                val existing = noteRepository.getLinkedVerseIds(id)
-                for (v in s.linkedVerseIds) { if (v !in existing) noteRepository.linkVerse(id, v) }
-                for (v in existing) { if (v !in s.linkedVerseIds) noteRepository.unlinkVerse(id, v) }
-            }
+        } finally {
             _state.update { it.copy(isSaving = false, isNew = false) }
         }
-        return noteId
     }
 
     fun deleteNote() {

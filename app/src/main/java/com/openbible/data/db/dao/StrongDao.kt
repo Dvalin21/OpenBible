@@ -8,6 +8,21 @@ import com.openbible.data.db.entity.StrongNumberEntity
 import com.openbible.data.db.entity.VerseStrongLinkEntity
 import kotlinx.coroutines.flow.Flow
 
+/** A verse occurrence with resolved book name, chapter, verse number, and text. */
+data class VerseLinkWithReference(
+    val verseId: Long,
+    val strongNumber: String,
+    val wordPosition: Int,
+    val originalWord: String,
+    val transliteration: String?,
+    val translationId: String,
+    val bookId: Int,
+    val chapter: Int,
+    val verse: Int,
+    val text: String,
+    val abbreviation: String
+)
+
 /**
  * DAO for Strong's Concordance data.
  *
@@ -64,6 +79,19 @@ interface StrongDao {
         LIMIT :limit
     """)
     suspend fun getVersesForStrongNumber(strongNumber: String, limit: Int = 100): List<VerseStrongLinkEntity>
+
+    @Query("""
+        SELECT vsl.verseId, vsl.strongNumber, vsl.wordPosition, vsl.originalWord, vsl.transliteration,
+               v.translationId, v.bookId, v.chapter, v.verse, v.text,
+               b.abbreviation
+        FROM verse_strong_links vsl
+        INNER JOIN verses v ON v.id = vsl.verseId
+        INNER JOIN books b ON b.id = v.bookId AND b.translationId = v.translationId
+        WHERE vsl.strongNumber = :strongNumber
+        ORDER BY v.bookId, v.chapter, v.verse
+        LIMIT :limit
+    """)
+    suspend fun getVerseLinksWithReference(strongNumber: String, limit: Int = 100): List<VerseLinkWithReference>
 
     @Query("""
         SELECT sn.* FROM strong_numbers sn

@@ -7,6 +7,7 @@ import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlin.jvm.Volatile
 import java.util.Locale
 
 /**
@@ -25,6 +26,7 @@ class TtsController(private val appContext: Context) {
     private var tts: TextToSpeech? = null
     private var verses: List<String> = emptyList()
     private var resumeIndex: Int = 0
+    @Volatile private var intentionalStop: Boolean = false  // ponytail: tts.stop() fires onDone async; flag prevents resumeIndex drift
 
     private val _state = MutableStateFlow(TtsState())
     val state: StateFlow<TtsState> = _state.asStateFlow()
@@ -52,6 +54,7 @@ class TtsController(private val appContext: Context) {
 
     /** Release all TTS resources. Call when the screen is disposed. */
     fun shutdown() {
+        intentionalStop = true
         tts?.stop()
         tts?.shutdown()
         tts = null
@@ -75,6 +78,8 @@ class TtsController(private val appContext: Context) {
         verses = verseTexts
         resumeIndex = startIndex.coerceIn(0, verseTexts.size - 1)
 
+        // ponytail: prevent onDone from nudging resumeIndex before we overwrite it
+        intentionalStop = true
         engine.stop()                            // cancel any prior queue
         engine.setSpeechRate(_state.value.speed)
 
@@ -101,9 +106,10 @@ class TtsController(private val appContext: Context) {
         val s = _state.value
         if (s.isPlaying) {
             // Pause — stop the engine, remember where we were
+            // ponytail: set flag before stop() so onDone() doesn't advance resumeIndex
+            intentionalStop = true
             tts?.stop()
             _state.value = s.copy(isPlaying = false)
-            // resumeIndex is already tracked by onStart/onDone
         } else {
             // Resume from current position
             if (verses.isNotEmpty() && resumeIndex < verses.size) {
@@ -128,6 +134,7 @@ class TtsController(private val appContext: Context) {
 
     /** Stop playback and reset state. */
     fun stop() {
+        intentionalStop = true
         tts?.stop()
         _state.value = _state.value.copy(isPlaying = false, currentVerseIndex = -1)
         verses = emptyList()
@@ -156,6 +163,11 @@ class TtsController(private val appContext: Context) {
         }
 
         override fun onDone(utteranceId: String?) {
+            // ponytail: skip if stop() was called intentionally (pause, shutdown, speak flush)
+            if (intentionalStop) {
+                intentionalStop = false
+                return
+            }
             val idx = utteranceId?.extractIndex() ?: return
             resumeIndex = idx + 1
             if (idx >= verses.size - 1) {

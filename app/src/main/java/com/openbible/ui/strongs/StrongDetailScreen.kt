@@ -1,5 +1,6 @@
 package com.openbible.ui.strongs
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -142,13 +143,33 @@ fun StrongDetailScreen(
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                     )
-                    // For now, just show verse IDs — proper verse text lookup is a future enhancement
                     data.verseLinks.take(20).forEach { link ->
-                        Text(
-                            text = "Verse ${link.verseId} (word ${link.wordPosition}: ${link.originalWord})",
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
-                        )
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 2.dp)
+                                .clickable { onOpenVerse(link.translationId, link.bookId, link.chapter) },
+                            shape = MaterialTheme.shapes.small,
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        ) {
+                            Column(modifier = Modifier.padding(8.dp)) {
+                                Text(
+                                    text = "${link.abbreviation} ${link.chapter}:${link.verse}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = link.text.take(100) + if (link.text.length > 100) "…" else "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    maxLines = 2
+                                )
+                                Text(
+                                    text = "${link.originalWord} (${link.transliteration ?: ""})",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                     if (data.verseLinks.size > 20) {
                         Text(

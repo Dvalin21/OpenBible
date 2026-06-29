@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.openbible.data.model.PenMode
+import kotlinx.coroutines.launch
 
 /** Pen color presets matching common stylus colors. */
 private val PEN_COLORS = listOf(
@@ -51,6 +52,7 @@ fun NoteEditorScreen(
     }
 
     var showPenControls by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -58,8 +60,10 @@ fun NoteEditorScreen(
                 title = { Text(if (state.isNew) "New Note" else "Edit Note") },
                 navigationIcon = {
                     IconButton(onClick = {
-                        viewModel.save()
-                        onNavigateBack()
+                        scope.launch {
+                            viewModel.save()
+                            onNavigateBack()
+                        }
                     }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
@@ -89,7 +93,7 @@ fun NoteEditorScreen(
                             Icon(Icons.Default.FormatPaint, contentDescription = "Pen settings")
                         }
                     }
-                    IconButton(onClick = { viewModel.save() }) {
+                    IconButton(onClick = { scope.launch { viewModel.save() } }) {
                         Icon(Icons.Default.Save, contentDescription = "Save")
                     }
                     if (!state.isNew) {
@@ -165,7 +169,7 @@ fun NoteEditorScreen(
                 )
                 PenMode.INK -> DrawingCanvas(
                     strokes = strokesFromJson(state.penStrokes),
-                    onStrokesChanged = { viewModel.setPenStrokes(strokesToJson(it)) },
+                    onStrokesChanged = { strokes, cw, ch -> viewModel.setPenStrokes(strokesToJson(strokes, cw, ch)) },
                     penSize = state.penSize,
                     penColor = state.penColor,
                     isEraser = state.isEraser,
@@ -181,7 +185,7 @@ fun NoteEditorScreen(
                     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                     DrawingCanvas(
                         strokes = strokesFromJson(state.penStrokes),
-                        onStrokesChanged = { viewModel.setPenStrokes(strokesToJson(it)) },
+                        onStrokesChanged = { strokes, cw, ch -> viewModel.setPenStrokes(strokesToJson(strokes, cw, ch)) },
                         penSize = state.penSize,
                         penColor = state.penColor,
                         isEraser = state.isEraser,

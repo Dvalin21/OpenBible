@@ -2,9 +2,10 @@ package com.openbible.ui.strongs
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.openbible.data.db.dao.BibleDao
 import com.openbible.data.db.dao.StrongDao
+import com.openbible.data.db.dao.VerseLinkWithReference
 import com.openbible.data.db.entity.StrongNumberEntity
-import com.openbible.data.db.entity.VerseStrongLinkEntity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,7 +15,7 @@ import javax.inject.Inject
 
 data class StrongNumberWithVerses(
     val number: StrongNumberEntity,
-    val verseLinks: List<VerseStrongLinkEntity>
+    val verseLinks: List<VerseLinkWithReference>
 )
 
 data class WordStrongInfo(
@@ -25,7 +26,8 @@ data class WordStrongInfo(
 
 @HiltViewModel
 class StrongViewModel @Inject constructor(
-    private val strongDao: StrongDao
+    private val strongDao: StrongDao,
+    private val bibleDao: BibleDao
 ) : ViewModel() {
 
     // ── Search ───────────────────────────────────────────────────
@@ -57,7 +59,7 @@ class StrongViewModel @Inject constructor(
     fun loadDetail(number: String) {
         viewModelScope.launch {
             val entity = strongDao.getStrongNumber(number) ?: return@launch
-            val links = strongDao.getVersesForStrongNumber(number)
+            val links = strongDao.getVerseLinksWithReference(number)
             _detail.value = StrongNumberWithVerses(entity, links)
         }
     }

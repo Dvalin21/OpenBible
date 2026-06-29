@@ -2,7 +2,9 @@ package com.openbible
 
 import com.openbible.data.db.dao.ReadingHistoryDao
 import com.openbible.data.db.dao.ReadingHistoryWithVerse
+import com.openbible.data.db.dao.BibleDao
 import com.openbible.data.db.dao.StrongDao
+import com.openbible.data.db.dao.VerseLinkWithReference
 import com.openbible.data.db.entity.StrongNumberEntity
 import com.openbible.data.db.entity.VerseStrongLinkEntity
 import com.openbible.ui.home.HomeViewModel
@@ -108,7 +110,7 @@ class ViewModelTest {
 
         coEvery { dao.searchStrongNumbers("love") } returns results
 
-        val vm = StrongViewModel(dao)
+        val vm = StrongViewModel(dao, mockk())
         vm.search("love")
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -121,7 +123,7 @@ class ViewModelTest {
     @Test
     fun `StrongViewModel search empty query clears results`() {
         val dao = mockk<StrongDao>()
-        val vm = StrongViewModel(dao)
+        val vm = StrongViewModel(dao, mockk())
 
         // First populate with results
         coEvery { dao.searchStrongNumbers("love") } returns listOf(
@@ -142,7 +144,7 @@ class ViewModelTest {
     @Test
     fun `StrongViewModel search with whitespace query clears`() {
         val dao = mockk<StrongDao>()
-        val vm = StrongViewModel(dao)
+        val vm = StrongViewModel(dao, mockk())
         vm.search("   ")
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -156,7 +158,7 @@ class ViewModelTest {
             StrongNumberEntity("H1697", "דָּבָר", "dabar", null, "noun", "word", null, 0, "Hebrew")
         )
 
-        val vm = StrongViewModel(dao)
+        val vm = StrongViewModel(dao, mockk())
 
         // Before search: not searching
         assertFalse(vm.isSearching.value)
@@ -178,14 +180,14 @@ class ViewModelTest {
             "a word, speech, divine utterance", "from G3004", 330, "Greek"
         )
         val links = listOf(
-            VerseStrongLinkEntity(1001001L, "G3056", 0, "Λόγος", "Logos"),
-            VerseStrongLinkEntity(1001001L, "G3056", 5, "λόγον", "logon")
+            VerseLinkWithReference(1001001L, "G3056", 0, "Λόγος", "Logos", "kjv", 1, 1, 1, "In the beginning was the Word", "Gen"),
+            VerseLinkWithReference(1001001L, "G3056", 5, "λόγον", "logon", "kjv", 1, 1, 1, "and the Word was with God", "Gen")
         )
 
         coEvery { dao.getStrongNumber("G3056") } returns entity
-        coEvery { dao.getVersesForStrongNumber("G3056") } returns links
+        coEvery { dao.getVerseLinksWithReference("G3056") } returns links
 
-        val vm = StrongViewModel(dao)
+        val vm = StrongViewModel(dao, mockk())
         vm.loadDetail("G3056")
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -200,7 +202,7 @@ class ViewModelTest {
         val dao = mockk<StrongDao>()
         coEvery { dao.getStrongNumber("G9999") } returns null
 
-        val vm = StrongViewModel(dao)
+        val vm = StrongViewModel(dao, mockk())
         vm.loadDetail("G9999")
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -225,7 +227,7 @@ class ViewModelTest {
         coEvery { dao.getStrongNumbersForVerse(verseId) } returns strongNumbers
         coEvery { dao.getLinksForVerse(verseId) } returns links
 
-        val vm = StrongViewModel(dao)
+        val vm = StrongViewModel(dao, mockk())
         vm.loadWordsForVerse(verseId)
         testDispatcher.scheduler.advanceUntilIdle()
 
@@ -239,7 +241,7 @@ class ViewModelTest {
     @Test
     fun `StrongViewModel clearVerseWords resets state`() {
         val dao = mockk<StrongDao>()
-        val vm = StrongViewModel(dao)
+        val vm = StrongViewModel(dao, mockk())
 
         // Populate
         coEvery { dao.getStrongNumbersForVerse(any()) } returns emptyList()
@@ -258,7 +260,7 @@ class ViewModelTest {
         coEvery { dao.getStrongNumbersForVerse(any()) } returns emptyList()
         coEvery { dao.getLinksForVerse(any()) } returns emptyList()
 
-        val vm = StrongViewModel(dao)
+        val vm = StrongViewModel(dao, mockk())
         vm.loadWordsForVerse(99999L)
         testDispatcher.scheduler.advanceUntilIdle()
 

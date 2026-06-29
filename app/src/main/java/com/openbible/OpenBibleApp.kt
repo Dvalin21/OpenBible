@@ -1,10 +1,12 @@
 package com.openbible
 
 import android.app.Application
+import com.openbible.data.ReadingPlanSeeder
 import com.openbible.data.db.OpenBibleDatabase
-import com.openbible.data.preferences.UserPreferences
 import com.openbible.data.locations.LocationImporter
+import com.openbible.data.preferences.UserPreferences
 import com.openbible.data.strongs.StrongImporter
+import com.openbible.data.translation.TranslationImporter
 import com.openbible.notification.DailyVerseReceiver
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
@@ -33,6 +35,9 @@ class OpenBibleApp : Application() {
     @Inject
     lateinit var locationImporter: LocationImporter
 
+    @Inject
+    lateinit var translationImporter: TranslationImporter
+
     override fun onCreate() {
         super.onCreate()
         DailyVerseReceiver.createNotificationChannel(this)
@@ -42,6 +47,8 @@ class OpenBibleApp : Application() {
         CoroutineScope(Dispatchers.IO).launch {
             strongImporter.importIfNeeded()
             locationImporter.importIfNeeded()
+            translationImporter.importMissing(database.openHelper.writableDatabase)
+            ReadingPlanSeeder.ensureSeeded(database.readingPlanDao(), database.bibleDao())
         }
     }
 }

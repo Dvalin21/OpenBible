@@ -1,6 +1,5 @@
 package com.openbible.ui.notes
 
-import android.view.MotionEvent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +18,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.input.pointer.changedToDown
 import androidx.compose.ui.input.pointer.changedToUp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import org.json.JSONArray
 import org.json.JSONObject
@@ -34,23 +34,41 @@ data class InkStroke(
     val isEraser: Boolean = false
 ) {
     /** Serialize to JSON for persistence. */
-    fun toJson(): JSONObject = JSONObject().apply {
+    fun toJson(canvasWidth: Float, canvasHeight: Float): JSONObject = JSONObject().apply {
         put("color", color)
         put("width", width.toDouble())
         put("eraser", isEraser)
+        val hasSize = canvasWidth > 0f && canvasHeight > 0f
+        if (hasSize) {
+            put("cw", canvasWidth.toDouble())
+            put("ch", canvasHeight.toDouble())
+        }
         val pts = JSONArray()
-        points.forEach { pts.put(JSONArray().apply { put(it.x.toDouble()); put(it.y.toDouble()) }) }
+        points.forEach { pts.put(JSONArray().apply {
+            if (hasSize) {
+                put((it.x / canvasWidth).toDouble())
+                put((it.y / canvasHeight).toDouble())
+            } else {
+                put(it.x.toDouble())
+                put(it.y.toDouble())
+            }
+        }) }
         put("points", pts)
     }
 
     companion object {
-        /** Deserialize from JSON. */
+        /** Deserialize from JSON. Denormalizes if canvas dimensions are embedded. */
         fun fromJson(obj: JSONObject): InkStroke {
+            val cw = obj.optDouble("cw", 0.0)
+            val ch = obj.optDouble("ch", 0.0)
+            val hasCanvasSize = cw > 0.0 && ch > 0.0
             val pts = mutableListOf<Offset>()
             val arr = obj.getJSONArray("points")
             for (i in 0 until arr.length()) {
                 val p = arr.getJSONArray(i)
-                pts.add(Offset(p.getDouble(0).toFloat(), p.getDouble(1).toFloat()))
+                val x = p.getDouble(0).toFloat()
+                val y = p.getDouble(1).toFloat()
+                pts.add(if (hasCanvasSize) Offset(x * cw.toFloat(), y * ch.toFloat()) else Offset(x, y))
             }
             return InkStroke(
                 points = pts,
@@ -63,9 +81,9 @@ data class InkStroke(
 }
 
 /** Serialize a list of strokes to a JSON string for storage. */
-fun strokesToJson(strokes: List<InkStroke>): String {
+fun strokesToJson(strokes: List<InkStroke>, canvasWidth: Float = 0f, canvasHeight: Float = 0f): String {
     val arr = JSONArray()
-    strokes.forEach { arr.put(it.toJson()) }
+    strokes.forEach { arr.put(it.toJson(canvasWidth, canvasHeight)) }
     return arr.toString()
 }
 
@@ -87,7 +105,7 @@ fun strokesFromJson(json: String?): List<InkStroke> {
 @Composable
 fun DrawingCanvas(
     strokes: List<InkStroke>,
-    onStrokesChanged: (List<InkStroke>) -> Unit,
+    onStrokesChanged: (strokes: List<InkStroke>, canvasWidth: Float, canvasHeight: Float) -> Unit,
     penSize: Float,
     penColor: Long,
     isEraser: Boolean,
@@ -98,6 +116,7 @@ fun DrawingCanvas(
     var currentColor by remember { mutableStateOf(penColor) }
     var currentWidth by remember { mutableStateOf(penSize) }
     var currentEraser by remember { mutableStateOf(isEraser) }
+    var canvasSize by remember { mutableStateOf(IntSize.Zero) }
 
     // Sync pen settings when they change externally
     LaunchedEffect(penSize) { currentWidth = penSize }
@@ -112,8 +131,13 @@ fun DrawingCanvas(
             .background(Color.White)
             .pointerInput(penSize, penColor, isEraser) {
                 awaitPointerEventScope {
+                    // Capture initial canvas size; pointer events are in local coords
+                    canvasSize = size
                     while (true) {
                         val event = awaitPointerEvent()
+
+                        // ponytail: update size each frame in case of orientation change
+                        canvasSize = size
 
                         // Filter for touch/stylus only
                         val touch = event.changes.firstOrNull()?.let { change ->
@@ -136,7 +160,7 @@ fun DrawingCanvas(
                                         width = currentWidth,
                                         isEraser = currentEraser
                                     )
-                                    onStrokesChanged(strokes + stroke)
+                                    onStrokesChanged(strokes + stroke, canvasSize.width.toFloat(), canvasSize.height.toFloat())
                                 }
                                 currentPoints = emptyList()
                             }

@@ -10,10 +10,12 @@ import com.openbible.data.db.dao.ReadingPlanDao
 import com.openbible.data.db.entity.ReadingPlanDayEntity
 import com.openbible.data.db.entity.ReadingPlanEntity
 import com.openbible.data.db.entity.ReadingProgressEntity
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.json.JSONArray
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * ViewModel for the reading plans screen.
@@ -28,6 +30,17 @@ class ReadingPlanViewModel(application: Application) : AndroidViewModel(applicat
     private val app = application as OpenBibleApp
     private val planDao: ReadingPlanDao = app.database.readingPlanDao()
     private val bibleDao: BibleDao = app.database.bibleDao()
+
+    /** Cache of bookId → book name, populated once from DB. */
+    private val bookNames = ConcurrentHashMap<Int, String>()
+
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            bibleDao.getBooks("kjv").first().forEach { book ->
+                bookNames[book.id] = book.name
+            }
+        }
+    }
 
     // ── Plan List ───────────────────────────────────────────────
 
@@ -105,15 +118,17 @@ class ReadingPlanViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    /** Parse readings JSON into a list of (bookId, chapter) pairs. */
+    /** Parse readings JSON into a list of reading items with resolved book names. */
     fun parseReadings(readingsJson: String): List<ReadingItem> {
         return try {
             val arr = JSONArray(readingsJson)
             (0 until arr.length()).map { i ->
                 val obj = arr.getJSONObject(i)
+                val bookId = obj.getInt("bookId")
                 ReadingItem(
-                    bookId = obj.getInt("bookId"),
-                    chapter = obj.getInt("chapter")
+                    bookId = bookId,
+                    chapter = obj.getInt("chapter"),
+                    bookName = bookNames[bookId] ?: "Book $bookId"
                 )
             }
         } catch (_: Exception) {
@@ -162,5 +177,6 @@ class ReadingPlanViewModel(application: Application) : AndroidViewModel(applicat
 /** A single reading item: read [chapter] of [bookId]. */
 data class ReadingItem(
     val bookId: Int,
-    val chapter: Int
+    val chapter: Int,
+    val bookName: String = "Book $bookId"
 )

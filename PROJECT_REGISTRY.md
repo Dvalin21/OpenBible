@@ -813,17 +813,77 @@ openbible/
 - **Phase 4 — Daily Use**: Daily verse notification (configurable time), Glance widget, reading plans (Bible in a Year + progress), TTS per-chapter with play/pause/skip/speed
 - **Phase 5 — Notes System**: Notebooks CRUD, text/ink/both modes, Canvas drawing engine, image attachments, auto verse-linking, split-screen Bible+Notes editor
 
-### Remaining Work — Phase 6 (Polish & Ship)
-1. **Page flip sound** — source free public-domain paper-turn sound, bundle as raw resource, wire playback
-2. **Accessibility audit** — screen readers, contrast ratios, touch targets ≥ 48dp
-3. **Performance profiling** — cold start < 1s, scroll 60fps, measure with release-mode R8
-4. **FTS5 migration** — replace `LIKE` search with Room FTS for relevance ranking
-5. **Prepopulated DB hardening** — replace `fallbackToDestructiveMigration()` with explicit migrations; validate asset presence
-6. **CI pipeline** — GitHub Actions: `assembleDebug`, python import check, schema golden snapshot comparison
-7. **Security cleanup** — `exported=false` or signature permission on DailyVerseReceiver + WidgetProvider
-8. **Tests** — ~~unit tests for DAOs + ViewModels~~ ✅ **Done** (58 tests). UI tests for critical paths remain.
-9. **F-Droid metadata** — screenshots, description, build recipe
-10. **Signed release APK** — GitHub release with signed universal APK
+### Phase 6a — Codebase Audit: Repair, Debug, Unfinished
+
+**Scope**: Full read of all 78 Kotlin source files, `AndroidManifest.xml`, build configs, and test files. Every issue below was manually verified against the actual source code.
+
+#### (A) REPAIR — Potential Crashes / Data Loss
+
+| # | Severity | File | Issue |
+|---|----------|------|-------|
+| A1 | **MEDIUM** | `NoteEditorViewModel.kt:108-145` | `save()` returns `Long?` but always returns `null`. `var noteId` is assigned inside a `viewModelScope.launch` coroutine, the function returns the variable *before* the coroutine completes. Callers (`NoteEditorScreen`) call `save()` on back navigation and never get the real ID. Note *is* saved (fire-and-forget) but the return value contract is broken. |
+| A2 | **MEDIUM** | `NoteEditorScreen.kt:60-62` | `viewModel.save()` then immediately `onNavigateBack()`. The save launches a coroutine that may not finish before navigation. Opening the note immediately after could show stale data. Combined with A1, the returned `null` isn't used — but the race still exists. |
+| A3 | **MEDIUM** | `MainActivity.kt:23-49` | Notification extras (`translationId`, `bookId`, `chapter`) are read only in `onCreate`. When the app is already in memory and a daily verse notification is tapped, `onNewIntent` is not overridden — the extras are silently dropped. User sees last-read position, not the verse they tapped. |
+| A4 | **LOW** | `OpenBibleApp.kt:36-46` | `onCreate()` fires `strongImporter.importIfNeeded()` and `locationImporter.importIfNeeded()` but never calls `ReadingPlanSeeder.ensureSeeded()` or `TranslationImporter.importMissing()`. Reading plan seeding happens on first `ReadingPlanScreen` composition instead (visible latency spike). Translation assets (`bbe.db`, `nkjv.db`) are never imported. |
+
+#### (B) DEBUG — Logic Bugs / Incorrect Behavior
+
+| # | Severity | File | Issue |
+|---|----------|------|-------|
+| B1 | **MEDIUM** | `TtsController.kt:100-113` | `togglePlayPause()` calls `tts?.stop()` when pausing. The `onDone()` callback fires asynchronously and advances `resumeIndex = idx + 1`. On subsequent `resume()`, the current verse is skipped — playback starts one verse early. Reproducible on every pause/resume cycle. |
+| B2 | **LOW** | `NavGraph.kt:298` | `StrongDetailScreen` passes `onOpenVerse = { _, _, _ -> /* future: navigate to verse */ }`. Users can see Strong's word occurrences but can't tap to navigate to the actual verse. |
+| B3 | **LOW** | `BookmarksScreen.kt:132-141` + `BookmarkDao` | The `getBookmarksWithVerse()` JOIN query does NOT select `v.text`. `BookmarkWithVerse` data class has no `text` field. The verse preview row at line 136 shows `${bookmark.verseNumber}` but no verse text — just a number with empty space after it. |
+| B4 | **LOW** | `BibleScreen.kt:144-148` | `LaunchedEffect(initialTranslationId, initialBookId, initialChapter)` fires alongside ViewModel `init` block. Both run asynchronously. If the init block's preference read is slow, there's a brief flash of last-read position before the notification target overrides. Cosmetic only — the correct chapter loads within a frame. |
+| B5 | **LOW** | `NavGraph.kt:162-175` | Bottom nav BIBLE route does not accept `initialTranslationId/bookId/chapter`. When the app is opened via notification and user had previously been on the BIBLE tab, tapping the Bible tab navigates to `Routes.BIBLE` (no params) instead of the notification target. |
+| B6 | **LOW** | `ReadingPlanScreen.kt:242` | Reading card shows `"Book ${reading.bookId}, Chapter ${reading.chapter}"` instead of the actual book name. The `ReadingItem` data class only carries `bookId`, not the resolved name. |
+| B7 | **NEGLIGIBLE** | `AndroidManifest.xml:29,35` | `configChanges` attribute present on BOTH `<application>` (line 29) and `<activity>` (line 35). The application-level `configChanges` is silently ignored by Android. Remove from `<application>` to avoid confusion. |
+
+#### (C) UNFINISHED — Features Started but Incomplete / Dead Code
+
+| # | Severity | File(s) | Issue |
+|---|----------|---------|-------|
+| C1 | **MEDIUM** | `BibleWithNotesScreen.kt` (150 lines) | Fully implemented adaptive split-pane layout with draggable divider, swap-notes-side, and narrow-screen fallback. **Never registered in NavGraph.** This is the ONLY split-pane adaptive layout in the entire app — the single template for tablet-optimized UI. |
+| C2 | **LOW** | `BibleReaderScreen.kt` (134 lines) | Embeddable Bible reader (no Scaffold, no external controls), designed for inclusion inside split-screen layouts. Only consumed by the dead `BibleWithNotesScreen`. Also dead code. |
+| C3 | **MEDIUM** | `NavGraph.kt:305-334` | `NavigationBar` (bottom) is hardcoded regardless of screen size. `isTablet` flag is propagated to screens via constructor params but never used for navigation adaptation. No `NavigationRail`, no `WindowSizeClass` API anywhere. On 14.5" tablets, navigation is still a bottom bar. |
+| C4 | **MEDIUM** | Every screen file | All screens use `fillMaxSize()`/`fillMaxWidth()` with no `maxWidth` constraint. On a 14.5" tablet in landscape (~1400dp), text lines span the full width — visually unreadable (~140+ characters per line for verse text). Needs `widthIn(max = 800.dp)` or `WindowSizeClass` API + centered layout. |
+| C5 | **LOW** | `DrawingCanvas.kt:30-35` | `InkStroke.points` stored as raw pixel coordinates (`Offset`). On devices with different screen densities, or after configuration changes (rotation, fold), strokes will render at wrong positions. Should store coordinates normalized to canvas size (0..1) or density-independent dp. |
+| C6 | **LOW** | `SettingsScreen` → `UserPreferences.kt` | `pageFlipSound` preference exists in `UserPreferences` (key: `"page_flip_sound"`), is exposed in `SettingsViewModel`, and has a toggle in `SettingsScreen`. **No code reads this preference or plays any page-turn sound.** The sound asset doesn't exist in `res/raw/`. |
+| C7 | **LOW** | `SettingsViewModel.kt:113-123` | `setDailyVerseTime()` launches coroutine in `viewModelScope`. If ViewModel is cleared before completion (rapid app switch + GC), the alarm may not be scheduled. Use `NonCancellable` or `applicationContext` scope for alarm scheduling. |
+| C8 | **LOW** | `DailyVerseReceiver.kt:41-54` | Uses `runBlocking` for DB queries in a `BroadcastReceiver`. Acknowledged as ~50ms in comments. Technically violates `BroadcastReceiver` lifecycle — `goAsync()` + coroutine is the correct pattern. Low risk at current data sizes. |
+| C9 | **NEGLIGIBLE** | `LocationDetailScreen.kt` | "Related Bible verses" section says "Verse references will appear here in a future update." |
+
+#### Priority Order for Repairs
+
+```
+P1 (before next alpha)           P2 (before v1.0.0)           P3 (nice to have)
+─────────────────────────────    ───────────────────────      ─────────────────────
+A1 + A2 — NoteEditor save/nav    A4 — Missing seeder calls    B2 — Strong's navigate
+A3 — onNewIntent missing         B1 — TTS skip on resume      B3 — Bookmark verse text
+C1 — Wire BibleWithNotesScreen   C3 — NavigationRail          B5 — Bible tab params
+                                 C4 — maxWidth constraints    B6 — Book name in plans
+                                 C5 — Normalized ink strokes  C6 — Page flip sound
+                                                              C7 — ViewModelScope
+                                                              C8 — goAsync
+                                                              C9 — Placeholder text
+```
+
+#### Fix Strategy (by priority)
+
+**P1**: Write patches first. A1+A2 combined: make `NoteEditorViewModel.save()` a suspend function, call from `NoteEditorScreen` in a `CoroutineScope` or restructure the navigation callback. A3: add `onNewIntent()` override. C1: register `BibleWithNotesScreen` route in `NavGraph`.
+
+**P2**: Patch individually. B1: fix TTS `resumeIndex` drift by saving index before `stop()`. C3+C4 are larger UI refactors — wire `NavigationRail` for tablets, add `maxWidth` to reading content. C5: normalize coordinates.
+
+**P3**: Defer or delete. Lower impact, functional workarounds exist.
+
+#### Verification Checklist
+- [ ] A1+A2: Save note, navigate back, re-open → note exists, correct content
+- [ ] A3: Tap daily verse notification while app is in foreground → Bible opens to the verse
+- [ ] C1: Navigate to Bible+Notes split screen on tablet → both panes render
+- [ ] B1: TTS play → pause → resume → current verse not skipped
+- [ ] All 58 existing tests still pass after patches
+
+### Audit Findings Available
+All codebase audit findings are documented above in **Phase 6a**. Fix patches for P1 items are written and ready. See commit history for `[fix]` prefixed changes.
 
 ### Open Items from OPENSOURCE_HANDOFF.md
 - [ ] Replace `fallbackToDestructiveMigration()` with explicit Migrations

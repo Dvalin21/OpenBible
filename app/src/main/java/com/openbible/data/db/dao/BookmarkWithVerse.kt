@@ -17,7 +17,8 @@ data class BookmarkWithVerse(
     val chapter: Int,
     val verseNumber: Int,
     val bookName: String,
-    val bookAbbreviation: String
+    val bookAbbreviation: String,
+    val text: String
 ) {
     /** Formatted citation like "John 3:16". */
     val citation: String get() = "$bookAbbreviation $chapter:$verseNumber"

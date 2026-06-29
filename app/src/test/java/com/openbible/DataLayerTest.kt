@@ -168,7 +168,7 @@ class DataLayerTest {
     @Test
     fun `InkStroke JSON roundtrip empty stroke`() {
         val original = InkStroke(points = emptyList(), color = 0xFF000000, width = 2f, isEraser = false)
-        val json = original.toJson()
+        val json = original.toJson(canvasWidth = 1000f, canvasHeight = 2000f)
         val restored = InkStroke.fromJson(json)
 
         assertEquals(original.color, restored.color)
@@ -189,7 +189,7 @@ class DataLayerTest {
             width = 3.5f,
             isEraser = true
         )
-        val json = original.toJson()
+        val json = original.toJson(canvasWidth = 1000f, canvasHeight = 2000f)
         val restored = InkStroke.fromJson(json)
 
         assertEquals(0xFFFF0000, restored.color)

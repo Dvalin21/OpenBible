@@ -48,8 +48,8 @@ interface BookmarkDao {
      * Joins bookmarks → verses → books for display in the bookmarks list.
      */
     @Query("""
-        SELECT b.id, b.verseId, b.label, b.createdAt, b.tags,
-               v.translationId, v.bookId, v.chapter, v.verse AS verseNumber,
+         SELECT b.id, b.verseId, b.label, b.createdAt, b.tags,
+               v.translationId, v.bookId, v.chapter, v.verse AS verseNumber, v.text,
                bk.name AS bookName, bk.abbreviation AS bookAbbreviation
         FROM bookmarks b
         JOIN verses v ON b.verseId = v.id

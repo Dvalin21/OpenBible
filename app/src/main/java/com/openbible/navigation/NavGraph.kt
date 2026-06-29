@@ -35,6 +35,7 @@ import androidx.navigation.navArgument
 import com.openbible.ui.bible.BibleScreen
 import com.openbible.ui.bookmarks.BookmarksScreen
 import com.openbible.ui.home.HomeScreen
+import com.openbible.ui.notes.BibleWithNotesScreen
 import com.openbible.ui.notes.NoteEditorScreen
 import com.openbible.ui.notes.NotebookListScreen
 import com.openbible.ui.readingplan.ReadingPlanScreen
@@ -58,6 +59,7 @@ object Routes {
     const val NOTES = "notebooks"
     const val NOTE_EDITOR = "note_editor?noteId={noteId}&translationId={translationId}&bookId={bookId}&chapter={chapter}&verseNumber={verseNumber}"
     const val READING_PLANS = "reading_plans"
+    const val BIBLE_WITH_NOTES = "bible_with_notes?translationId={translationId}&bookId={bookId}&chapter={chapter}&noteId={noteId}"
     const val STRONG_SEARCH = "strongs"
     const val STRONG_DETAIL = "strongs/{strongNumber}"
     const val LOCATIONS = "locations"
@@ -84,6 +86,17 @@ object Routes {
 
     fun strongDetail(strongNumber: String) = "strongs/$strongNumber"
     fun locationDetail(locationId: String) = "locations/$locationId"
+
+    fun bibleWithNotes(
+        translationId: String = "kjv",
+        bookId: Int = 1,
+        chapter: Int = 1,
+        noteId: Long? = null
+    ): String {
+        val params = mutableListOf("translationId=$translationId", "bookId=$bookId", "chapter=$chapter")
+        noteId?.let { params.add("noteId=$it") }
+        return "bible_with_notes?${params.joinToString("&")}"
+    }
 }
 
 /**
@@ -111,6 +124,7 @@ val bottomNavItems = listOf(
  * @param initialTranslationId Optional — navigate directly to a chapter on first render
  * @param initialBookId Optional — navigate directly to a chapter on first render
  * @param initialChapter Optional — navigate directly to a chapter on first render
+ * @param onNotificationConsumed Called after navigating from a notification (clears the pending nav state)
  */
 @Composable
 fun OpenBibleNavGraph(
@@ -118,19 +132,19 @@ fun OpenBibleNavGraph(
     initialTranslationId: String? = null,
     initialBookId: Int? = null,
     initialChapter: Int? = null,
+    onNotificationConsumed: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val navController = rememberNavController()
 
-    // Navigate to chapter if launched from a notification
-    val hasInitialNav = androidx.compose.runtime.remember {
-        initialTranslationId != null && initialBookId != null && initialChapter != null
-    }
-    if (hasInitialNav && initialTranslationId != null && initialBookId != null && initialChapter != null) {
-        androidx.compose.runtime.LaunchedEffect(Unit) {
+    // Navigate to chapter if launched from a notification or onNewIntent
+    val hasInitialNav = initialTranslationId != null && initialBookId != null && initialChapter != null
+    if (hasInitialNav) {
+        androidx.compose.runtime.LaunchedEffect(initialTranslationId, initialBookId, initialChapter) {
             navController.navigate(
-                Routes.bibleChapter(initialTranslationId, initialBookId, initialChapter)
+                Routes.bibleChapter(initialTranslationId!!, initialBookId!!, initialChapter!!)
             )
+            onNotificationConsumed()
         }
     }
 
@@ -250,6 +264,29 @@ fun OpenBibleNavGraph(
                 )
             }
 
+            composable(
+                route = Routes.BIBLE_WITH_NOTES,
+                arguments = listOf(
+                    navArgument("translationId") { type = NavType.StringType; defaultValue = "kjv" },
+                    navArgument("bookId") { type = NavType.IntType; defaultValue = 1 },
+                    navArgument("chapter") { type = NavType.IntType; defaultValue = 1 },
+                    navArgument("noteId") { type = NavType.LongType; defaultValue = -1L }
+                )
+            ) { backStackEntry ->
+                val translationId = backStackEntry.arguments?.getString("translationId") ?: "kjv"
+                val bookId = backStackEntry.arguments?.getInt("bookId") ?: 1
+                val chapter = backStackEntry.arguments?.getInt("chapter") ?: 1
+                val noteId = backStackEntry.arguments?.getLong("noteId").takeIf { it != -1L }
+
+                BibleWithNotesScreen(
+                    initialTranslationId = translationId,
+                    initialBookId = bookId,
+                    initialChapter = chapter,
+                    noteId = noteId,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
             composable(Routes.READING_PLANS) {
                 ReadingPlanScreen(
                     onOpenChapter = { translationId, bookId, chapter ->
@@ -295,7 +332,9 @@ fun OpenBibleNavGraph(
                 StrongDetailScreen(
                     strongNumber = strongNumber,
                     onNavigateBack = { navController.popBackStack() },
-                    onOpenVerse = { _, _, _ -> /* future: navigate to verse */ }
+                    onOpenVerse = { translationId, bookId, chapter ->
+                        navController.navigate(Routes.bibleChapter(translationId, bookId, chapter))
+                    }
                 )
             }
         }
