@@ -63,6 +63,7 @@ import com.openbible.tts.TtsController
 import com.openbible.tts.TtsState
 import com.openbible.ui.theme.*
 import com.openbible.data.model.HighlightColor
+import com.openbible.data.model.RedLetterData
 import com.openbible.ui.strongs.StrongVerseBottomSheet
 import kotlin.math.abs
 import kotlin.math.min
@@ -129,6 +130,9 @@ fun BibleScreen(
 
     // Retro is enabled only when device is a tablet AND user hasn't disabled it
     val retroEffective = retroConfig.enabled && retroEnabledPref
+
+    // Canonical book number (1=Gen…40=Mat…66=Rev) for red-letter support
+    val bookNumber = currentBook?.number ?: 1
 
     // ── Page flip sound (SoundPool) ────────────────────────────────
     val soundPool = remember {
@@ -357,6 +361,8 @@ fun BibleScreen(
                         if (retroEffective) {
                             RetroBibleContent(
                                 verses = verses,
+                                bookNumber = bookNumber,
+                                chapter = selectedChapter,
                                 fontSizeNumbers = fontSizeVerseNumbers,
                                 fontSizeText = fontSizeVerseText,
                                 lineSpacing = lineSpacing,
@@ -374,6 +380,8 @@ fun BibleScreen(
                         } else {
                             StandardBibleContent(
                                 verses = verses,
+                                bookNumber = bookNumber,
+                                chapter = selectedChapter,
                                 fontSizeNumbers = fontSizeVerseNumbers,
                                 fontSizeText = fontSizeVerseText,
                                 lineSpacing = lineSpacing,
@@ -434,6 +442,8 @@ fun BibleScreen(
                         if (retroEffective) {
                             RetroBibleContent(
                                 verses = verses,
+                                bookNumber = bookNumber,
+                                chapter = selectedChapter,
                                 fontSizeNumbers = fontSizeVerseNumbers,
                                 fontSizeText = fontSizeVerseText,
                                 lineSpacing = lineSpacing,
@@ -450,6 +460,8 @@ fun BibleScreen(
                         } else {
                             StandardBibleContent(
                                 verses = verses,
+                                bookNumber = bookNumber,
+                                chapter = selectedChapter,
                                 fontSizeNumbers = fontSizeVerseNumbers,
                                 fontSizeText = fontSizeVerseText,
                                 lineSpacing = lineSpacing,
@@ -470,6 +482,8 @@ fun BibleScreen(
                 if (retroEffective) {
                     RetroBibleContent(
                         verses = verses,
+                        bookNumber = bookNumber,
+                        chapter = selectedChapter,
                         fontSizeNumbers = fontSizeVerseNumbers,
                         fontSizeText = fontSizeVerseText,
                         lineSpacing = lineSpacing,
@@ -485,6 +499,8 @@ fun BibleScreen(
                 } else {
                     StandardBibleContent(
                         verses = verses,
+                        bookNumber = bookNumber,
+                        chapter = selectedChapter,
                         fontSizeNumbers = fontSizeVerseNumbers,
                         fontSizeText = fontSizeVerseText,
                         lineSpacing = lineSpacing,
@@ -576,6 +592,8 @@ fun BibleScreen(
 @Composable
 private fun StandardBibleContent(
     verses: List<VerseEntity>,
+    bookNumber: Int,
+    chapter: Int,
     fontSizeNumbers: Float,
     fontSizeText: Float,
     lineSpacing: Float,
@@ -602,9 +620,11 @@ private fun StandardBibleContent(
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         items(verses.withIndex().toList(), key = { it.value.id }) { (index, verse) ->
+            val redLetter = RedLetterData.isRedLetter(bookNumber, chapter, verse.verse)
             VerseLine(
                 verseNumber = verse.verse,
                 text = verse.text,
+                isRedLetter = redLetter,
                 isRetro = false,
                 fontSizeNumber = fontSizeNumbers,
                 fontSizeText = fontSizeText,
@@ -633,6 +653,8 @@ private fun StandardBibleContent(
 @Composable
 private fun RetroBibleContent(
     verses: List<VerseEntity>,
+    bookNumber: Int,
+    chapter: Int,
     fontSizeNumbers: Float,
     fontSizeText: Float,
     lineSpacing: Float,
@@ -760,9 +782,11 @@ private fun RetroBibleContent(
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             items(verses.withIndex().toList(), key = { it.value.id }) { (index, verse) ->
+                val redLetter = RedLetterData.isRedLetter(bookNumber, chapter, verse.verse)
                 VerseLine(
                     verseNumber = verse.verse,
                     text = verse.text,
+                    isRedLetter = redLetter,
                     isRetro = true,
                     fontSizeNumber = fontSizeNumbers,
                     fontSizeText = fontSizeText,
@@ -867,6 +891,7 @@ private fun VerseLine(
     isExpanded: Boolean = false,
     isSpeaking: Boolean = false,
     wordRange: IntRange? = null,
+    isRedLetter: Boolean = false,
     onToggleRefs: () -> Unit = {},
     onBookmarkToggle: () -> Unit = {},
     onHighlightToggle: (HighlightColor) -> Unit = {},
@@ -887,6 +912,11 @@ private fun VerseLine(
             HighlightColor.ORANGE -> com.openbible.ui.theme.HighlightColors.Orange
         }
     }
+
+    // ponytail: isDark via system theme. Follows app theme toggle.
+    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val verseColor = if (isRedLetter) Color(RedLetterData.redLetterColor(isDark))
+                     else MaterialTheme.colorScheme.onBackground
 
     val annotatedString = buildAnnotatedString {
         // Bookmark indicator
@@ -919,14 +949,14 @@ private fun VerseLine(
         val baseTextStyle = SpanStyle(
             fontFamily = if (isRetro) pixelFont else FontFamily.Serif,
             fontSize = fontSizeText.sp,
-            color = MaterialTheme.colorScheme.onBackground,
+            color = verseColor,
             background = highlightBg ?: Color.Transparent
         )
 
         val wordGlowStyle = SpanStyle(
             fontFamily = if (isRetro) pixelFont else FontFamily.Serif,
             fontSize = fontSizeText.sp,
-            color = MaterialTheme.colorScheme.onBackground,
+            color = verseColor,
             background = com.openbible.ui.theme.RetroGold.copy(alpha = 0.45f)
         )
 

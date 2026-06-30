@@ -69,6 +69,7 @@ fun BibleWithNotesScreen(
                 BibleReaderScreen(
                     verses = verses,
                     bookName = currentBook?.name ?: "Bible",
+                    bookNumber = currentBook?.number ?: 1,
                     chapter = selectedChapter,
                     translationLabel = selectedTranslationId.uppercase(),
                     crossReferenceMap = crossReferenceMap
@@ -97,6 +98,7 @@ fun BibleWithNotesScreen(
                 BibleReaderScreen(
                     verses = verses,
                     bookName = currentBook?.name ?: "Bible",
+                    bookNumber = currentBook?.number ?: 1,
                     chapter = selectedChapter,
                     translationLabel = selectedTranslationId.uppercase(),
                     crossReferenceMap = crossReferenceMap

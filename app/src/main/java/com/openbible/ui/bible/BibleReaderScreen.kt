@@ -10,12 +10,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.openbible.data.db.dao.CrossReferenceDisplay
 import com.openbible.data.db.entity.VerseEntity
+import com.openbible.data.model.RedLetterData
 
 /**
  * Minimal embeddable Bible reader — no Scaffold, no external controls.
@@ -25,6 +27,7 @@ import com.openbible.data.db.entity.VerseEntity
 fun BibleReaderScreen(
     verses: List<VerseEntity>,
     bookName: String,
+    bookNumber: Int,
     chapter: Int,
     translationLabel: String,
     crossReferenceMap: Map<Long, List<CrossReferenceDisplay>> = emptyMap(),
@@ -56,9 +59,11 @@ fun BibleReaderScreen(
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     items(verses, key = { it.id }) { verse ->
+                        val redLetter = RedLetterData.isRedLetter(bookNumber, chapter, verse.verse)
                         VerseLine(
                             verseNumber = verse.verse,
                             text = verse.text,
+                            isRedLetter = redLetter,
                             isRetro = false,
                             verseId = verse.id,
                             crossRefs = crossReferenceMap[verse.id] ?: emptyList(),
@@ -83,16 +88,21 @@ private fun VerseLine(
     text: String,
     isRetro: Boolean,
     verseId: Long = 0L,
+    isRedLetter: Boolean = false,
     crossRefs: List<CrossReferenceDisplay> = emptyList(),
     isExpanded: Boolean = false,
     onToggleRefs: () -> Unit = {}
 ) {
+    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val verseColor = if (isRedLetter) Color(RedLetterData.redLetterColor(isDark))
+                     else MaterialTheme.colorScheme.onSurface
     Column {
         Text(
             text = "$verseNumber $text",
             style = MaterialTheme.typography.bodyMedium,
             fontFamily = FontFamily.Serif,
             fontWeight = FontWeight.Normal,
+            color = verseColor,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 1.dp)
