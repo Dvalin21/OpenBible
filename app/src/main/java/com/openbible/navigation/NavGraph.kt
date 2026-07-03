@@ -50,6 +50,7 @@ import com.openbible.ui.search.SearchScreen
 import com.openbible.ui.settings.SettingsScreen
 import com.openbible.ui.locations.LocationDetailScreen
 import com.openbible.ui.locations.LocationListScreen
+import com.openbible.ui.locations.LocationMapScreen
 import com.openbible.ui.strongs.StrongDetailScreen
 import com.openbible.ui.strongs.StrongSearchScreen
 
@@ -70,6 +71,7 @@ object Routes {
     const val STRONG_SEARCH = "strongs"
     const val STRONG_DETAIL = "strongs/{strongNumber}"
     const val LOCATIONS = "locations"
+    const val LOCATION_MAP = "location_map"
     const val LOCATION_DETAIL = "locations/{locationId}"
 
     fun bibleChapter(translationId: String, bookId: Int, chapter: Int) =
@@ -344,6 +346,16 @@ private fun NavContent(
             LocationListScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onLocationSelected = { locationId ->
+                    navController.navigate(Routes.locationDetail(locationId))
+                },
+                onOpenMap = { navController.navigate(Routes.LOCATION_MAP) }
+            )
+        }
+
+        composable(Routes.LOCATION_MAP) {
+            LocationMapScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onLocationClick = { locationId ->
                     navController.navigate(Routes.locationDetail(locationId))
                 }
             )

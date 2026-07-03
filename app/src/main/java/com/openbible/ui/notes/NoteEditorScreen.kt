@@ -30,12 +30,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.openbible.data.model.PenMode
 import kotlinx.coroutines.launch
 
-/** Pen color presets matching common stylus colors. */
-private val PEN_COLORS = listOf(
-    0xFF000000, 0xFF1A237E, 0xFFB71C1C, 0xFF2E7D32,
-    0xFFE65100, 0xFF6A1B9A, 0xFF00838F, 0xFF37474F
-)
-
 /** Full note editor with text input, drawing canvas, and pen controls. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,6 +46,7 @@ fun NoteEditorScreen(
     }
 
     var showPenControls by remember { mutableStateOf(false) }
+    var showColorPicker by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     Scaffold(
@@ -153,10 +148,21 @@ fun NoteEditorScreen(
                     penSize = state.penSize,
                     penColor = state.penColor,
                     isEraser = state.isEraser,
+                    showColorPicker = showColorPicker,
                     onSizeChange = { viewModel.setPenSize(it) },
                     onColorChange = { viewModel.setPenColor(it) },
-                    onEraserToggle = { viewModel.toggleEraser() }
+                    onEraserToggle = { viewModel.toggleEraser() },
+                    onToggleColorPicker = { showColorPicker = !showColorPicker },
+                    onUndo = { viewModel.undo() },
+                    onRedo = { viewModel.redo() }
                 )
+                if (showColorPicker) {
+                    ColorPicker(
+                        currentColor = state.penColor,
+                        onColorChanged = { viewModel.setPenColor(it) },
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
@@ -241,9 +247,13 @@ private fun PenControls(
     penSize: Float,
     penColor: Long,
     isEraser: Boolean,
+    showColorPicker: Boolean = false,
     onSizeChange: (Float) -> Unit,
     onColorChange: (Long) -> Unit,
-    onEraserToggle: () -> Unit
+    onEraserToggle: () -> Unit,
+    onToggleColorPicker: () -> Unit = {},
+    onUndo: () -> Unit = {},
+    onRedo: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -263,23 +273,29 @@ private fun PenControls(
             Text("%.1f".format(penSize), style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(32.dp))
         }
 
-        // Color picker + eraser
+        // Color preview + undo/redo + eraser
         Row(verticalAlignment = Alignment.CenterVertically) {
-            PEN_COLORS.forEach { color ->
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .padding(2.dp)
-                        .clip(CircleShape)
-                        .background(Color(color))
-                        .border(
-                            width = if (color == penColor && !isEraser) 2.dp else 0.dp,
-                            color = MaterialTheme.colorScheme.primary,
-                            shape = CircleShape
-                        )
-                        .clickable { onColorChange(color) }
-                )
-                Spacer(modifier = Modifier.width(4.dp))
+            // Current color preview — tap to open full picker
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(if (isEraser) MaterialTheme.colorScheme.surfaceVariant else Color(penColor))
+                    .border(2.dp,
+                        if (showColorPicker) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.outline,
+                        CircleShape)
+                    .clickable { onToggleColorPicker() }
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            // Undo / Redo
+            @Suppress("DEPRECATION")
+            IconButton(onClick = onUndo, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Filled.Undo, contentDescription = "Undo", modifier = Modifier.size(18.dp))
+            }
+            @Suppress("DEPRECATION")
+            IconButton(onClick = onRedo, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Filled.Redo, contentDescription = "Redo", modifier = Modifier.size(18.dp))
             }
             Spacer(modifier = Modifier.weight(1f))
             IconButton(onClick = onEraserToggle) {

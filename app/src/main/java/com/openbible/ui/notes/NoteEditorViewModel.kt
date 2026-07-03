@@ -37,6 +37,10 @@ class NoteEditorViewModel @Inject constructor(
     private val _state = MutableStateFlow(NoteEditorState())
     val state: StateFlow<NoteEditorState> = _state.asStateFlow()
 
+    // ponytail: undo/redo as simple stacks of strokes JSON strings
+    private val undoStack = mutableListOf<String?>()
+    private val redoStack = mutableListOf<String?>()
+
     init {
         viewModelScope.launch {
             noteRepository.getAllNotebooks().collect { notebooks ->
@@ -88,7 +92,22 @@ class NoteEditorViewModel @Inject constructor(
     }
 
     fun setPenStrokes(strokes: String?) {
+        // Push previous state to undo before changing
+        undoStack.add(_state.value.penStrokes)
+        redoStack.clear()  // new action invalidates redo
         _state.update { it.copy(penStrokes = strokes) }
+    }
+
+    fun undo() {
+        if (undoStack.isEmpty()) return
+        redoStack.add(_state.value.penStrokes)
+        _state.update { it.copy(penStrokes = undoStack.removeLast()) }
+    }
+
+    fun redo() {
+        if (redoStack.isEmpty()) return
+        undoStack.add(_state.value.penStrokes)
+        _state.update { it.copy(penStrokes = redoStack.removeLast()) }
     }
 
     fun setActiveNotebook(notebookId: Long?) {

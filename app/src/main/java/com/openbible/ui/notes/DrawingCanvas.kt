@@ -80,6 +80,25 @@ data class InkStroke(
     }
 }
 
+/**
+ * Erase strokes that the eraser path intersects.
+ * Uses point-proximity detection (any eraser point within threshold of any stroke point).
+ * ponytail: O(n*m) scan. Spatial index if strokes > 200 and latency matters.
+ */
+private fun strokesErasedBy(
+    strokes: List<InkStroke>,
+    eraserPath: List<Offset>,
+    eraserWidth: Float
+): List<InkStroke> {
+    if (eraserPath.isEmpty()) return strokes
+    val threshold = (eraserWidth * 3f).coerceAtLeast(8f)
+    return strokes.filter { stroke ->
+        stroke.points.none { sp ->
+            eraserPath.any { ep -> (sp - ep).getDistance() <= threshold }
+        }
+    }
+}
+
 /** Serialize a list of strokes to a JSON string for storage. */
 fun strokesToJson(strokes: List<InkStroke>, canvasWidth: Float = 0f, canvasHeight: Float = 0f): String {
     val arr = JSONArray()
@@ -154,13 +173,19 @@ fun DrawingCanvas(
                             }
                             touch.changedToUp() -> {
                                 if (currentPoints.size > 1) {
-                                    val stroke = InkStroke(
-                                        points = currentPoints,
-                                        color = currentColor,
-                                        width = currentWidth,
-                                        isEraser = currentEraser
-                                    )
-                                    onStrokesChanged(strokes + stroke, canvasSize.width.toFloat(), canvasSize.height.toFloat())
+                                    if (currentEraser) {
+                                        // Eraser: remove intersecting strokes instead of adding
+                                        val remaining = strokesErasedBy(strokes, currentPoints, currentWidth)
+                                        onStrokesChanged(remaining, canvasSize.width.toFloat(), canvasSize.height.toFloat())
+                                    } else {
+                                        val stroke = InkStroke(
+                                            points = currentPoints,
+                                            color = currentColor,
+                                            width = currentWidth,
+                                            isEraser = false
+                                        )
+                                        onStrokesChanged(strokes + stroke, canvasSize.width.toFloat(), canvasSize.height.toFloat())
+                                    }
                                 }
                                 currentPoints = emptyList()
                             }
@@ -204,6 +229,7 @@ fun DrawingCanvas(
 
 /** Draw a single completed stroke onto the canvas. */
 private fun DrawScope.drawStroke(stroke: InkStroke) {
+    if (stroke.isEraser) return  // ponytail: skip legacy white-paint eraser strokes
     if (stroke.points.size < 2) return
     val path = Path().apply {
         moveTo(stroke.points[0].x, stroke.points[0].y)
@@ -211,10 +237,9 @@ private fun DrawScope.drawStroke(stroke: InkStroke) {
             lineTo(stroke.points[i].x, stroke.points[i].y)
         }
     }
-    val color = if (stroke.isEraser) Color.White else Color(stroke.color)
     drawPath(
         path = path,
-        color = color,
+        color = Color(stroke.color),
         style = Stroke(
             width = stroke.width,
             cap = StrokeCap.Round,

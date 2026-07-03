@@ -119,6 +119,9 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
 
+    // osmdroid — offline OpenStreetMap maps (LGPL)
+    implementation("org.osmdroid:osmdroid-android:6.1.20")
+
     // Testing
     testImplementation(libs.junit)
     testImplementation(libs.androidx.room.testing)
