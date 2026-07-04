@@ -48,6 +48,7 @@ import com.openbible.data.db.entity.VerseStrongLinkEntity
  * Version 3: added strong_numbers and verse_strong_links tables.
  * Version 4: added BBE and NKJV translation metadata entries.
  * Version 5: added locations and verse_location_links tables.
+ * Version 6: added FTS5 virtual tables for full-text search per translation.
  */
 @Database(
     entities = [
@@ -70,7 +71,7 @@ import com.openbible.data.db.entity.VerseStrongLinkEntity
         BibleLocationEntity::class,
         VerseLocationLinkEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -120,7 +121,7 @@ abstract class OpenBibleDatabase : RoomDatabase() {
             }
 
             // Explicit migrations — never destroy user data.
-            builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+            builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
 
             return builder.build()
         }
@@ -211,6 +212,162 @@ abstract class OpenBibleDatabase : RoomDatabase() {
         }
 
         /**
+         * Version 5 → 6: Added FTS5 virtual tables for full-text search per translation.
+         * These tables provide fast, ranked full-text search across verses.
+         * Safe to run multiple times (CREATE VIRTUAL TABLE IF NOT EXISTS).
+         */
+        private val MIGRATION_5_6 = Migration(5, 6) { db ->
+            db.execSQL("""
+                CREATE VIRTUAL TABLE IF NOT EXISTS verses_fts_kjv USING fts5(
+                    text,
+                    bookId UNINDEXED,
+                    chapter UNINDEXED,
+                    verse UNINDEXED,
+                    verseId UNINDEXED,
+                    content='verses',
+                    content_rowid='id',
+                    tokenize='porter unicode61'
+                )
+            """)
+            db.execSQL("""
+                CREATE VIRTUAL TABLE IF NOT EXISTS verses_fts_web USING fts5(
+                    text,
+                    bookId UNINDEXED,
+                    chapter UNINDEXED,
+                    verse UNINDEXED,
+                    verseId UNINDEXED,
+                    content='verses',
+                    content_rowid='id',
+                    tokenize='porter unicode61'
+                )
+            """)
+            db.execSQL("""
+                CREATE VIRTUAL TABLE IF NOT EXISTS verses_fts_asv USING fts5(
+                    text,
+                    bookId UNINDEXED,
+                    chapter UNINDEXED,
+                    verse UNINDEXED,
+                    verseId UNINDEXED,
+                    content='verses',
+                    content_rowid='id',
+                    tokenize='porter unicode61'
+                )
+            """)
+            db.execSQL("""
+                CREATE VIRTUAL TABLE IF NOT EXISTS verses_fts_ylt USING fts5(
+                    text,
+                    bookId UNINDEXED,
+                    chapter UNINDEXED,
+                    verse UNINDEXED,
+                    verseId UNINDEXED,
+                    content='verses',
+                    content_rowid='id',
+                    tokenize='porter unicode61'
+                )
+            """)
+            db.execSQL("""
+                CREATE VIRTUAL TABLE IF NOT EXISTS verses_fts_bbe USING fts5(
+                    text,
+                    bookId UNINDEXED,
+                    chapter UNINDEXED,
+                    verse UNINDEXED,
+                    verseId UNINDEXED,
+                    content='verses',
+                    content_rowid='id',
+                    tokenize='porter unicode61'
+                )
+            """)
+            db.execSQL("""
+                CREATE VIRTUAL TABLE IF NOT EXISTS verses_fts_nkjv USING fts5(
+                    text,
+                    bookId UNINDEXED,
+                    chapter UNINDEXED,
+                    verse UNINDEXED,
+                    verseId UNINDEXED,
+                    content='verses',
+                    content_rowid='id',
+                    tokenize='porter unicode61'
+                )
+            """)
+
+            // Triggers to keep FTS tables in sync with verses table
+            db.execSQL("""
+                CREATE TRIGGER IF NOT EXISTS verses_ai AFTER INSERT ON verses BEGIN
+                    INSERT INTO verses_fts_kjv(rowid, text, bookId, chapter, verse, verseId)
+                    SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'kjv';
+                    INSERT INTO verses_fts_web(rowid, text, bookId, chapter, verse, verseId)
+                    SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'web';
+                    INSERT INTO verses_fts_asv(rowid, text, bookId, chapter, verse, verseId)
+                    SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'asv';
+                    INSERT INTO verses_fts_ylt(rowid, text, bookId, chapter, verse, verseId)
+                    SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'ylt';
+                    INSERT INTO verses_fts_bbe(rowid, text, bookId, chapter, verse, verseId)
+                    SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'bbe';
+                    INSERT INTO verses_fts_nkjv(rowid, text, bookId, chapter, verse, verseId)
+                    SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'nkjv';
+                END
+            """)
+            db.execSQL("""
+                CREATE TRIGGER IF NOT EXISTS verses_ad AFTER DELETE ON verses BEGIN
+                    DELETE FROM verses_fts_kjv WHERE rowid = old.id;
+                    DELETE FROM verses_fts_web WHERE rowid = old.id;
+                    DELETE FROM verses_fts_asv WHERE rowid = old.id;
+                    DELETE FROM verses_fts_ylt WHERE rowid = old.id;
+                    DELETE FROM verses_fts_bbe WHERE rowid = old.id;
+                    DELETE FROM verses_fts_nkjv WHERE rowid = old.id;
+                END
+            """)
+            db.execSQL("""
+                CREATE TRIGGER IF NOT EXISTS verses_au AFTER UPDATE ON verses BEGIN
+                    DELETE FROM verses_fts_kjv WHERE rowid = old.id;
+                    DELETE FROM verses_fts_web WHERE rowid = old.id;
+                    DELETE FROM verses_fts_asv WHERE rowid = old.id;
+                    DELETE FROM verses_fts_ylt WHERE rowid = old.id;
+                    DELETE FROM verses_fts_bbe WHERE rowid = old.id;
+                    DELETE FROM verses_fts_nkjv WHERE rowid = old.id;
+                    INSERT INTO verses_fts_kjv(rowid, text, bookId, chapter, verse, verseId)
+                    SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'kjv';
+                    INSERT INTO verses_fts_web(rowid, text, bookId, chapter, verse, verseId)
+                    SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'web';
+                    INSERT INTO verses_fts_asv(rowid, text, bookId, chapter, verse, verseId)
+                    SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'asv';
+                    INSERT INTO verses_fts_ylt(rowid, text, bookId, chapter, verse, verseId)
+                    SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'ylt';
+                    INSERT INTO verses_fts_bbe(rowid, text, bookId, chapter, verse, verseId)
+                    SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'bbe';
+                    INSERT INTO verses_fts_nkjv(rowid, text, bookId, chapter, verse, verseId)
+                    SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'nkjv';
+                END
+            """)
+
+            // Rebuild FTS tables from existing verses data
+            db.execSQL("""
+                INSERT OR REPLACE INTO verses_fts_kjv(rowid, text, bookId, chapter, verse, verseId)
+                SELECT id, text, bookId, chapter, verse, id FROM verses WHERE translationId = 'kjv'
+            """)
+            db.execSQL("""
+                INSERT OR REPLACE INTO verses_fts_web(rowid, text, bookId, chapter, verse, verseId)
+                SELECT id, text, bookId, chapter, verse, id FROM verses WHERE translationId = 'web'
+            """)
+            db.execSQL("""
+                INSERT OR REPLACE INTO verses_fts_asv(rowid, text, bookId, chapter, verse, verseId)
+                SELECT id, text, bookId, chapter, verse, id FROM verses WHERE translationId = 'asv'
+            """)
+            db.execSQL("""
+                INSERT OR REPLACE INTO verses_fts_ylt(rowid, text, bookId, chapter, verse, verseId)
+                SELECT id, text, bookId, chapter, verse, id FROM verses WHERE translationId = 'ylt'
+            """)
+            db.execSQL("""
+                INSERT OR REPLACE INTO verses_fts_bbe(rowid, text, bookId, chapter, verse, verseId)
+                SELECT id, text, bookId, chapter, verse, id FROM verses WHERE translationId = 'bbe'
+            """)
+            db.execSQL("""
+                INSERT OR REPLACE INTO verses_fts_nkjv(rowid, text, bookId, chapter, verse, verseId)
+                SELECT id, text, bookId, chapter, verse, id FROM verses WHERE translationId = 'nkjv'
+            """)
+        }
+
+/**
          * Version 4 → 5: Added locations and verse_location_links tables.
          * These tables support Bible geography features.
          * Safe to run multiple times (CREATE TABLE IF NOT EXISTS).

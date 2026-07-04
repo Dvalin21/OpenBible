@@ -35,7 +35,8 @@ class ReadingPlanViewModel(application: Application) : AndroidViewModel(applicat
     private val bookNames = ConcurrentHashMap<Int, String>()
 
     init {
-        viewModelScope.launch(Dispatchers.IO) {
+        // ponytail: load book names synchronously to avoid UI race condition
+        kotlinx.coroutines.runBlocking(Dispatchers.IO) {
             bibleDao.getBooks("kjv").first().forEach { book ->
                 bookNames[book.id] = book.name
             }

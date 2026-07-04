@@ -226,6 +226,21 @@ private fun NavContent(
             )
         }
 
+        composable(Routes.BIBLE_WITH_NOTES) { backStackEntry ->
+            val translationId = backStackEntry.arguments?.getString("translationId") ?: "kjv"
+            val bookId = backStackEntry.arguments?.getInt("bookId") ?: 1
+            val chapter = backStackEntry.arguments?.getInt("chapter") ?: 1
+            val noteId = backStackEntry.arguments?.getLong("noteId").takeIf { it != -1L }
+
+            BibleWithNotesScreen(
+                initialTranslationId = translationId,
+                initialBookId = bookId,
+                initialChapter = chapter,
+                noteId = noteId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
         composable(Routes.BIBLE_CHAPTER) { backStackEntry ->
             val translationId = backStackEntry.arguments?.getString("translationId") ?: "kjv"
             val bookId = backStackEntry.arguments?.getString("bookId")?.toIntOrNull() ?: 1

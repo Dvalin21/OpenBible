@@ -8,48 +8,54 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.room.withTransaction
 import com.openbible.MainActivity
 import com.openbible.OpenBibleApp
 import com.openbible.R
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 /**
  * Receives the daily verse alarm and shows a notification.
  *
  * Also handles BOOT_COMPLETED to reschedule the alarm after reboot.
- * Uses runBlocking for the brief DB query — the BroadcastReceiver
- * has ~10 seconds to complete, and a local Room query finishes
- * in < 50ms.
+ * Uses goAsync() + coroutine for proper BroadcastReceiver lifecycle.
+ * The BroadcastReceiver has ~10 seconds to complete.
  */
 class DailyVerseReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        when (intent.action) {
-            ACTION_SHOW_DAILY_VERSE -> showDailyVerse(context)
-            Intent.ACTION_BOOT_COMPLETED -> rescheduleAfterBoot(context)
+        val pendingResult = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                when (intent.action) {
+                    ACTION_SHOW_DAILY_VERSE -> showDailyVerse(context)
+                    Intent.ACTION_BOOT_COMPLETED -> rescheduleAfterBoot(context)
+                }
+            } finally {
+                pendingResult.finish()
+            }
         }
     }
 
-    private fun showDailyVerse(context: Context) {
+    private suspend fun showDailyVerse(context: Context) {
         val app = context.applicationContext as OpenBibleApp
         val prefs = app.userPreferences
 
         // Check if daily verse is still enabled
-        val enabled = runBlocking {
-            prefs.dailyVerseEnabled.firstOrNull() ?: true
-        }
+        val enabled = prefs.dailyVerseEnabled.first()
         if (!enabled) return
 
         // Default to KJV if we can't read the preference
-        val translationId = runBlocking {
-            prefs.defaultTranslation.firstOrNull() ?: "kjv"
-        }
+        val translationId = prefs.defaultTranslation.first()
 
         // Query a random verse from the database
-        val verse = runBlocking(Dispatchers.IO) {
+        val verse = app.database.withTransaction {
             app.database.bibleDao().getRandomVerse(translationId)
         }
 
@@ -59,11 +65,7 @@ class DailyVerseReceiver : BroadcastReceiver() {
             return
         }
 
-        val bookName = runBlocking {
-            withContext(Dispatchers.IO) {
-                app.database.bibleDao().getBook(verse.bookId)?.name ?: "Bible"
-            }
-        }
+        val bookName = app.database.bibleDao().getBook(verse.bookId)?.name ?: "Bible"
 
         val reference = "$bookName ${verse.chapter}:${verse.verse}"
 
@@ -107,7 +109,7 @@ class DailyVerseReceiver : BroadcastReceiver() {
     }
 
     private fun scheduleNext(context: Context, prefs: com.openbible.data.preferences.UserPreferences) {
-        val (hour, minute) = runBlocking {
+        val (hour, minute) = kotlinx.coroutines.runBlocking {
             prefs.dailyVerseTime.firstOrNull() ?: Pair(7, 0)
         }
         DailyVerseScheduler.schedule(context, hour, minute)
@@ -115,12 +117,12 @@ class DailyVerseReceiver : BroadcastReceiver() {
 
     private fun rescheduleAfterBoot(context: Context) {
         val prefs = (context.applicationContext as OpenBibleApp).userPreferences
-        val enabled = runBlocking {
+        val enabled = kotlinx.coroutines.runBlocking {
             prefs.dailyVerseEnabled.firstOrNull() ?: true
         }
         if (!enabled) return
 
-        val (hour, minute) = runBlocking {
+        val (hour, minute) = kotlinx.coroutines.runBlocking {
             prefs.dailyVerseTime.firstOrNull() ?: Pair(7, 0)
         }
         DailyVerseScheduler.schedule(context, hour, minute)

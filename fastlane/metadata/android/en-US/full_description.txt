@@ -1,0 +1,33 @@
+OpenBible — Offline Bible Reader with Study Tools
+
+A fully offline, privacy-respecting Bible app for Android. No accounts, no tracking, no network required.
+
+FEATURES
+• Multiple translations: KJV, WEB, ASV, YLT, BBE (all public domain), plus NKJV import
+• Full-text search across all translations (FTS5 powered for speed)
+• Dark / Light / Sepia themes with adjustable font sizes and line spacing
+• Retro pixel Bible theme on tablets (7"+) — parchment texture, ornamental borders, page-flip animation with sound
+• Bookmarks with tags, highlights (5 colors), reading history with resume-per-book
+• Daily verse notification + home screen widget (configurable time)
+• Reading plans: "Bible in a Year" (365 days) with progress tracking
+• Text-to-speech per chapter: play/pause, skip verses, speed control
+• Cross-references inline (Treasury of Scripture Knowledge)
+• Strong's Concordance: word studies with lemma, definition, occurrences
+• Bible Geography: locations with coordinates, verse links, map view
+• Sermon/study notes: notebooks, text + pen/ink input, image attachments, auto verse-linking
+• Split-screen Bible + Notes on tablets (10"+)
+• Side-by-side translation comparison (10"+)
+• Copy verses with citation formatting
+• Export-ready data model (Room database, normalized schema)
+
+PRIVACY
+• Zero telemetry, zero analytics, zero network calls
+• All data stored locally in encrypted SQLite (Room)
+• No accounts, no sign-in, no cloud sync
+• GPL-3.0 licensed — source at https://github.com/yourusername/openbible
+
+PERMISSIONS
+• POST_NOTIFICATIONS — daily verse notification
+• RECEIVE_BOOT_COMPLETED — reschedule daily verse after reboot
+• VIBRATE — haptic feedback on chapter change
+• FOREGROUND_SERVICE — TTS playback (Android 14+)

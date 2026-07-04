@@ -1,0 +1,32 @@
+# F-Droid metadata for OpenBible
+# Place in fdroiddata/metadata/com.openbible.yml
+
+Categories:
+  - Books & Reference
+  - Education
+
+License: GPL-3.0-or-later
+
+SourceCode: https://github.com/yourusername/openbible
+IssueTracker: https://github.com/yourusername/openbible/issues
+Changelog: https://github.com/yourusername/openbible/blob/main/CHANGELOG.md
+Donate: https://github.com/sponsors/yourusername
+
+AutoName: OpenBible
+RepoType: git
+Repo: https://github.com/yourusername/openbible
+
+Builds:
+  - versionName: '1.2.0'
+    versionCode: 3
+    commit: v1.2.0
+    subdir: app
+    gradle:
+      - yes
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: '1.2.0'
+CurrentVersionCode: 3
+
+# No anti-features - fully offline, no tracking, no ads, no non-free deps

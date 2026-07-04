@@ -437,13 +437,13 @@ fun BibleScreen(
                             )
                     },
                     label = "pageFlip"
-                ) { _ ->
+                ) { targetChapter ->
                     Box(modifier = Modifier.fillMaxSize()) {
                         if (retroEffective) {
                             RetroBibleContent(
                                 verses = verses,
                                 bookNumber = bookNumber,
-                                chapter = selectedChapter,
+                                chapter = targetChapter,
                                 fontSizeNumbers = fontSizeVerseNumbers,
                                 fontSizeText = fontSizeVerseText,
                                 lineSpacing = lineSpacing,

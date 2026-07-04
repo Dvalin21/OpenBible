@@ -56,8 +56,8 @@ fun NoteEditorScreen(
                 navigationIcon = {
                     IconButton(onClick = {
                         scope.launch {
-                            viewModel.save()
-                            onNavigateBack()
+                            val savedId = viewModel.save()
+                            if (savedId != null) onNavigateBack()
                         }
                     }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -92,7 +92,10 @@ fun NoteEditorScreen(
                         Icon(Icons.Default.Save, contentDescription = "Save")
                     }
                     if (!state.isNew) {
-                        IconButton(onClick = { viewModel.deleteNote(); onNavigateBack() }) {
+                        IconButton(onClick = { 
+                            viewModel.deleteNote()
+                            onNavigateBack() 
+                        }) {
                             Icon(Icons.Default.Delete, contentDescription = "Delete")
                         }
                     }

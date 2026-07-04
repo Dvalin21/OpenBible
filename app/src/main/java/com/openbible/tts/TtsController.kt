@@ -26,7 +26,8 @@ class TtsController(private val appContext: Context) {
     private var tts: TextToSpeech? = null
     private var verses: List<String> = emptyList()
     private var resumeIndex: Int = 0
-    @Volatile private var intentionalStop: Boolean = false  // ponytail: tts.stop() fires onDone async; flag prevents resumeIndex drift
+    // ponytail: counter instead of boolean to handle async onDone after re-queue
+    private var intentionalStopCount: Int = 0
 
     private val _state = MutableStateFlow(TtsState())
     val state: StateFlow<TtsState> = _state.asStateFlow()
@@ -54,7 +55,7 @@ class TtsController(private val appContext: Context) {
 
     /** Release all TTS resources. Call when the screen is disposed. */
     fun shutdown() {
-        intentionalStop = true
+        intentionalStopCount++
         tts?.stop()
         tts?.shutdown()
         tts = null
@@ -79,7 +80,7 @@ class TtsController(private val appContext: Context) {
         resumeIndex = startIndex.coerceIn(0, verseTexts.size - 1)
 
         // ponytail: prevent onDone from nudging resumeIndex before we overwrite it
-        intentionalStop = true
+        intentionalStopCount++
         engine.stop()                            // cancel any prior queue
         engine.setSpeechRate(_state.value.speed)
 
@@ -106,8 +107,8 @@ class TtsController(private val appContext: Context) {
         val s = _state.value
         if (s.isPlaying) {
             // Pause — stop the engine, remember where we were
-            // ponytail: set flag before stop() so onDone() doesn't advance resumeIndex
-            intentionalStop = true
+            // ponytail: increment counter so onDone() doesn't advance resumeIndex
+            intentionalStopCount++
             tts?.stop()
             _state.value = s.copy(isPlaying = false, currentWordRange = null)
         } else {
@@ -134,11 +135,11 @@ class TtsController(private val appContext: Context) {
 
     /** Stop playback and reset state. */
     fun stop() {
-        intentionalStop = true
+        intentionalStopCount++
         tts?.stop()
+        resumeIndex = 0
         _state.value = _state.value.copy(isPlaying = false, currentVerseIndex = -1, currentWordRange = null)
         verses = emptyList()
-        resumeIndex = 0
     }
 
     /** Set speech rate (0.5–2.0). Restarts current playback if active. */
@@ -173,8 +174,8 @@ class TtsController(private val appContext: Context) {
 
         override fun onDone(utteranceId: String?) {
             // ponytail: skip if stop() was called intentionally (pause, shutdown, speak flush)
-            if (intentionalStop) {
-                intentionalStop = false
+            if (intentionalStopCount > 0) {
+                intentionalStopCount--
                 return
             }
             val idx = utteranceId?.extractIndex() ?: return
