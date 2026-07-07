@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Daily Verse Widget — Tablet layout (screens >= 1024dp wide, e.g. Lenovo Tab Extreme 14.5") -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center_vertical"
+    android:background="#1A1A2E"
+    android:padding="20dp">
+
+    <TextView
+        android:id="@+id/widget_verse_text"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center_vertical"
+        android:textColor="#E0E0E0"
+        android:textSize="16sp"
+        android:lineSpacingExtra="4sp"
+        android:text="In the beginning God created the heavens and the earth."
+        android:maxLines="4"
+        android:ellipsize="end" />
+
+    <TextView
+        android:id="@+id/widget_verse_ref"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="end"
+        android:textColor="#9E9E9E"
+        android:textSize="13sp"
+        android:text="Genesis 1:1" />
+
+</LinearLayout>

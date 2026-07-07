@@ -211,7 +211,8 @@ private fun NavContent(
                 onOpenNotes = { navController.navigate(Routes.NOTES) },
                 onOpenReadingPlans = { navController.navigate(Routes.READING_PLANS) },
                 onOpenStrongs = { navController.navigate(Routes.STRONG_SEARCH) },
-                onOpenLocations = { navController.navigate(Routes.LOCATIONS) }
+                onOpenLocations = { navController.navigate(Routes.LOCATIONS) },
+                onOpenParallelTraditions = { navController.navigate(Routes.PARALLEL_TRADITIONS) }
             )
         }
 
