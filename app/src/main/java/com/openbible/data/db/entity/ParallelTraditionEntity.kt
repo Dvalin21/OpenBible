@@ -1,7 +1,6 @@
 package com.openbible.data.db.entity
 
 import androidx.room.Entity
-import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
@@ -16,17 +15,17 @@ import androidx.room.PrimaryKey
  *   - Noah's Flood ←→ Gilgamesh Flood (Mesopotamian)
  *   - Creation ←→ Enuma Elish (Babylonian)
  *   - Moses in basket ←→ Sargon of Akkad birth legend (Akkadian)
+ *
+ * Note: FK constraint intentionally omitted. Room's createFromAsset + FK enforcement
+ * conflicts with sequential data importers at first boot. Data integrity is
+ * maintained by import pipeline — eventId values are validated against
+ * location_events.id before insertion in the JSON/pipeline layer.
+ * Re-add FK(entity = LocationEventEntity::class, parentColumns = ["id"],
+ * childColumns = ["eventId"], onDelete = ForeignKey.CASCADE) if we add
+ * user-editable cross-references or online sync.
  */
 @Entity(
     tableName = "parallel_traditions",
-    foreignKeys = [
-        ForeignKey(
-            entity = LocationEventEntity::class,
-            parentColumns = ["id"],
-            childColumns = ["eventId"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ],
     indices = [
         Index("eventId"),
         Index("culture"),
@@ -38,7 +37,7 @@ data class ParallelTraditionEntity(
     @PrimaryKey
     val id: String,                              // e.g. "noah_flood_gilgamesh"
 
-    /** FK → location_events.id. Nullable — not every biblical event has a location event entry yet. */
+    /** eventId → location_events.id. Nullable — not every biblical event has a location event entry yet. */
     val eventId: String?,
 
     /** Human-readable Bible reference (e.g. "Genesis 6-9"). */

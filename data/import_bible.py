@@ -331,55 +331,10 @@ def create_database(output_path: str):
         END
     """)
 
-    # ── Room v7: location_events table ─────────────────────────────
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS location_events (
-            id TEXT NOT NULL PRIMARY KEY,
-            locationId TEXT NOT NULL,
-            title TEXT NOT NULL,
-            description TEXT NOT NULL,
-            reference TEXT NOT NULL,
-            bookId INTEGER NOT NULL,
-            chapter INTEGER NOT NULL,
-            category TEXT NOT NULL,
-            era TEXT NOT NULL,
-            sortOrder INTEGER NOT NULL DEFAULT 0,
-            FOREIGN KEY (locationId) REFERENCES locations(id) ON DELETE CASCADE
-        )
-    """)
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_events_location ON location_events(locationId)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_events_era ON location_events(era)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_events_category ON location_events(category)")
-
-    # ── Room v8: parallel_traditions table ─────────────────────────
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS parallel_traditions (
-            id TEXT NOT NULL PRIMARY KEY,
-            eventId TEXT,
-            biblicalReference TEXT NOT NULL,
-            biblicalBookId INTEGER NOT NULL,
-            biblicalChapter INTEGER NOT NULL,
-            culture TEXT NOT NULL,
-            documentName TEXT NOT NULL,
-            title TEXT NOT NULL,
-            description TEXT NOT NULL,
-            similarities TEXT NOT NULL,
-            differences TEXT NOT NULL,
-            scholarlyNote TEXT,
-            dateRange TEXT,
-            category TEXT NOT NULL,
-            sortOrder INTEGER NOT NULL DEFAULT 0,
-            FOREIGN KEY (eventId) REFERENCES location_events(id) ON DELETE CASCADE
-        )
-    """)
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_parallels_event ON parallel_traditions(eventId)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_parallels_culture ON parallel_traditions(culture)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_parallels_category ON parallel_traditions(category)")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_parallels_book ON parallel_traditions(biblicalBookId)")
-
     # ── Room version ───────────────────────────────────────────────
-    cursor.execute("PRAGMA user_version = 8")
-    print("  PRAGMA user_version = 8")
+    # Must match @Database(version = 9) in OpenBibleDatabase.kt
+    cursor.execute("PRAGMA user_version = 9")
+    print("  PRAGMA user_version = 9")
 
     conn.close()
 
@@ -390,102 +345,157 @@ def create_database(output_path: str):
 
 
 def create_tables(cursor):
-    """Create all Room-compatible tables."""
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS translations (
-            id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL,
-            abbreviation TEXT NOT NULL, language TEXT NOT NULL DEFAULT 'en',
-            copyright TEXT, isPublicDomain INTEGER NOT NULL DEFAULT 1,
-            isBundled INTEGER NOT NULL DEFAULT 1
-        );
-    """)
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS books (
-            id INTEGER NOT NULL PRIMARY KEY, translationId TEXT NOT NULL,
-            name TEXT NOT NULL, abbreviation TEXT NOT NULL,
-            number INTEGER NOT NULL, chapterCount INTEGER NOT NULL,
-            testament TEXT NOT NULL, totalVerses INTEGER NOT NULL DEFAULT 0
-        );
-    """)
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_books_translation ON books(translationId);")
+    """Create all Room v9 entity tables using Room's exact DDL from schema JSON.
+    
+    Room validates every @Entity table when opening a pre-packaged database.
+    Every CREATE TABLE / INDEX must match Room's generated SQL character-for-character.
+    """
+    tables = {
+        # ── Core Bible data ─────────────────────────────────────────
+        "translations": (
+            "CREATE TABLE IF NOT EXISTS `translations` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `abbreviation` TEXT NOT NULL, `language` TEXT NOT NULL, `copyright` TEXT, `isPublicDomain` INTEGER NOT NULL, `isBundled` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+            [],
+        ),
+        "books": (
+            "CREATE TABLE IF NOT EXISTS `books` (`id` INTEGER NOT NULL, `translationId` TEXT NOT NULL, `name` TEXT NOT NULL, `abbreviation` TEXT NOT NULL, `number` INTEGER NOT NULL, `chapterCount` INTEGER NOT NULL, `testament` TEXT NOT NULL, `totalVerses` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+            [
+                "CREATE INDEX IF NOT EXISTS `index_books_translationId` ON `books` (`translationId`)",
+            ],
+        ),
+        "verses": (
+            "CREATE TABLE IF NOT EXISTS `verses` (`id` INTEGER NOT NULL, `translationId` TEXT NOT NULL, `bookId` INTEGER NOT NULL, `chapter` INTEGER NOT NULL, `verse` INTEGER NOT NULL, `text` TEXT NOT NULL, PRIMARY KEY(`id`))",
+            [
+                "CREATE INDEX IF NOT EXISTS `index_verses_bookId` ON `verses` (`bookId`)",
+                "CREATE INDEX IF NOT EXISTS `index_verses_translationId` ON `verses` (`translationId`)",
+                "CREATE INDEX IF NOT EXISTS `index_verses_translationId_bookId_chapter` ON `verses` (`translationId`, `bookId`, `chapter`)",
+                "CREATE UNIQUE INDEX IF NOT EXISTS `index_verses_translationId_bookId_chapter_verse` ON `verses` (`translationId`, `bookId`, `chapter`, `verse`)",
+            ],
+        ),
+        # ── Cross-references ────────────────────────────────────────
+        "cross_references": (
+            "CREATE TABLE IF NOT EXISTS `cross_references` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `fromVerseId` INTEGER NOT NULL, `toBookId` INTEGER NOT NULL, `toChapter` INTEGER NOT NULL, `toVerseStart` INTEGER NOT NULL, `toVerseEnd` INTEGER, `relevance` INTEGER NOT NULL)",
+            [
+                "CREATE INDEX IF NOT EXISTS `index_cross_references_fromVerseId` ON `cross_references` (`fromVerseId`)",
+                "CREATE INDEX IF NOT EXISTS `index_cross_references_toBookId_toChapter_toVerseStart` ON `cross_references` (`toBookId`, `toChapter`, `toVerseStart`)",
+            ],
+        ),
+        # ── Strong's Concordance ────────────────────────────────────
+        "strong_numbers": (
+            "CREATE TABLE IF NOT EXISTS `strong_numbers` (`number` TEXT NOT NULL, `lemma` TEXT NOT NULL, `transliteration` TEXT NOT NULL, `pronunciation` TEXT, `part_of_speech` TEXT, `definition` TEXT NOT NULL, `derivation` TEXT, `usageCount` INTEGER NOT NULL, `language` TEXT NOT NULL, PRIMARY KEY(`number`))",
+            [
+                "CREATE INDEX IF NOT EXISTS `index_strong_numbers_lemma` ON `strong_numbers` (`lemma`)",
+                "CREATE INDEX IF NOT EXISTS `index_strong_numbers_transliteration` ON `strong_numbers` (`transliteration`)",
+            ],
+        ),
+        "verse_strong_links": (
+            "CREATE TABLE IF NOT EXISTS `verse_strong_links` (`verseId` INTEGER NOT NULL, `strongNumber` TEXT NOT NULL, `wordPosition` INTEGER NOT NULL, `originalWord` TEXT NOT NULL, `transliteration` TEXT, PRIMARY KEY(`verseId`, `strongNumber`, `wordPosition`))",
+            [
+                "CREATE INDEX IF NOT EXISTS `index_verse_strong_links_strongNumber` ON `verse_strong_links` (`strongNumber`)",
+                "CREATE INDEX IF NOT EXISTS `index_verse_strong_links_verseId` ON `verse_strong_links` (`verseId`)",
+            ],
+        ),
+        # ── Locations ───────────────────────────────────────────────
+        "locations": (
+            "CREATE TABLE IF NOT EXISTS `locations` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `modern_name` TEXT, `latitude` REAL NOT NULL, `longitude` REAL NOT NULL, `description` TEXT NOT NULL, `category` TEXT NOT NULL, `significance` TEXT, PRIMARY KEY(`id`))",
+            [
+                "CREATE INDEX IF NOT EXISTS `index_locations_category` ON `locations` (`category`)",
+                "CREATE INDEX IF NOT EXISTS `index_locations_modern_name` ON `locations` (`modern_name`)",
+            ],
+        ),
+        "verse_location_links": (
+            "CREATE TABLE IF NOT EXISTS `verse_location_links` (`locationId` TEXT NOT NULL, `verseId` INTEGER NOT NULL, PRIMARY KEY(`locationId`, `verseId`))",
+            [
+                "CREATE INDEX IF NOT EXISTS `index_verse_location_links_verseId` ON `verse_location_links` (`verseId`)",
+            ],
+        ),
+        "location_events": (
+            "CREATE TABLE IF NOT EXISTS `location_events` (`id` TEXT NOT NULL, `locationId` TEXT NOT NULL, `title` TEXT NOT NULL, `description` TEXT NOT NULL, `reference` TEXT NOT NULL, `bookId` INTEGER NOT NULL, `chapter` INTEGER NOT NULL, `category` TEXT NOT NULL, `era` TEXT NOT NULL, `sortOrder` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+            [
+                "CREATE INDEX IF NOT EXISTS `index_location_events_locationId` ON `location_events` (`locationId`)",
+                "CREATE INDEX IF NOT EXISTS `index_location_events_era` ON `location_events` (`era`)",
+                "CREATE INDEX IF NOT EXISTS `index_location_events_category` ON `location_events` (`category`)",
+            ],
+        ),
+        "parallel_traditions": (
+            "CREATE TABLE IF NOT EXISTS `parallel_traditions` (`id` TEXT NOT NULL, `eventId` TEXT, `biblicalReference` TEXT NOT NULL, `biblicalBookId` INTEGER NOT NULL, `biblicalChapter` INTEGER NOT NULL, `culture` TEXT NOT NULL, `documentName` TEXT NOT NULL, `title` TEXT NOT NULL, `description` TEXT NOT NULL, `similarities` TEXT NOT NULL, `differences` TEXT NOT NULL, `scholarlyNote` TEXT, `dateRange` TEXT, `category` TEXT NOT NULL, `sortOrder` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+            [
+                "CREATE INDEX IF NOT EXISTS `index_parallel_traditions_eventId` ON `parallel_traditions` (`eventId`)",
+                "CREATE INDEX IF NOT EXISTS `index_parallel_traditions_culture` ON `parallel_traditions` (`culture`)",
+                "CREATE INDEX IF NOT EXISTS `index_parallel_traditions_category` ON `parallel_traditions` (`category`)",
+                "CREATE INDEX IF NOT EXISTS `index_parallel_traditions_biblicalBookId` ON `parallel_traditions` (`biblicalBookId`)",
+            ],
+        ),
+        # ── User content (bookmarks, notes, etc.) ────────────────────
+        "bookmarks": (
+            "CREATE TABLE IF NOT EXISTS `bookmarks` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `verseId` INTEGER NOT NULL, `label` TEXT, `createdAt` INTEGER NOT NULL, `tags` TEXT)",
+            [
+                "CREATE INDEX IF NOT EXISTS `index_bookmarks_verseId` ON `bookmarks` (`verseId`)",
+                "CREATE INDEX IF NOT EXISTS `index_bookmarks_createdAt` ON `bookmarks` (`createdAt`)",
+            ],
+        ),
+        "highlights": (
+            "CREATE TABLE IF NOT EXISTS `highlights` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `verseId` INTEGER NOT NULL, `color` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL)",
+            [
+                "CREATE INDEX IF NOT EXISTS `index_highlights_verseId` ON `highlights` (`verseId`)",
+                "CREATE INDEX IF NOT EXISTS `index_highlights_color` ON `highlights` (`color`)",
+            ],
+        ),
+        "notebooks": (
+            "CREATE TABLE IF NOT EXISTS `notebooks` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `color` INTEGER NOT NULL, `icon` TEXT, `createdAt` INTEGER NOT NULL)",
+            [],
+        ),
+        "notes": (
+            "CREATE TABLE IF NOT EXISTS `notes` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `notebookId` INTEGER, `title` TEXT NOT NULL, `contentText` TEXT, `penStrokes` TEXT, `penMode` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `tags` TEXT, `color` INTEGER)",
+            [
+                "CREATE INDEX IF NOT EXISTS `index_notes_notebookId` ON `notes` (`notebookId`)",
+                "CREATE INDEX IF NOT EXISTS `index_notes_updatedAt` ON `notes` (`updatedAt`)",
+                "CREATE INDEX IF NOT EXISTS `index_notes_createdAt` ON `notes` (`createdAt`)",
+            ],
+        ),
+        "note_images": (
+            "CREATE TABLE IF NOT EXISTS `note_images` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `noteId` INTEGER NOT NULL, `filePath` TEXT NOT NULL, `caption` TEXT, `position` INTEGER NOT NULL, FOREIGN KEY(`noteId`) REFERENCES `notes`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+            [
+                "CREATE INDEX IF NOT EXISTS `index_note_images_noteId` ON `note_images` (`noteId`)",
+            ],
+        ),
+        "note_verse_links": (
+            "CREATE TABLE IF NOT EXISTS `note_verse_links` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `noteId` INTEGER NOT NULL, `verseId` INTEGER NOT NULL, FOREIGN KEY(`noteId`) REFERENCES `notes`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`verseId`) REFERENCES `verses`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+            [
+                "CREATE INDEX IF NOT EXISTS `index_note_verse_links_noteId` ON `note_verse_links` (`noteId`)",
+                "CREATE INDEX IF NOT EXISTS `index_note_verse_links_verseId` ON `note_verse_links` (`verseId`)",
+            ],
+        ),
+        # ── Reading plans ────────────────────────────────────────────
+        "reading_plans": (
+            "CREATE TABLE IF NOT EXISTS `reading_plans` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `description` TEXT, `durationDays` INTEGER NOT NULL, `isPrebuilt` INTEGER NOT NULL)",
+            [],
+        ),
+        "reading_plan_days": (
+            "CREATE TABLE IF NOT EXISTS `reading_plan_days` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `planId` INTEGER NOT NULL, `dayNumber` INTEGER NOT NULL, `title` TEXT, `readings` TEXT NOT NULL, FOREIGN KEY(`planId`) REFERENCES `reading_plans`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+            [
+                "CREATE INDEX IF NOT EXISTS `index_reading_plan_days_planId` ON `reading_plan_days` (`planId`)",
+            ],
+        ),
+        "reading_progress": (
+            "CREATE TABLE IF NOT EXISTS `reading_progress` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `planId` INTEGER NOT NULL, `dayNumber` INTEGER NOT NULL, `completed` INTEGER NOT NULL, `completedAt` INTEGER, FOREIGN KEY(`planId`) REFERENCES `reading_plans`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+            [
+                "CREATE INDEX IF NOT EXISTS `index_reading_progress_planId` ON `reading_progress` (`planId`)",
+            ],
+        ),
+        "reading_history": (
+            "CREATE TABLE IF NOT EXISTS `reading_history` (`verseId` INTEGER NOT NULL, `lastReadAt` INTEGER NOT NULL, `readCount` INTEGER NOT NULL, PRIMARY KEY(`verseId`))",
+            [
+                "CREATE INDEX IF NOT EXISTS `index_reading_history_verseId` ON `reading_history` (`verseId`)",
+                "CREATE INDEX IF NOT EXISTS `index_reading_history_lastReadAt` ON `reading_history` (`lastReadAt`)",
+            ],
+        ),
+    }
 
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS verses (
-            id INTEGER NOT NULL PRIMARY KEY, translationId TEXT NOT NULL,
-            bookId INTEGER NOT NULL, chapter INTEGER NOT NULL,
-            verse INTEGER NOT NULL, text TEXT NOT NULL
-        );
-    """)
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_verses_book ON verses(bookId);")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_verses_translation ON verses(translationId);")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_verses_chapter ON verses(translationId, bookId, chapter);")
-    cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_verses_unique ON verses(translationId, bookId, chapter, verse);")
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS cross_references (
-            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-            fromVerseId INTEGER NOT NULL, toBookId INTEGER NOT NULL,
-            toChapter INTEGER NOT NULL, toVerseStart INTEGER NOT NULL,
-            toVerseEnd INTEGER, relevance INTEGER NOT NULL DEFAULT 0
-        );
-    """)
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_cr_from ON cross_references(fromVerseId);")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_cr_to ON cross_references(toBookId, toChapter, toVerseStart);")
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS strong_numbers (
-            number TEXT NOT NULL PRIMARY KEY, lemma TEXT NOT NULL DEFAULT '',
-            transliteration TEXT NOT NULL DEFAULT '', pronunciation TEXT,
-            part_of_speech TEXT, definition TEXT NOT NULL DEFAULT '',
-            derivation TEXT, usageCount INTEGER NOT NULL DEFAULT 0,
-            language TEXT NOT NULL DEFAULT 'Greek'
-        );
-    """)
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_strongs_lemma ON strong_numbers(lemma);")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_strongs_translit ON strong_numbers(transliteration);")
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS verse_strong_links (
-            verseId INTEGER NOT NULL, strongNumber TEXT NOT NULL,
-            wordPosition INTEGER NOT NULL, originalWord TEXT NOT NULL DEFAULT '',
-            transliteration TEXT, PRIMARY KEY (verseId, strongNumber, wordPosition)
-        );
-    """)
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_vsl_strong ON verse_strong_links(strongNumber);")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_vsl_verse ON verse_strong_links(verseId);")
-
-    # Locations
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS locations (
-            id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL,
-            modern_name TEXT, latitude REAL NOT NULL, longitude REAL NOT NULL,
-            description TEXT NOT NULL, category TEXT NOT NULL, significance TEXT
-        );
-    """)
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_locations_category ON locations(category);")
-    cursor.execute("CREATE TABLE IF NOT EXISTS verse_location_links (locationId TEXT NOT NULL, verseId INTEGER NOT NULL, PRIMARY KEY (locationId, verseId));")
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_vll_verse ON verse_location_links(verseId);")
-
-    # User tables (empty)
-    for sql in [
-        "CREATE TABLE IF NOT EXISTS bookmarks (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, verseId INTEGER NOT NULL, label TEXT, createdAt INTEGER NOT NULL, tags TEXT);",
-        "CREATE INDEX IF NOT EXISTS idx_bookmarks_verse ON bookmarks(verseId);",
-        "CREATE TABLE IF NOT EXISTS highlights (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, verseId INTEGER NOT NULL, color INTEGER NOT NULL, createdAt INTEGER NOT NULL);",
-        "CREATE INDEX IF NOT EXISTS idx_highlights_verse ON highlights(verseId);",
-        "CREATE TABLE IF NOT EXISTS notebooks (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, color INTEGER NOT NULL DEFAULT -1033074, icon TEXT, createdAt INTEGER NOT NULL);",
-        "CREATE TABLE IF NOT EXISTS notes (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, notebookId INTEGER, title TEXT NOT NULL, contentText TEXT, penStrokes TEXT, penMode TEXT NOT NULL DEFAULT 'TEXT', createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL, tags TEXT, color INTEGER);",
-        "CREATE INDEX IF NOT EXISTS idx_notes_notebook ON notes(notebookId);",
-        "CREATE TABLE IF NOT EXISTS note_images (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, noteId INTEGER NOT NULL, filePath TEXT NOT NULL, caption TEXT, position INTEGER NOT NULL DEFAULT 0, FOREIGN KEY (noteId) REFERENCES notes(id) ON DELETE CASCADE);",
-        "CREATE INDEX IF NOT EXISTS idx_note_images_note ON note_images(noteId);",
-        "CREATE TABLE IF NOT EXISTS note_verse_links (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, noteId INTEGER NOT NULL, verseId INTEGER NOT NULL, FOREIGN KEY (noteId) REFERENCES notes(id) ON DELETE CASCADE, FOREIGN KEY (verseId) REFERENCES verses(id) ON DELETE CASCADE);",
-        "CREATE INDEX IF NOT EXISTS idx_nvl_note ON note_verse_links(noteId);",
-        "CREATE TABLE IF NOT EXISTS reading_plans (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, description TEXT, durationDays INTEGER NOT NULL, isPrebuilt INTEGER NOT NULL DEFAULT 0);",
-        "CREATE TABLE IF NOT EXISTS reading_plan_days (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, planId INTEGER NOT NULL, dayNumber INTEGER NOT NULL, title TEXT, readings TEXT NOT NULL, FOREIGN KEY (planId) REFERENCES reading_plans(id) ON DELETE CASCADE);",
-        "CREATE INDEX IF NOT EXISTS idx_rpd_plan ON reading_plan_days(planId);",
-        "CREATE TABLE IF NOT EXISTS reading_progress (id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, planId INTEGER NOT NULL, dayNumber INTEGER NOT NULL, completed INTEGER NOT NULL DEFAULT 0, completedAt INTEGER, FOREIGN KEY (planId) REFERENCES reading_plans(id) ON DELETE CASCADE);",
-        "CREATE TABLE IF NOT EXISTS reading_history (verseId INTEGER NOT NULL PRIMARY KEY, lastReadAt INTEGER NOT NULL, readCount INTEGER NOT NULL DEFAULT 0);",
-    ]:
-        cursor.execute(sql)
+    for table_name, (create_sql, indices) in tables.items():
+        cursor.execute(create_sql)
+        for idx_sql in indices:
+            cursor.execute(idx_sql)
+    print(f"  Created {len(tables)} Room v9 entity tables with {sum(len(i) for _, i in tables.values())} indices")
 
 
 def insert_translations_and_books(cursor):

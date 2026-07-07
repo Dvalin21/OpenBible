@@ -54,6 +54,8 @@ import com.openbible.data.db.entity.VerseStrongLinkEntity
  * Version 6: added FTS5 virtual tables for full-text search per translation.
  * Version 7: added location_events table for biblical events at each location.
  * Version 8: added parallel_traditions table for cross-cultural comparisons.
+ * Version 9: removed FK constraint from parallel_traditions (conflicted with
+ *            createFromAsset + sequential data importer flow at first boot).
  */
 @Database(
     entities = [
@@ -78,7 +80,7 @@ import com.openbible.data.db.entity.VerseStrongLinkEntity
         LocationEventEntity::class,
         ParallelTraditionEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -129,7 +131,7 @@ abstract class OpenBibleDatabase : RoomDatabase() {
             }
 
             // Explicit migrations — never destroy user data.
-            builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+            builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
 
             return builder.build()
         }
@@ -282,6 +284,21 @@ abstract class OpenBibleDatabase : RoomDatabase() {
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_parallels_category ON parallel_traditions(category)")
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_parallels_book ON parallel_traditions(biblicalBookId)")
         }
+
+        /**
+         * Version 8 → 9: Removed FK constraint from parallel_traditions.
+         *
+         * The FOREIGN KEY (eventId → location_events.id) with ON DELETE CASCADE
+         * caused SQLiteConstraintException during first-boot sequential imports
+         * because Room enables FK enforcement automatically for tables with
+         * foreign keys. Data integrity is maintained by the import pipeline
+         * (eventId values are validated against location_events before insertion).
+         *
+         * Migration is a no-op: the table shape doesn't change, only the
+         * FK constraint is removed. The prepopulated DB at v9 is built
+         * without the FK constraint.
+         */
+        private val MIGRATION_8_9 = Migration(8, 9) { /* no-op — FK removal is schema-only change */ }
 
         private val MIGRATION_5_6 = Migration(5, 6) { db ->
             db.execSQL("""
