@@ -51,6 +51,7 @@ import com.openbible.ui.settings.SettingsScreen
 import com.openbible.ui.locations.LocationDetailScreen
 import com.openbible.ui.locations.LocationListScreen
 import com.openbible.ui.locations.LocationMapScreen
+import com.openbible.ui.locations.ParallelTraditionScreen
 import com.openbible.ui.strongs.StrongDetailScreen
 import com.openbible.ui.strongs.StrongSearchScreen
 
@@ -73,6 +74,8 @@ object Routes {
     const val LOCATIONS = "locations"
     const val LOCATION_MAP = "location_map"
     const val LOCATION_DETAIL = "locations/{locationId}"
+    const val PARALLEL_TRADITIONS = "parallel_traditions"
+    const val PARALLEL_TRADITIONS_EVENT = "parallel_traditions/{eventId}"
 
     fun bibleChapter(translationId: String, bookId: Int, chapter: Int) =
         "bible/$translationId/$bookId/$chapter"
@@ -95,6 +98,7 @@ object Routes {
 
     fun strongDetail(strongNumber: String) = "strongs/$strongNumber"
     fun locationDetail(locationId: String) = "locations/$locationId"
+    fun parallelTraditionsEvent(eventId: String) = "parallel_traditions/$eventId"
 
     fun bibleWithNotes(
         translationId: String = "kjv",
@@ -223,21 +227,6 @@ private fun NavContent(
                 onOpenStrongDetail = { number ->
                     navController.navigate(Routes.strongDetail(number))
                 }
-            )
-        }
-
-        composable(Routes.BIBLE_WITH_NOTES) { backStackEntry ->
-            val translationId = backStackEntry.arguments?.getString("translationId") ?: "kjv"
-            val bookId = backStackEntry.arguments?.getInt("bookId") ?: 1
-            val chapter = backStackEntry.arguments?.getInt("chapter") ?: 1
-            val noteId = backStackEntry.arguments?.getLong("noteId").takeIf { it != -1L }
-
-            BibleWithNotesScreen(
-                initialTranslationId = translationId,
-                initialBookId = bookId,
-                initialChapter = chapter,
-                noteId = noteId,
-                onNavigateBack = { navController.popBackStack() }
             )
         }
 
@@ -385,6 +374,33 @@ private fun NavContent(
                 locationId = locationId,
                 onNavigateBack = { navController.popBackStack() },
                 onOpenVerse = { translationId, bookId, chapter ->
+                    navController.navigate(Routes.bibleChapter(translationId, bookId, chapter))
+                },
+                onOpenParallels = { eventId ->
+                    navController.navigate(Routes.parallelTraditionsEvent(eventId))
+                }
+            )
+        }
+
+        composable(
+            route = Routes.PARALLEL_TRADITIONS_EVENT,
+            arguments = listOf(navArgument("eventId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val eventId = backStackEntry.arguments?.getString("eventId")
+            ParallelTraditionScreen(
+                eventId = eventId,
+                onBack = { navController.popBackStack() },
+                onOpenBible = { translationId, bookId, chapter ->
+                    navController.navigate(Routes.bibleChapter(translationId, bookId, chapter))
+                }
+            )
+        }
+
+        composable(Routes.PARALLEL_TRADITIONS) {
+            ParallelTraditionScreen(
+                eventId = null,
+                onBack = { navController.popBackStack() },
+                onOpenBible = { translationId, bookId, chapter ->
                     navController.navigate(Routes.bibleChapter(translationId, bookId, chapter))
                 }
             )

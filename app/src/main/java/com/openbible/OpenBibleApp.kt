@@ -3,7 +3,9 @@ package com.openbible
 import android.app.Application
 import com.openbible.data.ReadingPlanSeeder
 import com.openbible.data.db.OpenBibleDatabase
+import com.openbible.data.locations.EventImporter
 import com.openbible.data.locations.LocationImporter
+import com.openbible.data.locations.ParallelTraditionImporter
 import com.openbible.data.preferences.UserPreferences
 import com.openbible.data.strongs.StrongImporter
 import com.openbible.data.translation.TranslationImporter
@@ -38,6 +40,12 @@ class OpenBibleApp : Application() {
     @Inject
     lateinit var translationImporter: TranslationImporter
 
+    @Inject
+    lateinit var eventImporter: EventImporter
+
+    @Inject
+    lateinit var parallelTraditionImporter: ParallelTraditionImporter
+
     override fun onCreate() {
         super.onCreate()
         DailyVerseReceiver.createNotificationChannel(this)
@@ -47,6 +55,8 @@ class OpenBibleApp : Application() {
         CoroutineScope(Dispatchers.IO).launch {
             strongImporter.importIfNeeded()
             locationImporter.importIfNeeded()
+            eventImporter.importIfNeeded()
+            parallelTraditionImporter.importIfNeeded()
             translationImporter.importMissing(database.openHelper.writableDatabase)
             ReadingPlanSeeder.ensureSeeded(database.readingPlanDao(), database.bibleDao())
         }

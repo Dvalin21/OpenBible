@@ -1,29 +1,1578 @@
 [
-  {"locationId":"jerusalem","verseId":16096},
-  {"locationId":"jerusalem","verseId":23956},
-  {"locationId":"jerusalem","verseId":6066},
-  {"locationId":"bethlehem","verseId":22636},
-  {"locationId":"bethlehem","verseId":23171},
-  {"locationId":"bethlehem","verseId":7150},
-  {"locationId":"nazareth","verseId":23193},
-  {"locationId":"nazareth","verseId":24978},
-  {"locationId":"nazareth","verseId":26091},
-  {"locationId":"sea_of_galilee","verseId":23228},
-  {"locationId":"sea_of_galilee","verseId":24232},
-  {"locationId":"sea_of_galilee","verseId":26259},
-  {"locationId":"jericho","verseId":5951},
-  {"locationId":"jericho","verseId":25733},
-  {"locationId":"jericho","verseId":24635},
-  {"locationId":"jordan_river","verseId":329},
-  {"locationId":"jordan_river","verseId":5909},
-  {"locationId":"jordan_river","verseId":23206},
-  {"locationId":"mount_sinai","verseId":2045},
-  {"locationId":"mount_sinai","verseId":2029},
-  {"locationId":"mount_sinai","verseId":2047},
-  {"locationId":"mount_of_olives","verseId":23828},
-  {"locationId":"mount_of_olives","verseId":26936},
-  {"locationId":"mount_of_olives","verseId":23073},
-  {"locationId":"golgotha","verseId":24163},
-  {"locationId":"golgotha","verseId":26843},
-  {"locationId":"golgotha","verseId":24849}
+  {
+    "locationId": "ai",
+    "verseId": 5979
+  },
+  {
+    "locationId": "ai",
+    "verseId": 5980
+  },
+  {
+    "locationId": "ai",
+    "verseId": 5981
+  },
+  {
+    "locationId": "ai",
+    "verseId": 5982
+  },
+  {
+    "locationId": "ai",
+    "verseId": 6004
+  },
+  {
+    "locationId": "ai",
+    "verseId": 6005
+  },
+  {
+    "locationId": "ai",
+    "verseId": 6006
+  },
+  {
+    "locationId": "antioch",
+    "verseId": 27107
+  },
+  {
+    "locationId": "antioch",
+    "verseId": 27327
+  },
+  {
+    "locationId": "antioch",
+    "verseId": 27328
+  },
+  {
+    "locationId": "antioch",
+    "verseId": 27330
+  },
+  {
+    "locationId": "antioch",
+    "verseId": 27334
+  },
+  {
+    "locationId": "antioch",
+    "verseId": 27335
+  },
+  {
+    "locationId": "antioch",
+    "verseId": 27364
+  },
+  {
+    "locationId": "ashdod",
+    "verseId": 6130
+  },
+  {
+    "locationId": "ashdod",
+    "verseId": 6249
+  },
+  {
+    "locationId": "ashdod",
+    "verseId": 6250
+  },
+  {
+    "locationId": "ashdod",
+    "verseId": 7321
+  },
+  {
+    "locationId": "ashdod",
+    "verseId": 7323
+  },
+  {
+    "locationId": "ashdod",
+    "verseId": 7325
+  },
+  {
+    "locationId": "ashdod",
+    "verseId": 7326
+  },
+  {
+    "locationId": "athens",
+    "verseId": 27539
+  },
+  {
+    "locationId": "athens",
+    "verseId": 27540
+  },
+  {
+    "locationId": "athens",
+    "verseId": 27546
+  },
+  {
+    "locationId": "athens",
+    "verseId": 27559
+  },
+  {
+    "locationId": "athens",
+    "verseId": 29592
+  },
+  {
+    "locationId": "babel",
+    "verseId": 245
+  },
+  {
+    "locationId": "babel",
+    "verseId": 276
+  },
+  {
+    "locationId": "babylon",
+    "verseId": 5998
+  },
+  {
+    "locationId": "babylon",
+    "verseId": 10008
+  },
+  {
+    "locationId": "babylon",
+    "verseId": 10014
+  },
+  {
+    "locationId": "babylon",
+    "verseId": 10111
+  },
+  {
+    "locationId": "babylon",
+    "verseId": 10113
+  },
+  {
+    "locationId": "babylon",
+    "verseId": 10116
+  },
+  {
+    "locationId": "babylon",
+    "verseId": 10117
+  },
+  {
+    "locationId": "beersheba",
+    "verseId": 528
+  },
+  {
+    "locationId": "beersheba",
+    "verseId": 545
+  },
+  {
+    "locationId": "beersheba",
+    "verseId": 546
+  },
+  {
+    "locationId": "beersheba",
+    "verseId": 547
+  },
+  {
+    "locationId": "beersheba",
+    "verseId": 567
+  },
+  {
+    "locationId": "beersheba",
+    "verseId": 716
+  },
+  {
+    "locationId": "beersheba",
+    "verseId": 726
+  },
+  {
+    "locationId": "bethany",
+    "verseId": 23844
+  },
+  {
+    "locationId": "bethany",
+    "verseId": 24061
+  },
+  {
+    "locationId": "bethany",
+    "verseId": 24642
+  },
+  {
+    "locationId": "bethany",
+    "verseId": 24652
+  },
+  {
+    "locationId": "bethany",
+    "verseId": 24653
+  },
+  {
+    "locationId": "bethany",
+    "verseId": 24758
+  },
+  {
+    "locationId": "bethany",
+    "verseId": 25761
+  },
+  {
+    "locationId": "bethel",
+    "verseId": 307
+  },
+  {
+    "locationId": "bethel",
+    "verseId": 322
+  },
+  {
+    "locationId": "bethel",
+    "verseId": 793
+  },
+  {
+    "locationId": "bethel",
+    "verseId": 887
+  },
+  {
+    "locationId": "bethel",
+    "verseId": 1013
+  },
+  {
+    "locationId": "bethel",
+    "verseId": 1015
+  },
+  {
+    "locationId": "bethel",
+    "verseId": 1018
+  },
+  {
+    "locationId": "bethlehem",
+    "verseId": 1031
+  },
+  {
+    "locationId": "bethlehem",
+    "verseId": 1459
+  },
+  {
+    "locationId": "bethlehem",
+    "verseId": 6337
+  },
+  {
+    "locationId": "bethlehem",
+    "verseId": 6878
+  },
+  {
+    "locationId": "bethlehem",
+    "verseId": 6880
+  },
+  {
+    "locationId": "bethlehem",
+    "verseId": 7147
+  },
+  {
+    "locationId": "bethlehem",
+    "verseId": 7150
+  },
+  {
+    "locationId": "cairo",
+    "verseId": 309
+  },
+  {
+    "locationId": "cairo",
+    "verseId": 310
+  },
+  {
+    "locationId": "cairo",
+    "verseId": 311
+  },
+  {
+    "locationId": "cairo",
+    "verseId": 313
+  },
+  {
+    "locationId": "cairo",
+    "verseId": 320
+  },
+  {
+    "locationId": "cairo",
+    "verseId": 329
+  },
+  {
+    "locationId": "cairo",
+    "verseId": 379
+  },
+  {
+    "locationId": "cana",
+    "verseId": 26097
+  },
+  {
+    "locationId": "cana",
+    "verseId": 26107
+  },
+  {
+    "locationId": "cana",
+    "verseId": 26203
+  },
+  {
+    "locationId": "capernaum",
+    "verseId": 23223
+  },
+  {
+    "locationId": "capernaum",
+    "verseId": 23351
+  },
+  {
+    "locationId": "capernaum",
+    "verseId": 23483
+  },
+  {
+    "locationId": "capernaum",
+    "verseId": 23725
+  },
+  {
+    "locationId": "capernaum",
+    "verseId": 24237
+  },
+  {
+    "locationId": "capernaum",
+    "verseId": 24262
+  },
+  {
+    "locationId": "capernaum",
+    "verseId": 24572
+  },
+  {
+    "locationId": "corinth",
+    "verseId": 27559
+  },
+  {
+    "locationId": "corinth",
+    "verseId": 27566
+  },
+  {
+    "locationId": "corinth",
+    "verseId": 27587
+  },
+  {
+    "locationId": "corinth",
+    "verseId": 28366
+  },
+  {
+    "locationId": "corinth",
+    "verseId": 28802
+  },
+  {
+    "locationId": "corinth",
+    "verseId": 28824
+  },
+  {
+    "locationId": "corinth",
+    "verseId": 28910
+  },
+  {
+    "locationId": "crete",
+    "verseId": 26961
+  },
+  {
+    "locationId": "crete",
+    "verseId": 27863
+  },
+  {
+    "locationId": "crete",
+    "verseId": 27868
+  },
+  {
+    "locationId": "crete",
+    "verseId": 27869
+  },
+  {
+    "locationId": "crete",
+    "verseId": 27877
+  },
+  {
+    "locationId": "crete",
+    "verseId": 29898
+  },
+  {
+    "locationId": "cyprus",
+    "verseId": 27059
+  },
+  {
+    "locationId": "cyprus",
+    "verseId": 27327
+  },
+  {
+    "locationId": "cyprus",
+    "verseId": 27328
+  },
+  {
+    "locationId": "cyprus",
+    "verseId": 27367
+  },
+  {
+    "locationId": "cyprus",
+    "verseId": 27482
+  },
+  {
+    "locationId": "cyprus",
+    "verseId": 27668
+  },
+  {
+    "locationId": "cyprus",
+    "verseId": 27681
+  },
+  {
+    "locationId": "damascus",
+    "verseId": 352
+  },
+  {
+    "locationId": "damascus",
+    "verseId": 363
+  },
+  {
+    "locationId": "damascus",
+    "verseId": 8215
+  },
+  {
+    "locationId": "damascus",
+    "verseId": 8216
+  },
+  {
+    "locationId": "damascus",
+    "verseId": 9133
+  },
+  {
+    "locationId": "damascus",
+    "verseId": 9268
+  },
+  {
+    "locationId": "damascus",
+    "verseId": 9403
+  },
+  {
+    "locationId": "dan",
+    "verseId": 351
+  },
+  {
+    "locationId": "dan",
+    "verseId": 837
+  },
+  {
+    "locationId": "dan",
+    "verseId": 1037
+  },
+  {
+    "locationId": "dan",
+    "verseId": 1410
+  },
+  {
+    "locationId": "dan",
+    "verseId": 1490
+  },
+  {
+    "locationId": "dan",
+    "verseId": 1491
+  },
+  {
+    "locationId": "dan",
+    "verseId": 1537
+  },
+  {
+    "locationId": "dead_sea",
+    "verseId": 340
+  },
+  {
+    "locationId": "dead_sea",
+    "verseId": 4820
+  },
+  {
+    "locationId": "dead_sea",
+    "verseId": 4829
+  },
+  {
+    "locationId": "dead_sea",
+    "verseId": 4993
+  },
+  {
+    "locationId": "dead_sea",
+    "verseId": 5054
+  },
+  {
+    "locationId": "dead_sea",
+    "verseId": 5910
+  },
+  {
+    "locationId": "dead_sea",
+    "verseId": 6134
+  },
+  {
+    "locationId": "derbe",
+    "verseId": 27421
+  },
+  {
+    "locationId": "derbe",
+    "verseId": 27435
+  },
+  {
+    "locationId": "derbe",
+    "verseId": 27485
+  },
+  {
+    "locationId": "derbe",
+    "verseId": 27631
+  },
+  {
+    "locationId": "eden",
+    "verseId": 46
+  },
+  {
+    "locationId": "eden",
+    "verseId": 79
+  },
+  {
+    "locationId": "eden",
+    "verseId": 80
+  },
+  {
+    "locationId": "eden",
+    "verseId": 21395
+  },
+  {
+    "locationId": "eden",
+    "verseId": 22315
+  },
+  {
+    "locationId": "egypt_nile",
+    "verseId": 379
+  },
+  {
+    "locationId": "egypt_nile",
+    "verseId": 4822
+  },
+  {
+    "locationId": "egypt_nile",
+    "verseId": 6158
+  },
+  {
+    "locationId": "egypt_nile",
+    "verseId": 6207
+  },
+  {
+    "locationId": "egypt_nile",
+    "verseId": 6250
+  },
+  {
+    "locationId": "egypt_nile",
+    "verseId": 9051
+  },
+  {
+    "locationId": "egypt_nile",
+    "verseId": 10210
+  },
+  {
+    "locationId": "ephesus",
+    "verseId": 27577
+  },
+  {
+    "locationId": "ephesus",
+    "verseId": 27579
+  },
+  {
+    "locationId": "ephesus",
+    "verseId": 27582
+  },
+  {
+    "locationId": "ephesus",
+    "verseId": 27587
+  },
+  {
+    "locationId": "ephesus",
+    "verseId": 27603
+  },
+  {
+    "locationId": "ephesus",
+    "verseId": 27612
+  },
+  {
+    "locationId": "ephesus",
+    "verseId": 27621
+  },
+  {
+    "locationId": "ezion_geber",
+    "verseId": 4796
+  },
+  {
+    "locationId": "ezion_geber",
+    "verseId": 4797
+  },
+  {
+    "locationId": "ezion_geber",
+    "verseId": 4947
+  },
+  {
+    "locationId": "ezion_geber",
+    "verseId": 9078
+  },
+  {
+    "locationId": "ezion_geber",
+    "verseId": 9529
+  },
+  {
+    "locationId": "ezion_geber",
+    "verseId": 11364
+  },
+  {
+    "locationId": "ezion_geber",
+    "verseId": 11624
+  },
+  {
+    "locationId": "galilee",
+    "verseId": 6380
+  },
+  {
+    "locationId": "galilee",
+    "verseId": 6414
+  },
+  {
+    "locationId": "galilee",
+    "verseId": 9063
+  },
+  {
+    "locationId": "galilee",
+    "verseId": 9955
+  },
+  {
+    "locationId": "galilee",
+    "verseId": 10531
+  },
+  {
+    "locationId": "galilee",
+    "verseId": 17831
+  },
+  {
+    "locationId": "galilee",
+    "verseId": 23192
+  },
+  {
+    "locationId": "gath",
+    "verseId": 6130
+  },
+  {
+    "locationId": "gath",
+    "verseId": 7328
+  },
+  {
+    "locationId": "gath",
+    "verseId": 7349
+  },
+  {
+    "locationId": "gath",
+    "verseId": 7367
+  },
+  {
+    "locationId": "gath",
+    "verseId": 7623
+  },
+  {
+    "locationId": "gath",
+    "verseId": 7642
+  },
+  {
+    "locationId": "gath",
+    "verseId": 7671
+  },
+  {
+    "locationId": "gaza",
+    "verseId": 254
+  },
+  {
+    "locationId": "gaza",
+    "verseId": 6106
+  },
+  {
+    "locationId": "gaza",
+    "verseId": 6130
+  },
+  {
+    "locationId": "gaza",
+    "verseId": 6250
+  },
+  {
+    "locationId": "gaza",
+    "verseId": 6528
+  },
+  {
+    "locationId": "gaza",
+    "verseId": 6659
+  },
+  {
+    "locationId": "gaza",
+    "verseId": 6951
+  },
+  {
+    "locationId": "gibeon",
+    "verseId": 6041
+  },
+  {
+    "locationId": "gibeon",
+    "verseId": 6055
+  },
+  {
+    "locationId": "gibeon",
+    "verseId": 6066
+  },
+  {
+    "locationId": "gibeon",
+    "verseId": 6067
+  },
+  {
+    "locationId": "gibeon",
+    "verseId": 6069
+  },
+  {
+    "locationId": "gibeon",
+    "verseId": 6070
+  },
+  {
+    "locationId": "gibeon",
+    "verseId": 6071
+  },
+  {
+    "locationId": "gilgal",
+    "verseId": 5239
+  },
+  {
+    "locationId": "gilgal",
+    "verseId": 5930
+  },
+  {
+    "locationId": "gilgal",
+    "verseId": 5931
+  },
+  {
+    "locationId": "gilgal",
+    "verseId": 5944
+  },
+  {
+    "locationId": "gilgal",
+    "verseId": 5945
+  },
+  {
+    "locationId": "gilgal",
+    "verseId": 6044
+  },
+  {
+    "locationId": "gilgal",
+    "verseId": 6071
+  },
+  {
+    "locationId": "golgotha",
+    "verseId": 24163
+  },
+  {
+    "locationId": "golgotha",
+    "verseId": 24849
+  },
+  {
+    "locationId": "golgotha",
+    "verseId": 25969
+  },
+  {
+    "locationId": "golgotha",
+    "verseId": 26843
+  },
+  {
+    "locationId": "gomorrah",
+    "verseId": 254
+  },
+  {
+    "locationId": "gomorrah",
+    "verseId": 329
+  },
+  {
+    "locationId": "gomorrah",
+    "verseId": 339
+  },
+  {
+    "locationId": "gomorrah",
+    "verseId": 345
+  },
+  {
+    "locationId": "gomorrah",
+    "verseId": 347
+  },
+  {
+    "locationId": "gomorrah",
+    "verseId": 348
+  },
+  {
+    "locationId": "gomorrah",
+    "verseId": 445
+  },
+  {
+    "locationId": "harani",
+    "verseId": 293
+  },
+  {
+    "locationId": "harani",
+    "verseId": 294
+  },
+  {
+    "locationId": "harani",
+    "verseId": 295
+  },
+  {
+    "locationId": "harani",
+    "verseId": 296
+  },
+  {
+    "locationId": "harani",
+    "verseId": 298
+  },
+  {
+    "locationId": "harani",
+    "verseId": 299
+  },
+  {
+    "locationId": "harani",
+    "verseId": 303
+  },
+  {
+    "locationId": "hazor",
+    "verseId": 6109
+  },
+  {
+    "locationId": "hazor",
+    "verseId": 6118
+  },
+  {
+    "locationId": "hazor",
+    "verseId": 6119
+  },
+  {
+    "locationId": "hazor",
+    "verseId": 6121
+  },
+  {
+    "locationId": "hazor",
+    "verseId": 6150
+  },
+  {
+    "locationId": "hazor",
+    "verseId": 6226
+  },
+  {
+    "locationId": "hazor",
+    "verseId": 6228
+  },
+  {
+    "locationId": "hebron",
+    "verseId": 337
+  },
+  {
+    "locationId": "hebron",
+    "verseId": 574
+  },
+  {
+    "locationId": "hebron",
+    "verseId": 591
+  },
+  {
+    "locationId": "hebron",
+    "verseId": 1039
+  },
+  {
+    "locationId": "hebron",
+    "verseId": 1098
+  },
+  {
+    "locationId": "hebron",
+    "verseId": 1674
+  },
+  {
+    "locationId": "hebron",
+    "verseId": 3712
+  },
+  {
+    "locationId": "jericho",
+    "verseId": 4377
+  },
+  {
+    "locationId": "jericho",
+    "verseId": 4493
+  },
+  {
+    "locationId": "jericho",
+    "verseId": 4553
+  },
+  {
+    "locationId": "jericho",
+    "verseId": 4677
+  },
+  {
+    "locationId": "jericho",
+    "verseId": 4809
+  },
+  {
+    "locationId": "jericho",
+    "verseId": 4811
+  },
+  {
+    "locationId": "jericho",
+    "verseId": 4832
+  },
+  {
+    "locationId": "jerusalem",
+    "verseId": 6066
+  },
+  {
+    "locationId": "jerusalem",
+    "verseId": 6068
+  },
+  {
+    "locationId": "jerusalem",
+    "verseId": 6070
+  },
+  {
+    "locationId": "jerusalem",
+    "verseId": 6088
+  },
+  {
+    "locationId": "jerusalem",
+    "verseId": 6141
+  },
+  {
+    "locationId": "jerusalem",
+    "verseId": 6211
+  },
+  {
+    "locationId": "jerusalem",
+    "verseId": 6266
+  },
+  {
+    "locationId": "jordan_river",
+    "verseId": 329
+  },
+  {
+    "locationId": "jordan_river",
+    "verseId": 330
+  },
+  {
+    "locationId": "jordan_river",
+    "verseId": 939
+  },
+  {
+    "locationId": "jordan_river",
+    "verseId": 1517
+  },
+  {
+    "locationId": "jordan_river",
+    "verseId": 1518
+  },
+  {
+    "locationId": "jordan_river",
+    "verseId": 4105
+  },
+  {
+    "locationId": "jordan_river",
+    "verseId": 4377
+  },
+  {
+    "locationId": "lystra",
+    "verseId": 27421
+  },
+  {
+    "locationId": "lystra",
+    "verseId": 27423
+  },
+  {
+    "locationId": "lystra",
+    "verseId": 27436
+  },
+  {
+    "locationId": "lystra",
+    "verseId": 27485
+  },
+  {
+    "locationId": "lystra",
+    "verseId": 27486
+  },
+  {
+    "locationId": "lystra",
+    "verseId": 29865
+  },
+  {
+    "locationId": "megiddo",
+    "verseId": 6152
+  },
+  {
+    "locationId": "megiddo",
+    "verseId": 6287
+  },
+  {
+    "locationId": "megiddo",
+    "verseId": 6537
+  },
+  {
+    "locationId": "megiddo",
+    "verseId": 6643
+  },
+  {
+    "locationId": "megiddo",
+    "verseId": 8857
+  },
+  {
+    "locationId": "megiddo",
+    "verseId": 9067
+  },
+  {
+    "locationId": "megiddo",
+    "verseId": 9784
+  },
+  {
+    "locationId": "mount_ararat",
+    "verseId": 188
+  },
+  {
+    "locationId": "mount_ararat",
+    "verseId": 20240
+  },
+  {
+    "locationId": "mount_carmel",
+    "verseId": 9361
+  },
+  {
+    "locationId": "mount_carmel",
+    "verseId": 9362
+  },
+  {
+    "locationId": "mount_carmel",
+    "verseId": 9577
+  },
+  {
+    "locationId": "mount_carmel",
+    "verseId": 9629
+  },
+  {
+    "locationId": "mount_ebo",
+    "verseId": 5238
+  },
+  {
+    "locationId": "mount_ebo",
+    "verseId": 5590
+  },
+  {
+    "locationId": "mount_ebo",
+    "verseId": 5599
+  },
+  {
+    "locationId": "mount_ebo",
+    "verseId": 6033
+  },
+  {
+    "locationId": "mount_ebo",
+    "verseId": 6036
+  },
+  {
+    "locationId": "mount_gerizim",
+    "verseId": 5238
+  },
+  {
+    "locationId": "mount_gerizim",
+    "verseId": 5598
+  },
+  {
+    "locationId": "mount_gerizim",
+    "verseId": 6036
+  },
+  {
+    "locationId": "mount_gerizim",
+    "verseId": 6762
+  },
+  {
+    "locationId": "mount_of_olives",
+    "verseId": 23073
+  },
+  {
+    "locationId": "mount_of_olives",
+    "verseId": 23828
+  },
+  {
+    "locationId": "mount_of_olives",
+    "verseId": 23961
+  },
+  {
+    "locationId": "mount_of_olives",
+    "verseId": 24085
+  },
+  {
+    "locationId": "mount_of_olives",
+    "verseId": 24642
+  },
+  {
+    "locationId": "mount_of_olives",
+    "verseId": 24721
+  },
+  {
+    "locationId": "mount_of_olives",
+    "verseId": 24781
+  },
+  {
+    "locationId": "mount_sinai",
+    "verseId": 2038
+  },
+  {
+    "locationId": "mount_sinai",
+    "verseId": 2045
+  },
+  {
+    "locationId": "mount_sinai",
+    "verseId": 2047
+  },
+  {
+    "locationId": "mount_sinai",
+    "verseId": 2050
+  },
+  {
+    "locationId": "mount_sinai",
+    "verseId": 2194
+  },
+  {
+    "locationId": "mount_sinai",
+    "verseId": 2439
+  },
+  {
+    "locationId": "mount_sinai",
+    "verseId": 2499
+  },
+  {
+    "locationId": "nazareth",
+    "verseId": 23193
+  },
+  {
+    "locationId": "nazareth",
+    "verseId": 23223
+  },
+  {
+    "locationId": "nazareth",
+    "verseId": 23838
+  },
+  {
+    "locationId": "nazareth",
+    "verseId": 24126
+  },
+  {
+    "locationId": "nazareth",
+    "verseId": 24225
+  },
+  {
+    "locationId": "nazareth",
+    "verseId": 24240
+  },
+  {
+    "locationId": "nazareth",
+    "verseId": 24636
+  },
+  {
+    "locationId": "nineveh",
+    "verseId": 246
+  },
+  {
+    "locationId": "nineveh",
+    "verseId": 247
+  },
+  {
+    "locationId": "nineveh",
+    "verseId": 10098
+  },
+  {
+    "locationId": "nineveh",
+    "verseId": 18390
+  },
+  {
+    "locationId": "nineveh",
+    "verseId": 22534
+  },
+  {
+    "locationId": "nineveh",
+    "verseId": 22561
+  },
+  {
+    "locationId": "nineveh",
+    "verseId": 22562
+  },
+  {
+    "locationId": "patmos",
+    "verseId": 30707
+  },
+  {
+    "locationId": "persia",
+    "verseId": 12014
+  },
+  {
+    "locationId": "persia",
+    "verseId": 12016
+  },
+  {
+    "locationId": "persia",
+    "verseId": 12017
+  },
+  {
+    "locationId": "persia",
+    "verseId": 12018
+  },
+  {
+    "locationId": "persia",
+    "verseId": 12019
+  },
+  {
+    "locationId": "persia",
+    "verseId": 12025
+  },
+  {
+    "locationId": "persia",
+    "verseId": 12105
+  },
+  {
+    "locationId": "philip",
+    "verseId": 23686
+  },
+  {
+    "locationId": "philip",
+    "verseId": 24528
+  },
+  {
+    "locationId": "philip",
+    "verseId": 27496
+  },
+  {
+    "locationId": "philip",
+    "verseId": 27633
+  },
+  {
+    "locationId": "philip",
+    "verseId": 29363
+  },
+  {
+    "locationId": "philip",
+    "verseId": 29573
+  },
+  {
+    "locationId": "philistia",
+    "verseId": 14816
+  },
+  {
+    "locationId": "philistia",
+    "verseId": 15306
+  },
+  {
+    "locationId": "philistia",
+    "verseId": 15752
+  },
+  {
+    "locationId": "red_sea",
+    "verseId": 1797
+  },
+  {
+    "locationId": "red_sea",
+    "verseId": 1886
+  },
+  {
+    "locationId": "red_sea",
+    "verseId": 1925
+  },
+  {
+    "locationId": "red_sea",
+    "verseId": 1943
+  },
+  {
+    "locationId": "red_sea",
+    "verseId": 2176
+  },
+  {
+    "locationId": "red_sea",
+    "verseId": 4134
+  },
+  {
+    "locationId": "red_sea",
+    "verseId": 4345
+  },
+  {
+    "locationId": "rome",
+    "verseId": 26960
+  },
+  {
+    "locationId": "rome",
+    "verseId": 27560
+  },
+  {
+    "locationId": "rome",
+    "verseId": 27607
+  },
+  {
+    "locationId": "rome",
+    "verseId": 27746
+  },
+  {
+    "locationId": "rome",
+    "verseId": 27914
+  },
+  {
+    "locationId": "rome",
+    "verseId": 27916
+  },
+  {
+    "locationId": "rome",
+    "verseId": 27938
+  },
+  {
+    "locationId": "samaria",
+    "verseId": 9217
+  },
+  {
+    "locationId": "samaria",
+    "verseId": 9308
+  },
+  {
+    "locationId": "samaria",
+    "verseId": 9312
+  },
+  {
+    "locationId": "samaria",
+    "verseId": 9313
+  },
+  {
+    "locationId": "samaria",
+    "verseId": 9316
+  },
+  {
+    "locationId": "samaria",
+    "verseId": 9344
+  },
+  {
+    "locationId": "samaria",
+    "verseId": 9410
+  },
+  {
+    "locationId": "sea_of_galilee",
+    "verseId": 23228
+  },
+  {
+    "locationId": "sea_of_galilee",
+    "verseId": 23663
+  },
+  {
+    "locationId": "sea_of_galilee",
+    "verseId": 24232
+  },
+  {
+    "locationId": "sea_of_galilee",
+    "verseId": 24495
+  },
+  {
+    "locationId": "sea_of_galilee",
+    "verseId": 26259
+  },
+  {
+    "locationId": "shiloh",
+    "verseId": 1484
+  },
+  {
+    "locationId": "shiloh",
+    "verseId": 6295
+  },
+  {
+    "locationId": "shiloh",
+    "verseId": 6302
+  },
+  {
+    "locationId": "shiloh",
+    "verseId": 6303
+  },
+  {
+    "locationId": "shiloh",
+    "verseId": 6304
+  },
+  {
+    "locationId": "shiloh",
+    "verseId": 6373
+  },
+  {
+    "locationId": "shiloh",
+    "verseId": 6384
+  },
+  {
+    "locationId": "sodom",
+    "verseId": 254
+  },
+  {
+    "locationId": "sodom",
+    "verseId": 329
+  },
+  {
+    "locationId": "sodom",
+    "verseId": 331
+  },
+  {
+    "locationId": "sodom",
+    "verseId": 332
+  },
+  {
+    "locationId": "sodom",
+    "verseId": 339
+  },
+  {
+    "locationId": "sodom",
+    "verseId": 345
+  },
+  {
+    "locationId": "sodom",
+    "verseId": 347
+  },
+  {
+    "locationId": "susa",
+    "verseId": 12298
+  },
+  {
+    "locationId": "susa",
+    "verseId": 12705
+  },
+  {
+    "locationId": "susa",
+    "verseId": 12708
+  },
+  {
+    "locationId": "susa",
+    "verseId": 12728
+  },
+  {
+    "locationId": "susa",
+    "verseId": 12730
+  },
+  {
+    "locationId": "susa",
+    "verseId": 12733
+  },
+  {
+    "locationId": "susa",
+    "verseId": 12763
+  },
+  {
+    "locationId": "tarshish",
+    "verseId": 239
+  },
+  {
+    "locationId": "tarshish",
+    "verseId": 10260
+  },
+  {
+    "locationId": "tarshish",
+    "verseId": 11386
+  },
+  {
+    "locationId": "tarshish",
+    "verseId": 11624
+  },
+  {
+    "locationId": "tarshish",
+    "verseId": 11625
+  },
+  {
+    "locationId": "tarshish",
+    "verseId": 12717
+  },
+  {
+    "locationId": "tarshish",
+    "verseId": 14642
+  },
+  {
+    "locationId": "thessalonica",
+    "verseId": 27525
+  },
+  {
+    "locationId": "thessalonica",
+    "verseId": 27535
+  },
+  {
+    "locationId": "thessalonica",
+    "verseId": 27537
+  },
+  {
+    "locationId": "thessalonica",
+    "verseId": 27858
+  },
+  {
+    "locationId": "thessalonica",
+    "verseId": 29459
+  },
+  {
+    "locationId": "thessalonica",
+    "verseId": 29881
+  },
+  {
+    "locationId": "troas",
+    "verseId": 27492
+  },
+  {
+    "locationId": "troas",
+    "verseId": 27495
+  },
+  {
+    "locationId": "troas",
+    "verseId": 27632
+  },
+  {
+    "locationId": "troas",
+    "verseId": 27633
+  },
+  {
+    "locationId": "troas",
+    "verseId": 28837
+  },
+  {
+    "locationId": "troas",
+    "verseId": 29884
+  },
+  {
+    "locationId": "ur",
+    "verseId": 295
+  },
+  {
+    "locationId": "ur",
+    "verseId": 298
+  },
+  {
+    "locationId": "ur",
+    "verseId": 368
+  },
+  {
+    "locationId": "ur",
+    "verseId": 12519
+  },
+  {
+    "locationId": "wilderness_of_paran",
+    "verseId": 535
+  },
+  {
+    "locationId": "wilderness_of_paran",
+    "verseId": 4001
+  },
+  {
+    "locationId": "wilderness_of_paran",
+    "verseId": 4076
+  },
+  {
+    "locationId": "wilderness_of_paran",
+    "verseId": 4079
+  },
+  {
+    "locationId": "wilderness_of_paran",
+    "verseId": 4102
+  },
+  {
+    "locationId": "wilderness_of_paran",
+    "verseId": 7863
+  },
+  {
+    "locationId": "wilderness_of_zin",
+    "verseId": 4097
+  },
+  {
+    "locationId": "wilderness_of_zin",
+    "verseId": 4569
+  },
+  {
+    "locationId": "wilderness_of_zin",
+    "verseId": 4797
+  },
+  {
+    "locationId": "wilderness_of_zin",
+    "verseId": 4820
+  },
+  {
+    "locationId": "wilderness_of_zin",
+    "verseId": 5810
+  },
+  {
+    "locationId": "wilderness_of_zin",
+    "verseId": 6204
+  }
 ]

@@ -26,8 +26,12 @@ class TtsController(private val appContext: Context) {
     private var tts: TextToSpeech? = null
     private var verses: List<String> = emptyList()
     private var resumeIndex: Int = 0
-    // ponytail: counter instead of boolean to handle async onDone after re-queue
-    private var intentionalStopCount: Int = 0
+    // ponytail: generation counter instead of single counter.
+    // Each speak()/stop()/togglePlayPause() increments the generation;
+    // onDone only advances if its generation matches the current one.
+    // This handles the race where engine.stop() fires N async callbacks
+    // after we've already queued new utterances.
+    private var generation: Int = 0
 
     private val _state = MutableStateFlow(TtsState())
     val state: StateFlow<TtsState> = _state.asStateFlow()
@@ -55,7 +59,7 @@ class TtsController(private val appContext: Context) {
 
     /** Release all TTS resources. Call when the screen is disposed. */
     fun shutdown() {
-        intentionalStopCount++
+        generation++
         tts?.stop()
         tts?.shutdown()
         tts = null
@@ -76,17 +80,18 @@ class TtsController(private val appContext: Context) {
         if (!_state.value.isInitialized) return
         if (verseTexts.isEmpty()) return
 
+        generation++  // mark any in-flight onDone as stale
+        val myGen = generation
+
         verses = verseTexts
         resumeIndex = startIndex.coerceIn(0, verseTexts.size - 1)
 
-        // ponytail: prevent onDone from nudging resumeIndex before we overwrite it
-        intentionalStopCount++
         engine.stop()                            // cancel any prior queue
         engine.setSpeechRate(_state.value.speed)
 
         var queued = 0
         for (i in resumeIndex until verseTexts.size) {
-            val id = "verse_$i"
+            val id = "verse_${i}_gen$myGen"
             if (engine.speak(verseTexts[i], TextToSpeech.QUEUE_ADD, null, id) == TextToSpeech.SUCCESS) {
                 queued++
             } else {
@@ -97,7 +102,8 @@ class TtsController(private val appContext: Context) {
         if (queued > 0) {
             _state.value = _state.value.copy(
                 isPlaying = true,
-                currentVerseIndex = resumeIndex
+                currentVerseIndex = resumeIndex,
+                generation = myGen
             )
         }
     }
@@ -107,8 +113,7 @@ class TtsController(private val appContext: Context) {
         val s = _state.value
         if (s.isPlaying) {
             // Pause — stop the engine, remember where we were
-            // ponytail: increment counter so onDone() doesn't advance resumeIndex
-            intentionalStopCount++
+            generation++
             tts?.stop()
             _state.value = s.copy(isPlaying = false, currentWordRange = null)
         } else {
@@ -135,7 +140,7 @@ class TtsController(private val appContext: Context) {
 
     /** Stop playback and reset state. */
     fun stop() {
-        intentionalStopCount++
+        generation++
         tts?.stop()
         resumeIndex = 0
         _state.value = _state.value.copy(isPlaying = false, currentVerseIndex = -1, currentWordRange = null)
@@ -158,7 +163,8 @@ class TtsController(private val appContext: Context) {
 
     private val utteranceListener = object : UtteranceProgressListener() {
         override fun onStart(utteranceId: String?) {
-            val idx = utteranceId?.extractIndex() ?: return
+            val (idx, gen) = utteranceId?.parseUtteranceId() ?: return
+            if (gen != generation) return  // stale utterance from prior speak()
             resumeIndex = idx
             _state.value = _state.value.copy(
                 currentVerseIndex = idx,
@@ -169,16 +175,15 @@ class TtsController(private val appContext: Context) {
         override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
             // Word-level sync: called when a new word begins.
             // 'start' and 'end' are character offsets into the spoken text.
+            val (_, gen) = utteranceId?.parseUtteranceId() ?: return
+            if (gen != generation) return  // stale utterance
             _state.value = _state.value.copy(currentWordRange = start until end)
         }
 
         override fun onDone(utteranceId: String?) {
-            // ponytail: skip if stop() was called intentionally (pause, shutdown, speak flush)
-            if (intentionalStopCount > 0) {
-                intentionalStopCount--
-                return
-            }
-            val idx = utteranceId?.extractIndex() ?: return
+            val (idx, gen) = utteranceId?.parseUtteranceId() ?: return
+            // ponytail: skip stale callbacks from prior generation
+            if (gen != generation) return
             resumeIndex = idx + 1
             if (idx >= verses.size - 1) {
                 // Last verse finished
@@ -198,8 +203,15 @@ class TtsController(private val appContext: Context) {
 
     // ── Helpers ────────────────────────────────────────────────────
 
-    private fun String?.extractIndex(): Int? =
-        this?.removePrefix("verse_")?.toIntOrNull()
+    /** Parse "verse_{index}_gen{generation}" → Pair(index, generation). */
+    private fun String?.parseUtteranceId(): Pair<Int, Int>? {
+        val s = this ?: return null
+        val parts = s.removePrefix("verse_").split("_gen")
+        if (parts.size != 2) return null
+        val idx = parts[0].toIntOrNull() ?: return null
+        val gen = parts[1].toIntOrNull() ?: return null
+        return Pair(idx, gen)
+    }
 
     companion object {
         private const val TAG = "TtsController"
@@ -216,5 +228,8 @@ data class TtsState(
      *  (between verses or before first word). */
     val currentWordRange: IntRange? = null,
     val speed: Float = 1.0f,
-    val isAvailable: Boolean = true
+    val isAvailable: Boolean = true,
+    /** Monotonic generation counter incremented on each speak/stop/pause.
+     *  onDone callbacks with a stale generation are ignored. */
+    val generation: Int = 0
 )

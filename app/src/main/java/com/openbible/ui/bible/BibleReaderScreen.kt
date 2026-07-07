@@ -126,9 +126,7 @@ private fun VerseLine(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 8.dp, top = 2.dp, bottom = 4.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .fillMaxWidth()
                         .padding(8.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {

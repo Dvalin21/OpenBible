@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.openbible.data.db.entity.BibleLocationEntity
+import com.openbible.data.db.entity.LocationEventEntity
 import com.openbible.data.db.entity.VerseLocationLinkEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -24,7 +25,7 @@ data class LocationVerseLink(
 )
 
 /**
- * DAO for Bible geography locations.
+ * DAO for Bible geography locations and events.
  */
 @Dao
 interface LocationDao {
@@ -115,4 +116,31 @@ interface LocationDao {
 
     @Query("DELETE FROM verse_location_links")
     suspend fun clearVerseLinks()
+
+    // ── Location Events ───────────────────────────────────────
+
+    /** Get all events for a specific location, ordered by sort order then era. */
+    @Query("""
+        SELECT * FROM location_events
+        WHERE locationId = :locationId
+        ORDER BY sortOrder, era
+    """)
+    suspend fun getEventsForLocation(locationId: String): List<LocationEventEntity>
+
+    /** Get all events across all locations (for search/explore). */
+    @Query("SELECT * FROM location_events ORDER BY era, sortOrder")
+    suspend fun getAllEvents(): List<LocationEventEntity>
+
+    /** Get events by category. */
+    @Query("SELECT * FROM location_events WHERE category = :category ORDER BY locationId, sortOrder")
+    suspend fun getEventsByCategory(category: String): List<LocationEventEntity>
+
+    @Query("SELECT COUNT(*) FROM location_events")
+    suspend fun eventCount(): Int
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllEvents(events: List<LocationEventEntity>)
+
+    @Query("DELETE FROM location_events")
+    suspend fun clearEvents()
 }

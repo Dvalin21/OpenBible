@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import androidx.room.withTransaction
 import com.openbible.MainActivity
 import com.openbible.OpenBibleApp
 import com.openbible.R
@@ -54,10 +53,8 @@ class DailyVerseReceiver : BroadcastReceiver() {
         // Default to KJV if we can't read the preference
         val translationId = prefs.defaultTranslation.first()
 
-        // Query a random verse from the database
-        val verse = app.database.withTransaction {
-            app.database.bibleDao().getRandomVerse(translationId)
-        }
+        // Query a random verse from the database (no transaction needed — read only)
+        val verse = app.database.bibleDao().getRandomVerse(translationId)
 
         if (verse == null) {
             // Schedule next day anyway (maybe next time)

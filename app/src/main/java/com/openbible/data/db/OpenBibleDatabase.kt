@@ -14,6 +14,7 @@ import com.openbible.data.db.dao.CrossReferenceDao
 import com.openbible.data.db.dao.HighlightDao
 import com.openbible.data.db.dao.LocationDao
 import com.openbible.data.db.dao.NoteDao
+import com.openbible.data.db.dao.ParallelTraditionDao
 import com.openbible.data.db.dao.ReadingHistoryDao
 import com.openbible.data.db.dao.ReadingPlanDao
 import com.openbible.data.db.dao.StrongDao
@@ -22,10 +23,12 @@ import com.openbible.data.db.entity.BookEntity
 import com.openbible.data.db.entity.BookmarkEntity
 import com.openbible.data.db.entity.CrossReferenceEntity
 import com.openbible.data.db.entity.HighlightEntity
+import com.openbible.data.db.entity.LocationEventEntity
 import com.openbible.data.db.entity.NoteEntity
 import com.openbible.data.db.entity.NoteImageEntity
 import com.openbible.data.db.entity.NoteVerseLinkEntity
 import com.openbible.data.db.entity.NotebookEntity
+import com.openbible.data.db.entity.ParallelTraditionEntity
 import com.openbible.data.db.entity.ReadingHistoryEntity
 import com.openbible.data.db.entity.ReadingPlanDayEntity
 import com.openbible.data.db.entity.ReadingPlanEntity
@@ -49,6 +52,8 @@ import com.openbible.data.db.entity.VerseStrongLinkEntity
  * Version 4: added BBE and NKJV translation metadata entries.
  * Version 5: added locations and verse_location_links tables.
  * Version 6: added FTS5 virtual tables for full-text search per translation.
+ * Version 7: added location_events table for biblical events at each location.
+ * Version 8: added parallel_traditions table for cross-cultural comparisons.
  */
 @Database(
     entities = [
@@ -69,9 +74,11 @@ import com.openbible.data.db.entity.VerseStrongLinkEntity
         StrongNumberEntity::class,
         VerseStrongLinkEntity::class,
         BibleLocationEntity::class,
-        VerseLocationLinkEntity::class
+        VerseLocationLinkEntity::class,
+        LocationEventEntity::class,
+        ParallelTraditionEntity::class
     ],
-    version = 6,
+    version = 8,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -86,6 +93,7 @@ abstract class OpenBibleDatabase : RoomDatabase() {
     abstract fun readingHistoryDao(): ReadingHistoryDao
     abstract fun strongDao(): StrongDao
     abstract fun locationDao(): LocationDao
+    abstract fun parallelTraditionDao(): ParallelTraditionDao
 
     companion object {
         private const val DATABASE_NAME = "openbible.db"
@@ -121,7 +129,7 @@ abstract class OpenBibleDatabase : RoomDatabase() {
             }
 
             // Explicit migrations — never destroy user data.
-            builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+            builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
 
             return builder.build()
         }
@@ -216,6 +224,65 @@ abstract class OpenBibleDatabase : RoomDatabase() {
          * These tables provide fast, ranked full-text search across verses.
          * Safe to run multiple times (CREATE VIRTUAL TABLE IF NOT EXISTS).
          */
+        /**
+         * Version 6 → 7: Added location_events table for biblical events.
+         * Each event is tied to a location and has a narrative description,
+         * category, era, and Bible reference for navigation.
+         * Schema matches LocationEventEntity.
+         */
+        private val MIGRATION_6_7 = Migration(6, 7) { db ->
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS location_events (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    locationId TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    reference TEXT NOT NULL,
+                    bookId INTEGER NOT NULL,
+                    chapter INTEGER NOT NULL,
+                    category TEXT NOT NULL,
+                    era TEXT NOT NULL,
+                    sortOrder INTEGER NOT NULL DEFAULT 0,
+                    FOREIGN KEY (locationId) REFERENCES locations(id) ON DELETE CASCADE
+                )
+            """)
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_events_location ON location_events(locationId)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_events_era ON location_events(era)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_events_category ON location_events(category)")
+        }
+
+        /**
+         * Version 7 → 8: Added parallel_traditions table for cross-cultural
+         * comparisons. Schema matches ParallelTraditionEntity.
+         * Safe to run multiple times (CREATE TABLE IF NOT EXISTS).
+         */
+        private val MIGRATION_7_8 = Migration(7, 8) { db ->
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS parallel_traditions (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    eventId TEXT,
+                    biblicalReference TEXT NOT NULL,
+                    biblicalBookId INTEGER NOT NULL,
+                    biblicalChapter INTEGER NOT NULL,
+                    culture TEXT NOT NULL,
+                    documentName TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    similarities TEXT NOT NULL,
+                    differences TEXT NOT NULL,
+                    scholarlyNote TEXT,
+                    dateRange TEXT,
+                    category TEXT NOT NULL,
+                    sortOrder INTEGER NOT NULL DEFAULT 0,
+                    FOREIGN KEY (eventId) REFERENCES location_events(id) ON DELETE CASCADE
+                )
+            """)
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_parallels_event ON parallel_traditions(eventId)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_parallels_culture ON parallel_traditions(culture)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_parallels_category ON parallel_traditions(category)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_parallels_book ON parallel_traditions(biblicalBookId)")
+        }
+
         private val MIGRATION_5_6 = Migration(5, 6) { db ->
             db.execSQL("""
                 CREATE VIRTUAL TABLE IF NOT EXISTS verses_fts_kjv USING fts5(

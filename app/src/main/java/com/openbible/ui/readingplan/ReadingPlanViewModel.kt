@@ -10,7 +10,6 @@ import com.openbible.data.db.dao.ReadingPlanDao
 import com.openbible.data.db.entity.ReadingPlanDayEntity
 import com.openbible.data.db.entity.ReadingPlanEntity
 import com.openbible.data.db.entity.ReadingProgressEntity
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -35,8 +34,8 @@ class ReadingPlanViewModel(application: Application) : AndroidViewModel(applicat
     private val bookNames = ConcurrentHashMap<Int, String>()
 
     init {
-        // ponytail: load book names synchronously to avoid UI race condition
-        kotlinx.coroutines.runBlocking(Dispatchers.IO) {
+        // ponytail: load book names via coroutine, ConcurrentHashMap handles concurrent reads
+        viewModelScope.launch {
             bibleDao.getBooks("kjv").first().forEach { book ->
                 bookNames[book.id] = book.name
             }
