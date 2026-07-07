@@ -261,6 +261,126 @@ def create_database(output_path: str):
         count = cursor.fetchone()[0]
         print(f"  {table}: {count:,}")
 
+    # ── Room v6: FTS5 virtual tables for full-text search ──────────
+    print("\n  Creating FTS5 virtual tables...")
+    for tid in ["kjv", "web", "asv", "ylt", "bbe", "nkjv"]:
+        cursor.execute(f"""
+            CREATE VIRTUAL TABLE IF NOT EXISTS verses_fts_{tid} USING fts5(
+                text,
+                bookId UNINDEXED,
+                chapter UNINDEXED,
+                verse UNINDEXED,
+                verseId UNINDEXED,
+                tokenize='porter unicode61'
+            )
+        """)
+        cursor.execute(f"""
+            INSERT INTO verses_fts_{tid}(rowid, text, bookId, chapter, verse, verseId)
+            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE translationId = ?
+        """, (tid,))
+        cnt = cursor.execute(f"SELECT COUNT(*) FROM verses_fts_{tid}").fetchone()[0]
+        print(f"    verses_fts_{tid}: {cnt:,} rows")
+
+    # Triggers to keep FTS in sync if verses are modified
+    cursor.execute("""
+        CREATE TRIGGER IF NOT EXISTS verses_ai AFTER INSERT ON verses BEGIN
+            INSERT INTO verses_fts_kjv(rowid, text, bookId, chapter, verse, verseId)
+            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'kjv';
+            INSERT INTO verses_fts_web(rowid, text, bookId, chapter, verse, verseId)
+            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'web';
+            INSERT INTO verses_fts_asv(rowid, text, bookId, chapter, verse, verseId)
+            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'asv';
+            INSERT INTO verses_fts_ylt(rowid, text, bookId, chapter, verse, verseId)
+            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'ylt';
+            INSERT INTO verses_fts_bbe(rowid, text, bookId, chapter, verse, verseId)
+            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'bbe';
+            INSERT INTO verses_fts_nkjv(rowid, text, bookId, chapter, verse, verseId)
+            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'nkjv';
+        END
+    """)
+    cursor.execute("""
+        CREATE TRIGGER IF NOT EXISTS verses_ad AFTER DELETE ON verses BEGIN
+            DELETE FROM verses_fts_kjv WHERE rowid = old.id;
+            DELETE FROM verses_fts_web WHERE rowid = old.id;
+            DELETE FROM verses_fts_asv WHERE rowid = old.id;
+            DELETE FROM verses_fts_ylt WHERE rowid = old.id;
+            DELETE FROM verses_fts_bbe WHERE rowid = old.id;
+            DELETE FROM verses_fts_nkjv WHERE rowid = old.id;
+        END
+    """)
+    cursor.execute("""
+        CREATE TRIGGER IF NOT EXISTS verses_au AFTER UPDATE ON verses BEGIN
+            DELETE FROM verses_fts_kjv WHERE rowid = old.id;
+            DELETE FROM verses_fts_web WHERE rowid = old.id;
+            DELETE FROM verses_fts_asv WHERE rowid = old.id;
+            DELETE FROM verses_fts_ylt WHERE rowid = old.id;
+            DELETE FROM verses_fts_bbe WHERE rowid = old.id;
+            DELETE FROM verses_fts_nkjv WHERE rowid = old.id;
+            INSERT INTO verses_fts_kjv(rowid, text, bookId, chapter, verse, verseId)
+            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'kjv';
+            INSERT INTO verses_fts_web(rowid, text, bookId, chapter, verse, verseId)
+            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'web';
+            INSERT INTO verses_fts_asv(rowid, text, bookId, chapter, verse, verseId)
+            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'asv';
+            INSERT INTO verses_fts_ylt(rowid, text, bookId, chapter, verse, verseId)
+            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'ylt';
+            INSERT INTO verses_fts_bbe(rowid, text, bookId, chapter, verse, verseId)
+            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'bbe';
+            INSERT INTO verses_fts_nkjv(rowid, text, bookId, chapter, verse, verseId)
+            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'nkjv';
+        END
+    """)
+
+    # ── Room v7: location_events table ─────────────────────────────
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS location_events (
+            id TEXT NOT NULL PRIMARY KEY,
+            locationId TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL,
+            reference TEXT NOT NULL,
+            bookId INTEGER NOT NULL,
+            chapter INTEGER NOT NULL,
+            category TEXT NOT NULL,
+            era TEXT NOT NULL,
+            sortOrder INTEGER NOT NULL DEFAULT 0,
+            FOREIGN KEY (locationId) REFERENCES locations(id) ON DELETE CASCADE
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_events_location ON location_events(locationId)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_events_era ON location_events(era)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_events_category ON location_events(category)")
+
+    # ── Room v8: parallel_traditions table ─────────────────────────
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS parallel_traditions (
+            id TEXT NOT NULL PRIMARY KEY,
+            eventId TEXT,
+            biblicalReference TEXT NOT NULL,
+            biblicalBookId INTEGER NOT NULL,
+            biblicalChapter INTEGER NOT NULL,
+            culture TEXT NOT NULL,
+            documentName TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL,
+            similarities TEXT NOT NULL,
+            differences TEXT NOT NULL,
+            scholarlyNote TEXT,
+            dateRange TEXT,
+            category TEXT NOT NULL,
+            sortOrder INTEGER NOT NULL DEFAULT 0,
+            FOREIGN KEY (eventId) REFERENCES location_events(id) ON DELETE CASCADE
+        )
+    """)
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_parallels_event ON parallel_traditions(eventId)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_parallels_culture ON parallel_traditions(culture)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_parallels_category ON parallel_traditions(category)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_parallels_book ON parallel_traditions(biblicalBookId)")
+
+    # ── Room version ───────────────────────────────────────────────
+    cursor.execute("PRAGMA user_version = 8")
+    print("  PRAGMA user_version = 8")
+
     conn.close()
 
     file_size = os.path.getsize(output_path)
