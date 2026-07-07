@@ -36,11 +36,13 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val themeMode by preferences.themeMode.collectAsState(initial = com.openbible.data.model.ThemeMode.LIGHT)
+            val defaultTranslation by preferences.defaultTranslation.collectAsState(initial = "kjv")
             val retroConfig = rememberRetroPixelConfig()
 
             OpenBibleTheme(themeMode = themeMode) {
                 OpenBibleNavGraph(
                     isTablet = retroConfig.isTablet,
+                    defaultTranslation = defaultTranslation,
                     initialTranslationId = pendingNav.value?.first,
                     initialBookId = pendingNav.value?.second,
                     initialChapter = pendingNav.value?.third,

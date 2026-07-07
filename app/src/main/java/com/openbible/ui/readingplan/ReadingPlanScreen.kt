@@ -22,6 +22,7 @@ import com.openbible.data.db.entity.ReadingPlanEntity
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReadingPlanScreen(
+    defaultTranslation: String = "kjv",
     onOpenChapter: (translationId: String, bookId: Int, chapter: Int) -> Unit,
     viewModel: ReadingPlanViewModel = viewModel()
 ) {
@@ -112,7 +113,7 @@ fun ReadingPlanScreen(
                         ReadingCard(
                             reading = reading,
                             onClick = {
-                                onOpenChapter("kjv", reading.bookId, reading.chapter)
+                                onOpenChapter(defaultTranslation, reading.bookId, reading.chapter)
                             }
                         )
                     }

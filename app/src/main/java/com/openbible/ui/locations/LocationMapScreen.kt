@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
+import android.content.pm.PackageManager
 import com.openbible.data.db.entity.BibleLocationEntity
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
@@ -67,7 +68,11 @@ private fun BibleMapView(
     // Configure osmdroid once
     val mapView = remember {
         Configuration.getInstance().apply {
-            userAgentValue = context.packageName
+            // OSM tile policy requires a meaningful User-Agent — use package/version
+            val appVersion = try {
+                context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0"
+            } catch (_: PackageManager.NameNotFoundException) { "1.0" }
+            userAgentValue = "${context.packageName}/$appVersion"
             // ponytail: tile cache in app cache dir, survives sessions
             osmdroidTileCache = File(context.cacheDir, "osmdroid/tiles").also { it.mkdirs() }
         }
@@ -85,7 +90,10 @@ private fun BibleMapView(
     // Lifecycle management
     DisposableEffect(Unit) {
         mapView.onResume()
-        onDispose { mapView.onPause() }
+        onDispose {
+            mapView.onPause()
+            mapView.onDetach()  // prevents tile downloader thread leak
+        }
     }
 
     // Update markers when locations change

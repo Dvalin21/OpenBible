@@ -158,16 +158,18 @@ fun DrawingCanvas(
                         // ponytail: update size each frame in case of orientation change
                         canvasSize = size
 
-                        // Filter for touch/stylus only
-                        val touch = event.changes.firstOrNull()?.let { change ->
-                            if (change.type == PointerType.Touch || change.type == PointerType.Stylus) change
-                            else null
-                        } ?: continue
+                        // Palm rejection: prefer stylus over touch when both are present.
+                        // This prevents a resting palm from being treated as a drawing stroke.
+                        val touch = event.changes.firstOrNull { it.type == PointerType.Stylus }
+                            ?: event.changes.firstOrNull { it.type == PointerType.Touch }
+                            ?: continue
 
                         when {
                             touch.changedToDown() -> {
                                 currentPoints = listOf(touch.position)
-                                currentWidth = penSize
+                                // Pressure sensitivity: scale width by stylus pressure (0.0-1.0),
+                                // clamped to [0.25, 1.0] so light touches still draw a visible line.
+                                currentWidth = penSize * touch.pressure.coerceIn(0.25f, 1.0f)
                                 currentColor = if (isEraser) 0xFFFFFFFF else penColor
                                 currentEraser = isEraser
                             }

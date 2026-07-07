@@ -6,6 +6,7 @@ import com.openbible.data.db.dao.LocationDao
 import com.openbible.data.db.dao.LocationVerseLink
 import com.openbible.data.db.entity.BibleLocationEntity
 import com.openbible.data.db.entity.LocationEventEntity
+import com.openbible.data.preferences.UserPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,8 +20,12 @@ import javax.inject.Inject
 
 @HiltViewModel
 class LocationViewModel @Inject constructor(
-    private val locationDao: LocationDao
+    private val locationDao: LocationDao,
+    private val userPreferences: UserPreferences
 ) : ViewModel() {
+
+    val defaultTranslation: StateFlow<String> = userPreferences.defaultTranslation
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "kjv")
 
     /** All locations for the browse list. */
     val allLocations: StateFlow<List<BibleLocationEntity>> = locationDao

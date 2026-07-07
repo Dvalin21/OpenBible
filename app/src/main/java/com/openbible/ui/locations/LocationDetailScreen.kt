@@ -40,6 +40,7 @@ fun LocationDetailScreen(
     val location by viewModel.selectedLocation.collectAsState()
     val verseLinks by viewModel.verseLinks.collectAsState()
     val events by viewModel.events.collectAsState()
+    val defaultTranslation by viewModel.defaultTranslation.collectAsState()
 
     Scaffold(
         topBar = {
@@ -62,6 +63,7 @@ fun LocationDetailScreen(
                 location = location!!,
                 verseLinks = verseLinks,
                 events = events,
+                defaultTranslation = defaultTranslation,
                 onOpenVerse = onOpenVerse,
                 onOpenParallels = onOpenParallels,
                 modifier = Modifier.padding(padding)
@@ -75,6 +77,7 @@ private fun LocationDetailContent(
     location: BibleLocationEntity,
     verseLinks: List<LocationVerseLink>,
     events: List<LocationEventEntity>,
+    defaultTranslation: String = "kjv",
     onOpenVerse: (translationId: String, bookId: Int, chapter: Int) -> Unit,
     onOpenParallels: (eventId: String) -> Unit = {},
     modifier: Modifier = Modifier
@@ -193,7 +196,7 @@ private fun LocationDetailContent(
             }
         } else {
             items(events, key = { it.id }) { event ->
-                EventCard(event = event, onOpenVerse = onOpenVerse, onOpenParallels = onOpenParallels)
+                EventCard(event = event, defaultTranslation = defaultTranslation, onOpenVerse = onOpenVerse, onOpenParallels = onOpenParallels)
             }
         }
 
@@ -276,6 +279,7 @@ private val eventCategoryColors = mapOf(
 @Composable
 private fun EventCard(
     event: LocationEventEntity,
+    defaultTranslation: String = "kjv",
     onOpenVerse: (translationId: String, bookId: Int, chapter: Int) -> Unit,
     onOpenParallels: (eventId: String) -> Unit = {}
 ) {
@@ -356,7 +360,7 @@ private fun EventCard(
                     Text("Parallels", style = MaterialTheme.typography.labelSmall)
                 }
                 FilledTonalButton(
-                    onClick = { onOpenVerse("kjv", event.bookId, event.chapter) },
+                    onClick = { onOpenVerse(defaultTranslation, event.bookId, event.chapter) },
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                     modifier = Modifier.height(32.dp)
                 ) {

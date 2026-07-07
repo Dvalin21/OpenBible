@@ -93,10 +93,19 @@ private fun StrongNumberRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Text(
-                text = "${strong.lemma} (${strong.transliteration})",
-                style = MaterialTheme.typography.bodyMedium
-            )
+            val subtitle = buildString {
+                if (strong.lemma.isNotBlank()) append(strong.lemma)
+                if (strong.transliteration.isNotBlank()) {
+                    if (isNotEmpty()) append(" ")
+                    append("(${strong.transliteration})")
+                }
+            }
+            if (subtitle.isNotBlank()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
             if (strong.partOfSpeech != null) {
                 Text(
                     text = strong.partOfSpeech,

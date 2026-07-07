@@ -62,6 +62,7 @@ fun ParallelTraditionScreen(
 ) {
     val parallels by viewModel.parallels.collectAsState()
     val title by viewModel.title.collectAsState()
+    val defaultTranslation by viewModel.defaultTranslation.collectAsState()
 
     viewModel.setEventId(eventId)
 
@@ -105,7 +106,7 @@ fun ParallelTraditionScreen(
             items(parallels, key = { it.id }) { tradition ->
                 ParallelTraditionCard(
                     tradition = tradition,
-                    onOpenBible = { onOpenBible("kjv", tradition.biblicalBookId, tradition.biblicalChapter) }
+                    onOpenBible = { onOpenBible(defaultTranslation, tradition.biblicalBookId, tradition.biblicalChapter) }
                 )
             }
         }

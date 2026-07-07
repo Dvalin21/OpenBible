@@ -36,6 +36,12 @@
 -keepclassmembers enum com.openbible.data.model.** { *; }
 -keepclassmembers enum com.openbible.data.db.converter.** { *; }
 
+# ── osmdroid Map ─────────────────────────────────────────────────────
+# osmdroid uses reflection for tile source providers and HTTP connections.
+# R8 cannot trace through these initialization paths.
+-keep class org.osmdroid.** { *; }
+-keep interface org.osmdroid.** { *; }
+
 # ── Kotlin Coroutines ────────────────────────────────────────────────
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}

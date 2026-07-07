@@ -630,6 +630,7 @@ private fun StandardBibleContent(
                 fontSizeText = fontSizeText,
                 lineSpacing = lineSpacing,
                 verseId = verse.id,
+                currentChapter = chapter,
                 isBookmarked = verse.id in bookmarkedIds,
                 highlightColor = highlightMap[verse.id],
                 crossRefs = crossReferenceMap[verse.id] ?: emptyList(),
@@ -792,6 +793,7 @@ private fun RetroBibleContent(
                     fontSizeText = fontSizeText,
                     lineSpacing = lineSpacing,
                     verseId = verse.id,
+                    currentChapter = chapter,
                     isBookmarked = verse.id in bookmarkedIds,
                     highlightColor = highlightMap[verse.id],
                     crossRefs = crossReferenceMap[verse.id] ?: emptyList(),
@@ -885,6 +887,7 @@ private fun VerseLine(
     fontSizeText: Float = 16f,
     lineSpacing: Float = 1.6f,
     verseId: Long = 0L,
+    currentChapter: Int = 0,
     isBookmarked: Boolean = false,
     highlightColor: HighlightColor? = null,
     crossRefs: List<CrossReferenceDisplay> = emptyList(),
@@ -1030,9 +1033,15 @@ private fun VerseLine(
                             "${ref.toVerseStart}-${ref.toVerseEnd}"
                         else ref.toVerseStart.toString()
                         val refText = "${ref.toBookAbbreviation} ${ref.toChapter}:$range"
-                        val snippet = ref.toVerseSnippet
-                            .replaceFirst("^\\d+\\s*".toRegex(), "") // strip leading verse number
-                            .let { if (it.length > 80) it.take(80) + "…" else it }
+
+                        // ponytail: skip verse snippet when cross-ref points to same chapter —
+                        // the full verse text is visible below as regular content,
+                        // showing it again in the snippet creates redundancy.
+                        val snippet = if (ref.toChapter != currentChapter) {
+                            ref.toVerseSnippet
+                                .replaceFirst("^\\d+\\s*".toRegex(), "")
+                                .let { if (it.length > 80) it.take(80) + "…" else it }
+                        } else ""
 
                         Text(
                             text = buildAnnotatedString {

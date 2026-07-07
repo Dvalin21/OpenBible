@@ -27,6 +27,7 @@ import com.openbible.ui.bible.BookChapterSelectorState
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    defaultTranslation: String = "kjv",
     onOpenBible: () -> Unit,
     onOpenChapter: (translationId: String, bookId: Int, chapter: Int) -> Unit,
     onOpenSearch: () -> Unit = {},
@@ -339,10 +340,10 @@ fun HomeScreen(
         } else {
             // No reading history — show picker
             BookChapterSelector(
-                translationId = "kjv",
+                translationId = defaultTranslation,
                 state = selectorState,
                 onChapterSelected = { bookId, chapter ->
-                    onOpenChapter("kjv", bookId, chapter)
+                    onOpenChapter(defaultTranslation, bookId, chapter)
                 }
             )
         }

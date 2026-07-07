@@ -142,6 +142,7 @@ val bottomNavItems = listOf(
 @Composable
 fun OpenBibleNavGraph(
     isTablet: Boolean,
+    defaultTranslation: String = "kjv",
     initialTranslationId: String? = null,
     initialBookId: Int? = null,
     initialChapter: Int? = null,
@@ -168,6 +169,7 @@ fun OpenBibleNavGraph(
                 NavContent(
                     navController = navController,
                     isTablet = isTablet,
+                    defaultTranslation = defaultTranslation,
                     modifier = Modifier.padding(innerPadding)
                 )
             }
@@ -180,6 +182,7 @@ fun OpenBibleNavGraph(
             NavContent(
                 navController = navController,
                 isTablet = isTablet,
+                defaultTranslation = defaultTranslation,
                 modifier = Modifier.padding(innerPadding)
             )
         }
@@ -194,6 +197,7 @@ fun OpenBibleNavGraph(
 private fun NavContent(
     navController: NavHostController,
     isTablet: Boolean,
+    defaultTranslation: String = "kjv",
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -203,6 +207,7 @@ private fun NavContent(
     ) {
         composable(Routes.HOME) {
             HomeScreen(
+                defaultTranslation = defaultTranslation,
                 onOpenBible = { navController.navigate(Routes.BIBLE) },
                 onOpenChapter = { translationId, bookId, chapter ->
                     navController.navigate(Routes.bibleChapter(translationId, bookId, chapter))
@@ -332,6 +337,7 @@ private fun NavContent(
 
         composable(Routes.READING_PLANS) {
             ReadingPlanScreen(
+                defaultTranslation = defaultTranslation,
                 onOpenChapter = { translationId, bookId, chapter ->
                     navController.navigate(Routes.bibleChapter(translationId, bookId, chapter))
                 }
