@@ -244,8 +244,7 @@ abstract class OpenBibleDatabase : RoomDatabase() {
                     chapter INTEGER NOT NULL,
                     category TEXT NOT NULL,
                     era TEXT NOT NULL,
-                    sortOrder INTEGER NOT NULL DEFAULT 0,
-                    FOREIGN KEY (locationId) REFERENCES locations(id) ON DELETE CASCADE
+                    sortOrder INTEGER NOT NULL DEFAULT 0
                 )
             """)
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_events_location ON location_events(locationId)")
@@ -275,8 +274,7 @@ abstract class OpenBibleDatabase : RoomDatabase() {
                     scholarlyNote TEXT,
                     dateRange TEXT,
                     category TEXT NOT NULL,
-                    sortOrder INTEGER NOT NULL DEFAULT 0,
-                    FOREIGN KEY (eventId) REFERENCES location_events(id) ON DELETE CASCADE
+                    sortOrder INTEGER NOT NULL DEFAULT 0
                 )
             """)
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_parallels_event ON parallel_traditions(eventId)")
@@ -286,19 +284,70 @@ abstract class OpenBibleDatabase : RoomDatabase() {
         }
 
         /**
-         * Version 8 → 9: Removed FK constraint from parallel_traditions.
+         * Version 8 → 9: Drop the FK constraints from location_events and
+         * parallel_traditions.
          *
-         * The FOREIGN KEY (eventId → location_events.id) with ON DELETE CASCADE
-         * caused SQLiteConstraintException during first-boot sequential imports
-         * because Room enables FK enforcement automatically for tables with
-         * foreign keys. Data integrity is maintained by the import pipeline
-         * (eventId values are validated against location_events before insertion).
+         * MIGRATION_6_7 / MIGRATION_7_8 created those FKs, but the entities
+         * declare none (Room's createFromAsset + sequential importers conflict
+         * with FK enforcement; integrity is maintained by the import pipeline).
+         * The exported v9 schema therefore expects no FK. Leaving the FK in the
+         * migrated table makes Room's post-migration schema validation fail on
+         * upgrade — a hard crash for v7/v8 users.
          *
-         * Migration is a no-op: the table shape doesn't change, only the
-         * FK constraint is removed. The prepopulated DB at v9 is built
-         * without the FK constraint.
+         * SQLite cannot ALTER TABLE DROP CONSTRAINT portably, so both tables are
+         * rebuilt without the FK. Idempotent: safe whether or not the FK exists.
          */
-        private val MIGRATION_8_9 = Migration(8, 9) { /* no-op — FK removal is schema-only change */ }
+        private val MIGRATION_8_9 = Migration(8, 9) { db ->
+            // location_events
+            db.execSQL("""
+                CREATE TABLE location_events_new (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    locationId TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    reference TEXT NOT NULL,
+                    bookId INTEGER NOT NULL,
+                    chapter INTEGER NOT NULL,
+                    category TEXT NOT NULL,
+                    era TEXT NOT NULL,
+                    sortOrder INTEGER NOT NULL DEFAULT 0
+                )
+            """)
+            db.execSQL("INSERT INTO location_events_new SELECT * FROM location_events")
+            db.execSQL("DROP TABLE location_events")
+            db.execSQL("ALTER TABLE location_events_new RENAME TO location_events")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_events_location ON location_events(locationId)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_events_era ON location_events(era)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_events_category ON location_events(category)")
+
+            // parallel_traditions
+            db.execSQL("""
+                CREATE TABLE parallel_traditions_new (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    eventId TEXT,
+                    biblicalReference TEXT NOT NULL,
+                    biblicalBookId INTEGER NOT NULL,
+                    biblicalChapter INTEGER NOT NULL,
+                    culture TEXT NOT NULL,
+                    documentName TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    similarities TEXT NOT NULL,
+                    differences TEXT NOT NULL,
+                    scholarlyNote TEXT,
+                    dateRange TEXT,
+                    category TEXT NOT NULL,
+                    sortOrder INTEGER NOT NULL DEFAULT 0
+                )
+            """)
+            db.execSQL("INSERT INTO parallel_traditions_new SELECT * FROM parallel_traditions")
+            db.execSQL("DROP TABLE parallel_traditions")
+            db.execSQL("ALTER TABLE parallel_traditions_new RENAME TO parallel_traditions")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_parallels_event ON parallel_traditions(eventId)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_parallels_culture ON parallel_traditions(culture)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_parallels_category ON parallel_traditions(category)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_parallels_book ON parallel_traditions(biblicalBookId)")
+        }
 
         private val MIGRATION_5_6 = Migration(5, 6) { db ->
             db.execSQL("""

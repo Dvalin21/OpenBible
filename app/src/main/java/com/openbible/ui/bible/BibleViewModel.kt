@@ -270,25 +270,26 @@ class BibleViewModel(application: Application) : AndroidViewModel(application) {
     // ── Reading History ─────────────────────────────────────────
 
     /**
-     * Record that the user has read this chapter.
-     * Called when the screen is displayed or the user navigates.
+     * Record that the user has read the current chapter.
+     * Queries the actual selected chapter (not the async [verses] flow) so the
+     * resume point is correct, and increments the existing read count.
      */
     fun recordReading() {
         viewModelScope.launch {
-            val verseId = verses.value.firstOrNull()?.id ?: return@launch
+            val translationId = _selectedTranslationId.value
+            val bookId = _selectedBookId.value
+            val chapter = _selectedChapter.value
+            val verseId = bibleDao.getFirstVerseId(translationId, bookId, chapter) ?: return@launch
             val now = System.currentTimeMillis()
+            val existing = readingHistoryDao.getHistoryForVerse(verseId)
             readingHistoryDao.upsert(
                 ReadingHistoryEntity(
                     verseId = verseId,
                     lastReadAt = now,
-                    readCount = 1
+                    readCount = (existing?.readCount ?: 0) + 1
                 )
             )
-            preferences.setLastReadingPosition(
-                _selectedTranslationId.value,
-                _selectedBookId.value,
-                _selectedChapter.value
-            )
+            preferences.setLastReadingPosition(translationId, bookId, chapter)
         }
     }
 
@@ -296,6 +297,10 @@ class BibleViewModel(application: Application) : AndroidViewModel(application) {
         _selectedBookId.value = bookId
         _selectedChapter.value = chapter
     }
+
+    /** First verse id of a chapter — used to anchor Study Mode notes. */
+    suspend fun getFirstVerseId(translationId: String, bookId: Int, chapter: Int): Long? =
+        bibleDao.getFirstVerseId(translationId, bookId, chapter)
 
     // ── Default Translation from Preferences ────────────────────
 

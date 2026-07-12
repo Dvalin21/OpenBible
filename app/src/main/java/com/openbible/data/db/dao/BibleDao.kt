@@ -64,6 +64,9 @@ interface BibleDao {
     @Query("SELECT * FROM verses WHERE translationId = :translationId AND bookId = :bookId AND chapter = :chapter AND verse = :verse")
     suspend fun getVerseByRef(translationId: String, bookId: Int, chapter: Int, verse: Int): VerseEntity?
 
+    @Query("SELECT id FROM verses WHERE translationId = :translationId AND bookId = :bookId AND chapter = :chapter ORDER BY verse LIMIT 1")
+    suspend fun getFirstVerseId(translationId: String, bookId: Int, chapter: Int): Long?
+
     // -- Search (FTS5) --
 
     /** Raw query support for FTS5 searches returning [VerseEntity]. */
@@ -80,6 +83,7 @@ interface BibleDao {
         query: String,
         limit: Int = 100
     ): List<VerseEntity> {
+        if (translationId !in FTS_TRANSLATIONS) return emptyList()
         val q = sanitizeFtsQuery(query)
         if (q.isEmpty()) return emptyList()
         val sql = """
@@ -99,6 +103,7 @@ interface BibleDao {
         query: String,
         limit: Int = 50
     ): List<VerseEntity> {
+        if (translationId !in FTS_TRANSLATIONS) return emptyList()
         val q = sanitizeFtsQuery(query)
         if (q.isEmpty()) return emptyList()
         val sql = """
@@ -117,6 +122,7 @@ interface BibleDao {
         query: String,
         limit: Int = 100
     ): List<SearchResult> {
+        if (translationId !in FTS_TRANSLATIONS) return emptyList()
         val q = sanitizeFtsQuery(query)
         if (q.isEmpty()) return emptyList()
         val sql = """
@@ -202,7 +208,7 @@ interface BibleDao {
     companion object {
         /** Strip FTS5 special characters from a user query string.
          *  FTS5 MATCH syntax uses: " * ( ) + - | ^ ! ~ < > = [ ] { }
-         *  We remove these to treat the input as a simple OR search over words. */
+         *  We remove these so the input becomes space-separated words (FTS5 implicit AND). */
         fun sanitizeFtsQuery(query: String): String {
             return query.replace(Regex("""['"*()+\-|^!<>=~\[\]{}]"""), " ")
                 .replace(Regex("\\s+"), " ")

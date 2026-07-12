@@ -39,6 +39,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import java.net.URLEncoder
 import com.openbible.ui.bible.BibleScreen
 import com.openbible.ui.bookmarks.BookmarksScreen
 import com.openbible.ui.home.HomeScreen
@@ -85,7 +86,8 @@ object Routes {
         translationId: String? = null,
         bookId: Int? = null,
         chapter: Int? = null,
-        verseNumber: Int? = null
+        verseNumber: Int? = null,
+        title: String? = null
     ): String {
         val params = mutableListOf<String>()
         noteId?.let { params.add("noteId=$it") }
@@ -93,6 +95,7 @@ object Routes {
         bookId?.let { params.add("bookId=$it") }
         chapter?.let { params.add("chapter=$it") }
         verseNumber?.let { params.add("verseNumber=$it") }
+        title?.let { params.add("title=${URLEncoder.encode(it, "UTF-8").replace("+", "%20")}") }
         return if (params.isEmpty()) "note_editor" else "note_editor?${params.joinToString("&")}"
     }
 
@@ -113,7 +116,7 @@ object Routes {
 }
 
 /**
- * Bottom navigation items (5 destinations).
+ * Bottom navigation items (6 destinations).
  */
 data class BottomNavItem(
     val route: String,
@@ -255,6 +258,9 @@ private fun NavContent(
                         verseNumber = verseNumber
                     ))
                 },
+                onStudyMode = { t, b, c ->
+                    navController.navigate(Routes.bibleWithNotes(t, b, c))
+                },
                 isTablet = isTablet,
                 onOpenStrongDetail = { number ->
                     navController.navigate(Routes.strongDetail(number))
@@ -301,13 +307,16 @@ private fun NavContent(
                 navArgument("translationId") { type = NavType.StringType; defaultValue = "" },
                 navArgument("bookId") { type = NavType.IntType; defaultValue = -1 },
                 navArgument("chapter") { type = NavType.IntType; defaultValue = -1 },
-                navArgument("verseNumber") { type = NavType.IntType; defaultValue = -1 }
+                navArgument("verseNumber") { type = NavType.IntType; defaultValue = -1 },
+                navArgument("title") { type = NavType.StringType; nullable = true; defaultValue = null }
             )
         ) { backStackEntry ->
             val noteId = backStackEntry.arguments?.getLong("noteId").takeIf { it != -1L }
+            val initialTitle = backStackEntry.arguments?.getString("title")
 
             NoteEditorScreen(
                 noteId = noteId,
+                initialTitle = initialTitle,
                 onNavigateBack = { navController.popBackStack() }
             )
         }
@@ -385,6 +394,9 @@ private fun NavContent(
                 },
                 onOpenParallels = { eventId ->
                     navController.navigate(Routes.parallelTraditionsEvent(eventId))
+                },
+                onAddNote = { noteTitle ->
+                    navController.navigate(Routes.noteEditor(title = noteTitle))
                 }
             )
         }
@@ -399,6 +411,9 @@ private fun NavContent(
                 onBack = { navController.popBackStack() },
                 onOpenBible = { translationId, bookId, chapter ->
                     navController.navigate(Routes.bibleChapter(translationId, bookId, chapter))
+                },
+                onAddNote = { noteTitle ->
+                    navController.navigate(Routes.noteEditor(title = noteTitle))
                 }
             )
         }
@@ -407,6 +422,9 @@ private fun NavContent(
             ParallelTraditionScreen(
                 eventId = null,
                 onBack = { navController.popBackStack() },
+                onAddNote = { noteTitle ->
+                    navController.navigate(Routes.noteEditor(title = noteTitle))
+                },
                 onOpenBible = { translationId, bookId, chapter ->
                     navController.navigate(Routes.bibleChapter(translationId, bookId, chapter))
                 }

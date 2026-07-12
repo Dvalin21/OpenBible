@@ -10,6 +10,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,6 +32,7 @@ fun LocationDetailScreen(
     onNavigateBack: () -> Unit,
     onOpenVerse: (translationId: String, bookId: Int, chapter: Int) -> Unit,
     onOpenParallels: (eventId: String) -> Unit = {},
+    onAddNote: (title: String) -> Unit = {},
     viewModel: LocationViewModel = hiltViewModel()
 ) {
     LaunchedEffect(locationId) {
@@ -49,6 +51,11 @@ fun LocationDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { onAddNote(location?.name ?: "Location") }) {
+                        Icon(Icons.Filled.EditNote, contentDescription = "Add note")
                     }
                 }
             )

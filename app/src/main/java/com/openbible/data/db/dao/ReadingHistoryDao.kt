@@ -40,7 +40,7 @@ interface ReadingHistoryDao {
                b.abbreviation AS bookAbbreviation
         FROM reading_history rh
         INNER JOIN verses v ON v.id = rh.verseId
-        INNER JOIN books b ON b.id = v.bookId
+        INNER JOIN books b ON b.id = v.bookId AND b.translationId = v.translationId
         ORDER BY rh.lastReadAt DESC
         LIMIT 1
     """)

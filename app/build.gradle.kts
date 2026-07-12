@@ -15,7 +15,7 @@ android {
         minSdk = 29
         targetSdk = 34
         versionCode = 5
-        versionName = "1.2.2"
+        versionName = "1.2.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -25,18 +25,9 @@ android {
         }
     }
 
-    signingConfigs {
-        create("release") {
-            storeFile = file("debug.keystore")
-            storePassword = "android"
-            keyAlias = "debug"
-            keyPassword = "android"
-        }
-    }
-
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            // ponytail: no release keystore committed — configure signing in local env / CI
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

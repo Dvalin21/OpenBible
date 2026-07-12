@@ -46,6 +46,14 @@ fun BibleWithNotesScreen(
     val selectedTranslationId by bibleViewModel.selectedTranslationId.collectAsState()
     val crossReferenceMap by bibleViewModel.crossReferenceMap.collectAsState()
 
+    // Passage context for seeding a new note (Study Mode ties notes to the chapter read)
+    val currentRef = "${currentBook?.name ?: "Bible"} $selectedChapter"
+    var linkedVerseId by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(selectedTranslationId, selectedChapter, currentBook?.id) {
+        val bookId = currentBook?.id ?: return@LaunchedEffect
+        linkedVerseId = bibleViewModel.getFirstVerseId(selectedTranslationId, bookId, selectedChapter)
+    }
+
     // Navigate to initial chapter
     LaunchedEffect(Unit) {
         bibleViewModel.selectTranslation(initialTranslationId)
@@ -60,12 +68,20 @@ fun BibleWithNotesScreen(
         var showNotes by remember { mutableStateOf(isNewNote || noteId != null) }
 
         Box(modifier = modifier.fillMaxSize()) {
-            if (showNotes) {
-                NoteEditorScreen(
-                    noteId = noteId,
-                    onNavigateBack = { showNotes = false }
-                )
-            } else {
+                if (showNotes) {
+                    if (linkedVerseId == null) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    } else {
+                        NoteEditorScreen(
+                            noteId = noteId,
+                            initialTitle = if (noteId == null) currentRef else null,
+                            initialLinkedVerseId = if (noteId == null) linkedVerseId else null,
+                            onNavigateBack = { showNotes = false }
+                        )
+                    }
+                } else {
                 BibleReaderScreen(
                     verses = verses,
                     bookName = currentBook?.name ?: "Bible",
@@ -106,10 +122,18 @@ fun BibleWithNotesScreen(
             }
 
             val notesPane = @Composable {
-                NoteEditorScreen(
-                    noteId = noteId,
-                    onNavigateBack = onNavigateBack
-                )
+                if (linkedVerseId == null) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                } else {
+                    NoteEditorScreen(
+                        noteId = noteId,
+                        initialTitle = if (noteId == null) currentRef else null,
+                        initialLinkedVerseId = if (noteId == null) linkedVerseId else null,
+                        onNavigateBack = onNavigateBack
+                    )
+                }
             }
 
             val divider = @Composable {

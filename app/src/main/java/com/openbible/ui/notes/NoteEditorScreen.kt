@@ -35,6 +35,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun NoteEditorScreen(
     noteId: Long? = null,
+    initialTitle: String? = null,
+    initialLinkedVerseId: Long? = null,
     onNavigateBack: () -> Unit,
     onNotebooksClick: () -> Unit = {},
     viewModel: NoteEditorViewModel = hiltViewModel()
@@ -43,6 +45,9 @@ fun NoteEditorScreen(
 
     LaunchedEffect(noteId) {
         if (noteId != null) viewModel.loadNote(noteId)
+        else if (initialTitle != null || initialLinkedVerseId != null) {
+            viewModel.seedNewNote(initialTitle, initialLinkedVerseId)
+        }
     }
 
     var showPenControls by remember { mutableStateOf(false) }

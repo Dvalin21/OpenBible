@@ -27,6 +27,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -89,6 +91,7 @@ fun BibleScreen(
     onNavigateToChapter: (translationId: String, bookId: Int, chapter: Int) -> Unit,
     isTablet: Boolean,
     onAddNote: (verseNumber: Int) -> Unit = {},
+    onStudyMode: (translationId: String, bookId: Int, chapter: Int) -> Unit = { _, _, _ -> },
     onOpenStrongDetail: (strongNumber: String) -> Unit = {},
     viewModel: BibleViewModel = viewModel()
 ) {
@@ -98,6 +101,7 @@ fun BibleScreen(
     val chapters by viewModel.chapters.collectAsState()
     val translations by viewModel.translations.collectAsState()
     val selectedTranslationId by viewModel.selectedTranslationId.collectAsState()
+    val selectedBookId by viewModel.selectedBookId.collectAsState()
     val books by viewModel.books.collectAsState()
     val retroConfig = LocalRetroPixel.current
 
@@ -272,6 +276,18 @@ fun BibleScreen(
                                         else MaterialTheme.colorScheme.onSurface
                             )
                         }
+                    }
+
+                    // Study Mode: Bible + notes side-by-side (tablets show split; phones toggle)
+                    IconButton(
+                        onClick = {
+                            onStudyMode(selectedTranslationId, selectedBookId, selectedChapter)
+                        }
+                    ) {
+                        Icon(
+                            Icons.Filled.EditNote,
+                            contentDescription = "Study mode (Bible + notes)"
+                        )
                     }
                 }
             )

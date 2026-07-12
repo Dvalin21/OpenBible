@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,6 +59,7 @@ fun ParallelTraditionScreen(
     eventId: String?,
     onBack: () -> Unit,
     onOpenBible: (translationId: String, bookId: Int, chapter: Int) -> Unit,
+    onAddNote: (title: String) -> Unit = {},
     viewModel: ParallelTraditionViewModel = hiltViewModel()
 ) {
     val parallels by viewModel.parallels.collectAsState()
@@ -73,6 +75,11 @@ fun ParallelTraditionScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { onAddNote(title) }) {
+                        Icon(Icons.Filled.EditNote, contentDescription = "Add note")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

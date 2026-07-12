@@ -51,15 +51,16 @@ object ReadingPlanSeeder {
             )
         )
 
-        // Distribute chapters across days
-        val chaptersPerDay = (allChapters.size + PLAN_DURATION - 1) / PLAN_DURATION  // ceil
-
+        // Distribute every chapter evenly across PLAN_DURATION days.
+        // First `extra` days get one extra chapter so all chapters are covered.
+        val base = allChapters.size / PLAN_DURATION
+        val extra = allChapters.size % PLAN_DURATION
         var chapterIndex = 0
         for (day in 1..PLAN_DURATION) {
-            if (chapterIndex >= allChapters.size) break
+            val count = base + if (day <= extra) 1 else 0
 
             val dayChapters = mutableListOf<Pair<Int, Int>>()
-            repeat(chaptersPerDay) {
+            repeat(count) {
                 if (chapterIndex < allChapters.size) {
                     dayChapters.add(allChapters[chapterIndex])
                     chapterIndex++

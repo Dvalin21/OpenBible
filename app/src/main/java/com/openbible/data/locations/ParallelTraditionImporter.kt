@@ -72,7 +72,8 @@ class ParallelTraditionImporter @Inject constructor(
             result.add(
                 ParallelTraditionEntity(
                     id = obj.getString("id"),
-                    eventId = obj.optString("eventId", null),
+                    // ponytail: absent/empty eventId → null (optString returns "" when missing)
+                    eventId = obj.optString("eventId").takeIf { it.isNotEmpty() },
                     biblicalReference = obj.getString("biblicalReference"),
                     biblicalBookId = obj.getInt("biblicalBookId"),
                     biblicalChapter = obj.getInt("biblicalChapter"),

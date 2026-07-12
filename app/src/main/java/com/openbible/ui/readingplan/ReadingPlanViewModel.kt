@@ -125,9 +125,11 @@ class ReadingPlanViewModel(application: Application) : AndroidViewModel(applicat
             (0 until arr.length()).map { i ->
                 val obj = arr.getJSONObject(i)
                 val bookId = obj.getInt("bookId")
+                // ponytail: asset writes chapterStart/chapterEnd, seeder writes chapter — accept both
+                val chapter = obj.optInt("chapterStart", obj.optInt("chapter", 1))
                 ReadingItem(
                     bookId = bookId,
-                    chapter = obj.getInt("chapter"),
+                    chapter = chapter,
                     bookName = bookNames[bookId] ?: "Book $bookId"
                 )
             }

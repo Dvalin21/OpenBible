@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Bible reading via audible text-to-speech -->
-    <uses-permission android:name="android.permission.TTS_CALLBACK" />
-
     <!-- Storage for note images and pen stroke data -->
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"

@@ -17,11 +17,13 @@ class Converters {
     fun testamentToString(value: Testament): String = value.name
 
     @TypeConverter
-    fun stringToTestament(value: String): Testament = Testament.valueOf(value)
+    fun stringToTestament(value: String): Testament =
+        enumValues<Testament>().firstOrNull { it.name == value } ?: Testament.OLD
 
     @TypeConverter
     fun penModeToString(value: PenMode): String = value.name
 
     @TypeConverter
-    fun stringToPenMode(value: String): PenMode = PenMode.valueOf(value)
+    fun stringToPenMode(value: String): PenMode =
+        enumValues<PenMode>().firstOrNull { it.name == value } ?: PenMode.TEXT
 }

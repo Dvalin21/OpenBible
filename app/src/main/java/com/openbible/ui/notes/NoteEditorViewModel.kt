@@ -67,6 +67,20 @@ class NoteEditorViewModel @Inject constructor(
         }
     }
 
+    /** Seed a fresh note pre-linked to a passage (Study Mode). */
+    fun seedNewNote(title: String?, verseId: Long?) {
+        _state.update {
+            it.copy(
+                note = null,
+                title = title ?: "",
+                contentText = "",
+                penStrokes = null,
+                linkedVerseIds = if (verseId != null) listOf(verseId) else emptyList(),
+                isNew = true
+            )
+        }
+    }
+
     fun setTitle(title: String) {
         _state.update { it.copy(title = title) }
     }
