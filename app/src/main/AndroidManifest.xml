@@ -38,13 +38,13 @@
             </intent-filter>
         </activity>
 
-        <!-- Daily verse alarm + boot reschedule receiver -->
+        <!-- Daily verse alarm + boot reschedule receiver.
+             exported=true is required for BOOT_COMPLETED (sent by the system).
+             The alarm itself uses an explicit PendingIntent, so no broadcast
+             intent-filter is declared — external apps cannot spoof the trigger. -->
         <receiver
             android:name=".notification.DailyVerseReceiver"
             android:exported="true">
-            <intent-filter>
-                <action android:name="com.openbible.action.SHOW_DAILY_VERSE" />
-            </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
