@@ -333,8 +333,8 @@ def create_database(output_path: str):
 
     # ── Room version ───────────────────────────────────────────────
     # Must match @Database(version = 9) in OpenBibleDatabase.kt
-    cursor.execute("PRAGMA user_version = 9")
-    print("  PRAGMA user_version = 9")
+    cursor.execute("PRAGMA user_version = 10")
+    print("  PRAGMA user_version = 10")
 
     conn.close()
 
@@ -357,7 +357,7 @@ def create_tables(cursor):
             [],
         ),
         "books": (
-            "CREATE TABLE IF NOT EXISTS `books` (`id` INTEGER NOT NULL, `translationId` TEXT NOT NULL, `name` TEXT NOT NULL, `abbreviation` TEXT NOT NULL, `number` INTEGER NOT NULL, `chapterCount` INTEGER NOT NULL, `testament` TEXT NOT NULL, `totalVerses` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+            "CREATE TABLE IF NOT EXISTS `books` (`id` INTEGER NOT NULL, `translationId` TEXT NOT NULL, `name` TEXT NOT NULL, `abbreviation` TEXT NOT NULL, `number` INTEGER NOT NULL, `chapterCount` INTEGER NOT NULL, `testament` TEXT NOT NULL, `totalVerses` INTEGER NOT NULL, PRIMARY KEY(`translationId`, `id`))",
             [
                 "CREATE INDEX IF NOT EXISTS `index_books_translationId` ON `books` (`translationId`)",
             ],

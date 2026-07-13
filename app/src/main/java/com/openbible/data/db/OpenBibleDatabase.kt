@@ -80,7 +80,7 @@ import com.openbible.data.db.entity.VerseStrongLinkEntity
         LocationEventEntity::class,
         ParallelTraditionEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -131,7 +131,7 @@ abstract class OpenBibleDatabase : RoomDatabase() {
             }
 
             // Explicit migrations — never destroy user data.
-            builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+            builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
 
             return builder.build()
         }
@@ -347,6 +347,58 @@ abstract class OpenBibleDatabase : RoomDatabase() {
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_parallels_culture ON parallel_traditions(culture)")
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_parallels_category ON parallel_traditions(category)")
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_parallels_book ON parallel_traditions(biblicalBookId)")
+        }
+
+        /**
+         * Version 9 → 10: switch `books` to a composite primary key
+         * (translationId, id) so every translation owns its own 66 book rows.
+         *
+         * The v9 table used a single-column PK (id) holding only the kjv rows,
+         * so every other translation had an empty book list. Rebuild with the
+         * composite key, carry over the kjv rows, and materialise book rows for
+         * each translation that has verses (copying translation-independent
+         * canonical metadata from kjv). Runtime-imported translations (e.g. nkjv)
+         * get their book rows via TranslationImporter.
+         */
+        private val MIGRATION_9_10 = Migration(9, 10) { db ->
+            db.execSQL("DROP TABLE IF EXISTS `books_new`")
+            db.execSQL(
+                """CREATE TABLE IF NOT EXISTS `books_new` (
+                    `id` INTEGER NOT NULL,
+                    `translationId` TEXT NOT NULL,
+                    `name` TEXT NOT NULL,
+                    `abbreviation` TEXT NOT NULL,
+                    `number` INTEGER NOT NULL,
+                    `chapterCount` INTEGER NOT NULL,
+                    `testament` TEXT NOT NULL,
+                    `totalVerses` INTEGER NOT NULL,
+                    PRIMARY KEY(`translationId`, `id`))"""
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_books_translationId` ON `books_new` (`translationId`)")
+            // Carry over existing (kjv) book rows.
+            db.execSQL(
+                "INSERT INTO `books_new` (translationId, id, name, abbreviation, number, chapterCount, testament, totalVerses) " +
+                "SELECT translationId, id, name, abbreviation, number, chapterCount, testament, totalVerses FROM `books`"
+            )
+            // Materialise book rows for every other translation that has verses,
+            // copying canonical metadata from the kjv rows (book data is translation-independent).
+            db.execSQL(
+                "INSERT OR IGNORE INTO `books_new` (translationId, id, name, abbreviation, number, chapterCount, testament, totalVerses) " +
+                "SELECT v.translationId, k.id, k.name, k.abbreviation, k.number, k.chapterCount, k.testament, 0 " +
+                "FROM `books` k CROSS JOIN (SELECT DISTINCT translationId FROM `verses` WHERE translationId != 'kjv') v " +
+                "WHERE k.translationId = 'kjv'"
+            )
+            db.execSQL("DROP TABLE `books`")
+            db.execSQL("ALTER TABLE `books_new` RENAME TO `books`")
+            // Fix per-book verse counts for the materialised rows
+            // (verse data exists in `verses`; the v9 schema never tracked it
+            // for non-kjv translations).
+            db.execSQL(
+                "UPDATE `books` SET totalVerses = (" +
+                "SELECT COUNT(*) FROM `verses` v " +
+                "WHERE v.translationId = `books`.translationId AND v.bookId = `books`.id) " +
+                "WHERE totalVerses = 0"
+            )
         }
 
         private val MIGRATION_5_6 = Migration(5, 6) { db ->

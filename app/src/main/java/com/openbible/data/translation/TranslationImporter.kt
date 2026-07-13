@@ -74,19 +74,24 @@ class TranslationImporter @Inject constructor(
             tempFile.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY
         )
         importDb.use { source ->
-            val cursor = source.rawQuery("SELECT bookId, chapter, verse, text FROM verses ORDER BY bookId, chapter, verse", null)
+            val cursor = source.rawQuery(
+                "SELECT bookId, chapter, verse, text FROM verses ORDER BY bookId, chapter, verse", null
+            )
+            val bookVerseCounts = mutableMapOf<Int, Int>()
             cursor.use { c ->
                 db.beginTransaction()
                 try {
                     val values = ContentValues()
                     while (c.moveToNext()) {
+                        val bookId = c.getInt(0)
                         values.clear()
                         values.put("translationId", translationId)
-                        values.put("bookId", c.getInt(0))
+                        values.put("bookId", bookId)
                         values.put("chapter", c.getInt(1))
                         values.put("verse", c.getInt(2))
                         values.put("text", c.getString(3))
                         db.insert("verses", android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE, values)
+                        bookVerseCounts[bookId] = bookVerseCounts.getOrDefault(bookId, 0) + 1
                     }
                     db.setTransactionSuccessful()
                     android.util.Log.i(TAG, "Imported $translationId from $assetFile")
@@ -94,9 +99,65 @@ class TranslationImporter @Inject constructor(
                     db.endTransaction()
                 }
             }
+            seedBooks(db, translationId, bookVerseCounts)
         }
         tempFile.delete()
     }
+
+    /**
+     * Ensure a `books` row exists for every book imported. With the composite
+     * (translationId, id) primary key each translation owns its own book list;
+     * a runtime-imported translation such as NKJV otherwise has verses but no
+     * book rows and the UI cannot show its books. Copy canonical book metadata
+     * from an already-present translation (names/chapter counts are
+     * translation-independent) and `INSERT OR IGNORE` so existing rows are left
+     * untouched.
+     */
+    private fun seedBooks(
+        db: SupportSQLiteDatabase,
+        translationId: String,
+        bookVerseCounts: Map<Int, Int>
+    ) {
+        if (bookVerseCounts.isEmpty()) return
+        val meta = mutableMapOf<Int, BookMeta>()
+        db.query("SELECT id, name, abbreviation, number, chapterCount, testament FROM books WHERE translationId = 'kjv'")
+            .use { t ->
+                while (t.moveToNext()) {
+                    meta[t.getInt(0)] = BookMeta(
+                        t.getString(1), t.getString(2), t.getInt(3), t.getInt(4), t.getString(5)
+                    )
+                }
+            }
+        db.beginTransaction()
+        try {
+            val values = ContentValues()
+            for ((bookId, count) in bookVerseCounts) {
+                val m = meta[bookId] ?: continue
+                values.clear()
+                values.put("translationId", translationId)
+                values.put("id", bookId)
+                values.put("name", m.name)
+                values.put("abbreviation", m.abbr)
+                values.put("number", m.number)
+                values.put("chapterCount", m.chapterCount)
+                values.put("testament", m.testament)
+                values.put("totalVerses", count)
+                db.insert("books", android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE, values)
+            }
+            db.setTransactionSuccessful()
+            android.util.Log.i(TAG, "Seeded ${bookVerseCounts.size} books for $translationId")
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    private data class BookMeta(
+        val name: String,
+        val abbr: String,
+        val number: Int,
+        val chapterCount: Int,
+        val testament: String
+    )
 
     companion object {
         private const val TAG = "TranslationImporter"
