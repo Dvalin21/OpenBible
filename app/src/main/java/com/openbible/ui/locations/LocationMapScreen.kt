@@ -30,6 +30,7 @@ import java.io.File
 fun LocationMapScreen(
     onNavigateBack: () -> Unit,
     onLocationClick: (locationId: String) -> Unit,
+    onOpenList: () -> Unit = {},
     viewModel: LocationViewModel = hiltViewModel()
 ) {
     val locations by viewModel.allLocations.collectAsState()
@@ -43,6 +44,9 @@ fun LocationMapScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
+                },
+                actions = {
+                    TextButton(onClick = onOpenList) { Text("List") }
                 }
             )
         }

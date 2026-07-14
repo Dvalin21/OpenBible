@@ -219,7 +219,7 @@ private fun NavContent(
                 onOpenNotes = { navController.navigate(Routes.NOTES) },
                 onOpenReadingPlans = { navController.navigate(Routes.READING_PLANS) },
                 onOpenStrongs = { navController.navigate(Routes.STRONG_SEARCH) },
-                onOpenLocations = { navController.navigate(Routes.LOCATIONS) },
+                onOpenLocations = { navController.navigate(Routes.LOCATION_MAP) },
                 onOpenParallelTraditions = { navController.navigate(Routes.PARALLEL_TRADITIONS) }
             )
         }
@@ -233,6 +233,9 @@ private fun NavContent(
                     navController.navigate(Routes.noteEditor(verseNumber = verseNumber))
                 },
                 isTablet = isTablet,
+                onStudyMode = { t, b, c ->
+                    navController.navigate(Routes.bibleWithNotes(t, b, c))
+                },
                 onOpenStrongDetail = { number ->
                     navController.navigate(Routes.strongDetail(number))
                 }
@@ -375,6 +378,7 @@ private fun NavContent(
         composable(Routes.LOCATION_MAP) {
             LocationMapScreen(
                 onNavigateBack = { navController.popBackStack() },
+                onOpenList = { navController.navigate(Routes.LOCATIONS) },
                 onLocationClick = { locationId ->
                     navController.navigate(Routes.locationDetail(locationId))
                 }

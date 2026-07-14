@@ -29,7 +29,7 @@ Kotlin + Jetpack Compose + Material 3. API 29+.
 
 ### Study Mode (14.5" Tablet)
 
-Study Mode shows the Bible text and your Notes side-by-side — ideal on tablets.
+Study Mode shows the Bible text and your Notes side-by-side, with a draggable divider and a **toggle to swap which side each pane is on** — ideal on tablets.
 
 ![Study Mode — Bible + Notes split on a 14.5" tablet](screenshots/study_mode.png)
 

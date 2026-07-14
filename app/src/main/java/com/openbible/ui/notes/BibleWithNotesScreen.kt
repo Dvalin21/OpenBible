@@ -108,6 +108,7 @@ fun BibleWithNotesScreen(
     } else {
         // Wide screen: side-by-side split
         var splitRatio by remember { mutableStateOf(0.5f) }
+        var notesOnLeftState by remember { mutableStateOf(notesOnLeft) }
 
         Row(modifier = modifier.fillMaxSize()) {
             val biblePane = @Composable {
@@ -122,7 +123,7 @@ fun BibleWithNotesScreen(
             }
 
             val notesPane = @Composable {
-                if (linkedVerseId == null) {
+                if (verses.isEmpty()) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()
                     }
@@ -137,24 +138,24 @@ fun BibleWithNotesScreen(
             }
 
             val divider = @Composable {
-                Box(
-                    modifier = Modifier
-                        .width(8.dp)
-                        .fillMaxHeight()
-                        .background(MaterialTheme.colorScheme.outlineVariant)
-                        .pointerInput(Unit) {
-                            detectHorizontalDragGestures { _, dragAmount ->
-                                val delta = dragAmount / screenWidthDp.value
-                                splitRatio = (splitRatio + delta).coerceIn(0.15f, 0.85f)
+                Box(modifier = Modifier.width(8.dp).fillMaxHeight()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.outlineVariant)
+                            .pointerInput(Unit) {
+                                detectHorizontalDragGestures { _, dragAmount ->
+                                    val delta = dragAmount / screenWidthDp.value
+                                    splitRatio = (splitRatio + delta).coerceIn(0.15f, 0.85f)
+                                }
                             }
-                        }
-                ) {
+                    )
                     IconButton(
-                        onClick = onToggleNotesSide,
+                        onClick = { notesOnLeftState = !notesOnLeftState; onToggleNotesSide() },
                         modifier = Modifier.align(Alignment.Center)
                     ) {
                         Icon(
-                            if (notesOnLeft) Icons.Default.ChevronRight else Icons.Default.ChevronLeft,
+                            if (notesOnLeftState) Icons.Default.ChevronRight else Icons.Default.ChevronLeft,
                             contentDescription = "Swap sides",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -162,7 +163,7 @@ fun BibleWithNotesScreen(
                 }
             }
 
-            if (notesOnLeft) {
+            if (notesOnLeftState) {
                 Box(modifier = Modifier.weight(splitRatio)) { notesPane() }
                 divider()
                 Box(modifier = Modifier.weight(1f - splitRatio)) { biblePane() }
