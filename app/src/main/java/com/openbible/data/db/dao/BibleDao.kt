@@ -16,8 +16,8 @@ data class BookChapterCount(
     val chapterCount: Int
 )
 
-/** All translations with FTS5 tables. */
-private val FTS_TRANSLATIONS = listOf("kjv", "web", "asv", "ylt", "bbe", "nkjv")
+/** Translations with FTS5 tables and shipped verse data. */
+private val FTS_TRANSLATIONS = listOf("kjv", "web", "asv", "ylt", "bbe")
 
 /**
  * DAO for read-only Bible text queries.
@@ -28,7 +28,7 @@ interface BibleDao {
 
     // -- Translations --
 
-    @Query("SELECT * FROM translations WHERE isBundled = 1 ORDER BY id")
+    @Query("SELECT * FROM translations WHERE isBundled = 1 AND id IN (SELECT DISTINCT translationId FROM books) ORDER BY id")
     fun getBundledTranslations(): Flow<List<TranslationEntity>>
 
     @Query("SELECT * FROM translations ORDER BY id")
