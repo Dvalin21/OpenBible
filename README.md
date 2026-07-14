@@ -27,6 +27,32 @@ Kotlin + Jetpack Compose + Material 3. API 29+.
 
 > **Search** uses SQLite FTS5 (standard on Android since API 24). The screenshot above shows the search entry UI; full-text results require an FTS5-capable device/emulator.
 
+### Study Mode (14.5" Tablet)
+
+Study Mode shows the Bible text and your Notes side-by-side — ideal on tablets.
+
+![Study Mode — Bible + Notes split on a 14.5" tablet](screenshots/study_mode.png)
+
+### 14.5" Tablet Feature Tour
+
+Captured on a 2960×1848 @ 240dpi (14.5") emulator:
+
+| | |
+|---|---|
+| ![Dashboard](screenshots/tablet/01_dashboard.png) | ![Reader](screenshots/tablet/02_reader.png) |
+| ![Translations](screenshots/tablet/03_reader_translations.png) | ![WEB](screenshots/tablet/04_reader_web.png) |
+| ![Verse menu](screenshots/tablet/05_verse_menu.png) | ![Strong's](screenshots/tablet/06_strongs.png) |
+| ![Strong's results](screenshots/tablet/07_strongs_results.png) | ![Strong's entry](screenshots/tablet/08_strongs_entry.png) |
+| ![Geography](screenshots/tablet/10_geography.png) | ![Geography detail](screenshots/tablet/11_geography_detail.png) |
+| ![Parallel](screenshots/tablet/12_parallel.png) | ![Parallel detail](screenshots/tablet/13_parallel_detail.png) |
+| ![Parallel read](screenshots/tablet/14_parallel_read.png) | ![Reading plan](screenshots/tablet/15_reading_plan.png) |
+| ![Plan progress](screenshots/tablet/16_reading_plan_progress.png) | ![Bookmarks](screenshots/tablet/17_bookmarks.png) |
+| ![Bookmark open](screenshots/tablet/18_bookmark_open.png) | ![Notes](screenshots/tablet/19_notes.png) |
+| ![Notebook](screenshots/tablet/20_notebook_created.png) | ![Settings](screenshots/tablet/21_settings.png) |
+| ![Dark](screenshots/tablet/22_settings_dark.png) | ![Retro](screenshots/tablet/23_settings_retro.png) |
+| ![Default translation](screenshots/tablet/24_settings_translations.png) | ![Study mode](screenshots/tablet/25_study_mode.png) |
+| ![Search UI](screenshots/tablet/26_search_ui.png) | |
+
 ## Build
 
 ```shell
