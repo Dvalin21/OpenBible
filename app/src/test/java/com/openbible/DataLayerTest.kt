@@ -7,12 +7,28 @@ import com.openbible.data.db.entity.NoteEntity
 import com.openbible.data.db.entity.ReadingPlanEntity
 import com.openbible.data.db.entity.StrongNumberEntity
 import com.openbible.data.db.entity.VerseStrongLinkEntity
+import com.openbible.data.model.PenMode
+import com.openbible.data.repository.NoteRepository
+import androidx.compose.ui.geometry.Offset
+import com.openbible.ui.notes.*
 import com.openbible.ui.notes.InkStroke
+import com.openbible.ui.notes.NoteEditorViewModel
 import com.openbible.ui.notes.strokesFromJson
 import com.openbible.ui.notes.strokesToJson
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
+import io.mockk.slot
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.*
@@ -244,6 +260,88 @@ class DataLayerTest {
         assertTrue(strokesFromJson("[invalid]").isEmpty())
     }
 
+    // ── Unified page model JSON roundtrip ──────────────────────────
+
+    @Test
+    fun `pagesToJson and pagesFromJson roundtrip ink, shape, image, highlighter, transform, template`() {
+        val pages = listOf(
+            NotePage(
+                text = "Sermon notes",
+                template = PageTemplate.RULED,
+                coverColor = 0xFFECEFF1,
+                elements = listOf(
+                    InkElement(
+                        id = "a", points = listOf(Offset(1f, 2f), Offset(3f, 4f)),
+                        color = 0xFF000000, width = 4f, highlighter = false
+                    ),
+                    InkElement(
+                        id = "b", points = listOf(Offset(10f, 10f)),
+                        color = 0xFFFF0000, width = 20f, highlighter = true,
+                        transform = ElementTransform(tx = 5f, ty = 6f, scale = 2f)
+                    ),
+                    ShapeElement(
+                        id = "c", shape = ShapeType.OVAL, p1 = Offset(0f, 0f), p2 = Offset(50f, 60f),
+                        color = 0xFF0000FF, width = 3f
+                    ),
+                    ImageElement(
+                        id = "d", filePath = "/x/y.jpg", left = 10f, top = 20f,
+                        width = 100f, height = 80f, transform = ElementTransform(scale = 1.5f)
+                    )
+                )
+            ),
+            NotePage(text = "page two", template = PageTemplate.GRID)
+        )
+
+        val json = pagesToJson(pages)
+        val restored = pagesFromJson(json)
+
+        assertEquals(2, restored.size)
+        assertEquals("Sermon notes", restored[0].text)
+        assertEquals(PageTemplate.RULED, restored[0].template)
+        assertEquals(0xFFECEFF1, restored[0].coverColor)
+        assertEquals(4, restored[0].elements.size)
+
+        val ink = restored[0].elements[0] as InkElement
+        assertEquals(0xFF000000, ink.color)
+        assertEquals(4f, ink.width, 0.001f)
+        assertFalse(ink.highlighter)
+
+        val hl = restored[0].elements[1] as InkElement
+        assertTrue(hl.highlighter)
+        assertEquals(2f, hl.transform.scale, 0.001f)
+        assertEquals(5f, hl.transform.tx, 0.001f)
+
+        val shape = restored[0].elements[2] as ShapeElement
+        assertEquals(ShapeType.OVAL, shape.shape)
+        assertEquals(50f, shape.p2.x, 0.001f)
+
+        val img = restored[0].elements[3] as ImageElement
+        assertEquals("/x/y.jpg", img.filePath)
+        assertEquals(1.5f, img.transform.scale, 0.001f)
+
+        assertEquals("page two", restored[1].text)
+        assertEquals(PageTemplate.GRID, restored[1].template)
+    }
+
+    @Test
+    fun `pagesFromJson handles null and malformed gracefully`() {
+        assertTrue(pagesFromJson(null).isEmpty())
+        assertTrue(pagesFromJson("").isEmpty())
+        assertTrue(pagesFromJson("not json").isEmpty())
+    }
+
+    @Test
+    fun `legacyStrokesToElements drops eraser strokes and converts ink`() {
+        val legacy = listOf(
+            InkStroke(points = listOf(Offset(0f, 0f), Offset(5f, 5f)), color = 0xFF000000, width = 2f, isEraser = false),
+            InkStroke(points = listOf(Offset(1f, 1f)), color = 0xFFFFFFFF, width = 10f, isEraser = true)
+        )
+        val els = legacyStrokesToElements(legacy)
+        assertEquals(1, els.size)
+        assertTrue(els[0] is InkElement)
+        assertEquals(0xFF000000, (els[0] as InkElement).color)
+    }
+
     // ── Strong's Number JSON Parsing (extracted pattern) ──────────
 
     @Test
@@ -472,5 +570,76 @@ class DataLayerTest {
         assertEquals(2000L, updated.updatedAt)
         assertEquals("Updated content", updated.contentText)
         assertEquals(1000L, updated.createdAt)  // createdAt unchanged
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun `NoteEditorViewModel persists tags and favorite through save`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            val repo = mockk<NoteRepository>(relaxed = true)
+            coEvery { repo.getAllNotebooks() } returns emptyFlow()
+            coEvery { repo.createNote(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns 7L
+            val vm = NoteEditorViewModel(repo)
+
+            vm.setTitle("Sermon notes")
+            vm.addTag("faith")
+            vm.addTag("sermon")
+            vm.addTag("faith") // duplicate ignored
+            vm.toggleFavorite() // new note: sets state, persists on save
+
+            assertEquals(listOf("faith", "sermon"), vm.state.value.tags)
+            assertTrue(vm.state.value.isFavorite)
+
+            val id = vm.save()
+            assertEquals(7L, id)
+
+            coVerify(exactly = 1) {
+                repo.createNote(
+                    notebookId = null,
+                    title = "Sermon notes",
+                    contentText = null,
+                    penStrokes = null,
+                    penMode = PenMode.TEXT,
+                    tags = "faith,sermon",
+                    color = null,
+                    pagesJson = any(),
+                    isFavorite = true
+                )
+            }
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun `toggleFavorite on existing note persists immediately`() = runTest {
+        Dispatchers.setMain(UnconfinedTestDispatcher(testScheduler))
+        try {
+            val repo = mockk<NoteRepository>(relaxed = true)
+            coEvery { repo.getAllNotebooks() } returns emptyFlow()
+            coEvery { repo.getNote(1L) } returns NoteEntity(
+                id = 1L, notebookId = null, title = "T",
+                contentText = null, penStrokes = null, penMode = PenMode.TEXT,
+                createdAt = 1L, updatedAt = 1L, tags = null, color = null
+            )
+            coEvery { repo.getLinkedVerseIds(any()) } returns emptyList()
+            coEvery { repo.getAudiosForNote(any()) } returns flowOf(emptyList())
+            val vm = NoteEditorViewModel(repo)
+            vm.loadNote(1L)
+            advanceUntilIdle()
+
+            assertFalse(vm.state.value.isFavorite)
+            vm.toggleFavorite()
+            advanceUntilIdle()
+
+            assertTrue(vm.state.value.isFavorite)
+            val cap = slot<NoteEntity>()
+            coVerify { repo.updateNote(capture(cap)) }
+            assertEquals(true, cap.captured.isFavorite)
+        } finally {
+            Dispatchers.resetMain()
+        }
     }
 }

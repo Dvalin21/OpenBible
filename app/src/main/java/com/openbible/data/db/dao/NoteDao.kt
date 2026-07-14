@@ -7,6 +7,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.openbible.data.db.entity.NoteEntity
+import com.openbible.data.db.entity.NoteAudioEntity
 import com.openbible.data.db.entity.NoteImageEntity
 import com.openbible.data.db.entity.NoteVerseLinkEntity
 import com.openbible.data.db.entity.NotebookEntity
@@ -52,8 +53,19 @@ interface NoteDao {
     @Delete
     suspend fun deleteNote(note: NoteEntity)
 
-    @Query("SELECT * FROM notes WHERE title LIKE '%' || :query || '%' OR contentText LIKE '%' || :query || '%' ORDER BY updatedAt DESC")
-    suspend fun searchNotes(query: String): List<NoteEntity>
+    // -- Audio memos --
+
+    @Query("SELECT * FROM note_audio WHERE noteId = :noteId ORDER BY createdAt")
+    fun getAudiosForNote(noteId: Long): Flow<List<NoteAudioEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAudio(audio: NoteAudioEntity): Long
+
+    @Delete
+    suspend fun deleteAudio(audio: NoteAudioEntity)
+
+    @Query("DELETE FROM note_audio WHERE noteId = :noteId")
+    suspend fun deleteAllAudiosForNote(noteId: Long)
 
     // -- Note Images --
 

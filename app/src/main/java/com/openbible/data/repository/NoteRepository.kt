@@ -1,12 +1,15 @@
 package com.openbible.data.repository
 
 import com.openbible.data.db.dao.NoteDao
+import com.openbible.data.db.entity.NoteAudioEntity
 import com.openbible.data.db.entity.NoteEntity
 import com.openbible.data.db.entity.NoteImageEntity
 import com.openbible.data.db.entity.NoteVerseLinkEntity
 import com.openbible.data.db.entity.NotebookEntity
 import com.openbible.data.model.PenMode
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -41,7 +44,9 @@ class NoteRepository @Inject constructor(
         penStrokes: String? = null,
         penMode: PenMode = PenMode.TEXT,
         tags: String? = null,
-        color: Int? = null
+        color: Int? = null,
+        pagesJson: String? = null,
+        isFavorite: Boolean = false
     ): Long {
         return noteDao.insertNote(
             NoteEntity(
@@ -52,6 +57,8 @@ class NoteRepository @Inject constructor(
                 penMode = penMode,
                 tags = tags,
                 color = color,
+                pagesJson = pagesJson,
+                isFavorite = isFavorite,
                 createdAt = System.currentTimeMillis(),
                 updatedAt = System.currentTimeMillis()
             )
@@ -62,9 +69,21 @@ class NoteRepository @Inject constructor(
         noteDao.updateNote(note.copy(updatedAt = System.currentTimeMillis()))
     }
 
-    suspend fun deleteNote(note: NoteEntity) = noteDao.deleteNote(note)
+    suspend fun deleteNote(note: NoteEntity) {
+        // Best-effort cleanup of audio files before the row (and its
+        // note_audio children via CASCADE) is removed.
+        runCatching {
+            noteDao.getAudiosForNote(note.id).first().forEach { File(it.filePath).delete() }
+        }
+        noteDao.deleteNote(note)
+    }
 
-    suspend fun searchNotes(query: String): List<NoteEntity> = noteDao.searchNotes(query)
+    // -- Audio memos --
+
+    fun getAudiosForNote(noteId: Long): Flow<List<NoteAudioEntity>> = noteDao.getAudiosForNote(noteId)
+    suspend fun insertAudio(audio: NoteAudioEntity): Long = noteDao.insertAudio(audio)
+    suspend fun deleteAudio(audio: NoteAudioEntity) = noteDao.deleteAudio(audio)
+    suspend fun deleteAllAudiosForNote(noteId: Long) = noteDao.deleteAllAudiosForNote(noteId)
 
     // -- Images --
 

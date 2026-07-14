@@ -9,6 +9,9 @@
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="29" />
 
+    <!-- Audio memos (voice recording) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <!-- Internet for OpenStreetMap tiles (osmdroid) — tiles cache to disk for offline revisit -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />

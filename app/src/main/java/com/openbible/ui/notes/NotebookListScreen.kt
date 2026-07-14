@@ -4,6 +4,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -62,24 +63,53 @@ fun NotebookListScreen(
     val allNotes by viewModel.notes.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
     var selectedNotebookId by remember { mutableStateOf<Long?>(null) }
+    var viewAllNotes by remember { mutableStateOf(false) }
+    var search by remember { mutableStateOf("") }
+    var showFavoritesOnly by remember { mutableStateOf(false) }
 
-    val displayNotes = if (selectedNotebookId == null) allNotes
-    else allNotes.filter { it.notebookId == selectedNotebookId }
+    val query = search.trim().lowercase()
+    val filteredNotes = allNotes.filter { note ->
+        val matchesQuery = query.isEmpty() ||
+            listOf(note.title, note.contentText ?: "", note.tags ?: "", note.pagesJson ?: "")
+                .any { it.lowercase().contains(query) }
+        val matchesFav = !showFavoritesOnly || note.isFavorite
+        matchesQuery && matchesFav
+    }
+    // ponytail: viewAllNotes shows every note incl. uncategorized (notebookId == null);
+    // selectedNotebookId == null in chooser mode only (handled separately, never shows notes)
+    val displayNotes = if (viewAllNotes) filteredNotes
+    else if (selectedNotebookId == null) filteredNotes
+    else filteredNotes.filter { it.notebookId == selectedNotebookId }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (selectedNotebookId == null) "Notebooks" else "Notes") },
+                title = { Text(when {
+                    viewAllNotes -> "All notes"
+                    selectedNotebookId == null -> "Notebooks"
+                    else -> "Notes"
+                }) },
                 navigationIcon = {
                     IconButton(onClick = {
-                        if (selectedNotebookId != null) selectedNotebookId = null
-                        else onBack()
+                        when {
+                            search.isNotBlank() -> search = ""
+                            viewAllNotes -> viewAllNotes = false
+                            selectedNotebookId != null -> selectedNotebookId = null
+                            else -> onBack()
+                        }
                     }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
-                    if (selectedNotebookId != null) {
+                    if (selectedNotebookId != null || viewAllNotes) {
+                        IconButton(onClick = { showFavoritesOnly = !showFavoritesOnly }) {
+                            Icon(
+                                if (showFavoritesOnly) Icons.Filled.Star else Icons.Filled.StarBorder,
+                                contentDescription = "Show favorites only",
+                                tint = if (showFavoritesOnly) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         IconButton(onClick = onNewNote) {
                             Icon(Icons.Default.Add, contentDescription = "New note")
                         }
@@ -92,66 +122,121 @@ fun NotebookListScreen(
             )
         }
     ) { padding ->
-        if (selectedNotebookId == null) {
-            // Notebook list
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 16.dp)
-            ) {
-                if (notebooks.isEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(Icons.Default.NoteAlt, contentDescription = null, modifier = Modifier.size(48.dp))
-                                Spacer(Modifier.height(8.dp))
-                                Text("No notebooks yet", style = MaterialTheme.typography.bodyLarge)
-                                TextButton(onClick = { showCreateDialog = true }) { Text("Create one") }
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            // Global search-within-notes
+            OutlinedTextField(
+                value = search,
+                onValueChange = { search = it; if (it.isNotBlank()) showFavoritesOnly = false },
+                placeholder = { Text("Search notes…") },
+                singleLine = true,
+                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
+            when {
+                search.isNotBlank() -> {
+                    // Flat global results
+                    val results = displayNotes
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize().weight(1f).padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(vertical = 8.dp)
+                    ) {
+                        if (results.isEmpty()) {
+                            item {
+                                Box(Modifier.fillMaxWidth().padding(vertical = 48.dp), contentAlignment = Alignment.Center) {
+                                    Text("No notes match \"$search\"", style = MaterialTheme.typography.bodyMedium)
+                                }
                             }
                         }
-                    }
-                }
-                items(notebooks) { nb ->
-                    NotebookCard(
-                        notebook = nb,
-                        onClick = { selectedNotebookId = nb.id },
-                        onDelete = { viewModel.deleteNotebook(nb) }
-                    )
-                }
-            }
-        } else {
-            // Notes in selected notebook
-            val notebook = notebooks.find { it.id == selectedNotebookId }
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 16.dp)
-            ) {
-                if (displayNotes.isEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("No notes in this notebook", style = MaterialTheme.typography.bodyMedium)
+                        items(results) { note ->
+                            NoteCard(note = note, onClick = { onOpenNote(note.id) }, onDelete = { viewModel.deleteNote(note) })
                         }
                     }
                 }
-                items(displayNotes) { note ->
-                    NoteCard(
-                        note = note,
-                        onClick = { onOpenNote(note.id) },
-                        onDelete = { viewModel.deleteNote(note) }
-                    )
+
+                viewAllNotes -> {
+                    // All notes incl. uncategorized (notebookId == null)
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize().weight(1f).padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(vertical = 8.dp)
+                    ) {
+                        if (displayNotes.isEmpty()) {
+                            item {
+                                Box(Modifier.fillMaxWidth().padding(vertical = 48.dp), contentAlignment = Alignment.Center) {
+                                    Text("No notes yet", style = MaterialTheme.typography.bodyMedium)
+                                }
+                            }
+                        }
+                        items(displayNotes) { note ->
+                            NoteCard(note = note, onClick = { onOpenNote(note.id) }, onDelete = { viewModel.deleteNote(note) })
+                        }
+                    }
+                }
+
+                selectedNotebookId == null -> {
+                    // Notebook list
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize().weight(1f).padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(vertical = 8.dp)
+                    ) {
+                        if (notebooks.isEmpty()) {
+                            item {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(Icons.Default.NoteAlt, contentDescription = null, modifier = Modifier.size(48.dp))
+                                        Spacer(Modifier.height(8.dp))
+                                        Text("No notebooks yet", style = MaterialTheme.typography.bodyLarge)
+                                        TextButton(onClick = { showCreateDialog = true }) { Text("Create one") }
+                                    }
+                                }
+                            }
+                        }
+                        item {
+                            AllNotesCard(
+                                noteCount = filteredNotes.size,
+                                onClick = { viewAllNotes = true }
+                            )
+                        }
+                        items(notebooks) { nb ->
+                            NotebookCard(
+                                notebook = nb,
+                                onClick = { selectedNotebookId = nb.id },
+                                onDelete = { viewModel.deleteNotebook(nb) }
+                            )
+                        }
+                    }
+                }
+
+                else -> {
+                    // Notes in selected notebook
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize().weight(1f).padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(vertical = 8.dp)
+                    ) {
+                        if (displayNotes.isEmpty()) {
+                            item {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        if (showFavoritesOnly) "No favorite notes here" else "No notes in this notebook",
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                            }
+                        }
+                        items(displayNotes) { note ->
+                            NoteCard(note = note, onClick = { onOpenNote(note.id) }, onDelete = { viewModel.deleteNote(note) })
+                        }
+                    }
                 }
             }
         }
@@ -204,6 +289,42 @@ private fun NotebookCard(
 }
 
 @Composable
+private fun AllNotesCard(
+    noteCount: Int,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f))
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.Notes,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(32.dp)
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text = "All notes",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = "$noteCount",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
 private fun NoteCard(
     note: NoteEntity,
     onClick: () -> Unit,
@@ -226,6 +347,15 @@ private fun NoteCard(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
+                if (note.isFavorite) {
+                    Icon(
+                        Icons.Filled.Star,
+                        contentDescription = "Favorite",
+                        tint = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                }
                 TextButton(onClick = onDelete) { Text("Delete", color = MaterialTheme.colorScheme.error) }
             }
             if (preview.isNotEmpty()) {
@@ -235,6 +365,18 @@ private fun NoteCard(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     maxLines = 2
                 )
+            }
+            val tags = note.tags?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() } ?: emptyList()
+            if (tags.isNotEmpty()) {
+                Spacer(Modifier.height(6.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    items(tags) { tag ->
+                        SuggestionChip(
+                            onClick = { },
+                            label = { Text("#$tag", style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
+                }
             }
             Spacer(Modifier.height(4.dp))
             Text(

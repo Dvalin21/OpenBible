@@ -34,5 +34,8 @@ data class NoteEntity(
     val createdAt: Long,
     val updatedAt: Long,
     val tags: String?,              // comma-separated
-    val color: Int?                 // accent color for note card (ARGB)
+    val color: Int?,                // accent color for note card (ARGB)
+    val pagesJson: String? = null, // unified multi-page model (v11+); supersedes penStrokes
+    @androidx.room.ColumnInfo(defaultValue = "0")
+    val isFavorite: Boolean = false // starred notes (v12+)
 )

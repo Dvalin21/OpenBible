@@ -27,6 +27,7 @@ import com.openbible.data.db.entity.LocationEventEntity
 import com.openbible.data.db.entity.NoteEntity
 import com.openbible.data.db.entity.NoteImageEntity
 import com.openbible.data.db.entity.NoteVerseLinkEntity
+import com.openbible.data.db.entity.NoteAudioEntity
 import com.openbible.data.db.entity.NotebookEntity
 import com.openbible.data.db.entity.ParallelTraditionEntity
 import com.openbible.data.db.entity.ReadingHistoryEntity
@@ -56,6 +57,9 @@ import com.openbible.data.db.entity.VerseStrongLinkEntity
  * Version 8: added parallel_traditions table for cross-cultural comparisons.
  * Version 9: removed FK constraint from parallel_traditions (conflicted with
  *            createFromAsset + sequential data importer flow at first boot).
+ * Version 10: kept composite book PK (see MIGRATION_9_10).
+ * Version 11: added pagesJson column to notes (unified multi-page note model).
+ * Version 12: added isFavorite column to notes + note_audio table (audio memos).
  */
 @Database(
     entities = [
@@ -67,6 +71,7 @@ import com.openbible.data.db.entity.VerseStrongLinkEntity
         HighlightEntity::class,
         NoteEntity::class,
         NoteImageEntity::class,
+        NoteAudioEntity::class,
         NoteVerseLinkEntity::class,
         NotebookEntity::class,
         ReadingPlanEntity::class,
@@ -80,7 +85,7 @@ import com.openbible.data.db.entity.VerseStrongLinkEntity
         LocationEventEntity::class,
         ParallelTraditionEntity::class
     ],
-    version = 10,
+    version = 12,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -131,7 +136,7 @@ abstract class OpenBibleDatabase : RoomDatabase() {
             }
 
             // Explicit migrations — never destroy user data.
-            builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+            builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
 
             return builder.build()
         }
@@ -402,6 +407,38 @@ abstract class OpenBibleDatabase : RoomDatabase() {
                 "WHERE v.translationId = `books`.translationId AND v.bookId = `books`.id) " +
                 "WHERE totalVerses = 0"
             )
+        }
+
+        /**
+         * Version 10 → 11: Added pagesJson column to notes.
+         * Stores the unified multi-page note model (text + drawing elements +
+         * templates). Legacy contentText/penStrokes remain as a fallback and
+         * are migrated into page 0 on first load. ADD COLUMN is backward
+         * compatible and safe to re-run.
+         */
+        private val MIGRATION_10_11 = Migration(10, 11) { db ->
+            db.execSQL("ALTER TABLE notes ADD COLUMN pagesJson TEXT")
+        }
+
+        /**
+         * Version 11 → 12: favorites flag on notes + audio-memo table.
+         * - notes.isFavorite: NOT NULL INTEGER default 0 (backward compatible).
+         * - note_audio: voice memos attached to notes, CASCADE delete.
+         * Both are safe to re-run.
+         */
+        private val MIGRATION_11_12 = Migration(11, 12) { db ->
+            db.execSQL("ALTER TABLE notes ADD COLUMN isFavorite INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS note_audio (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                    noteId INTEGER NOT NULL,
+                    filePath TEXT NOT NULL,
+                    durationMs INTEGER NOT NULL DEFAULT 0,
+                    createdAt INTEGER NOT NULL,
+                    FOREIGN KEY(noteId) REFERENCES notes(id) ON DELETE CASCADE
+                )
+            """)
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_note_audio_noteId ON note_audio(noteId)")
         }
 
         private val MIGRATION_5_6 = Migration(5, 6) { db ->
