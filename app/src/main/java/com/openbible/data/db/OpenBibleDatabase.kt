@@ -374,7 +374,6 @@ abstract class OpenBibleDatabase : RoomDatabase() {
                     `totalVerses` INTEGER NOT NULL,
                     PRIMARY KEY(`translationId`, `id`))"""
             )
-            db.execSQL("CREATE INDEX IF NOT EXISTS `index_books_translationId` ON `books_new` (`translationId`)")
             // Carry over existing (kjv) book rows.
             db.execSQL(
                 "INSERT INTO `books_new` (translationId, id, name, abbreviation, number, chapterCount, testament, totalVerses) " +
@@ -389,6 +388,10 @@ abstract class OpenBibleDatabase : RoomDatabase() {
                 "WHERE k.translationId = 'kjv'"
             )
             db.execSQL("DROP TABLE `books`")
+            // Create the index only after the old table (and its same-named index) is
+            // gone — SQLite index names are database-global, so IF NOT EXISTS would
+            // otherwise see the old index and skip creating this one.
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_books_translationId` ON `books_new` (`translationId`)")
             db.execSQL("ALTER TABLE `books_new` RENAME TO `books`")
             // Fix per-book verse counts for the materialised rows
             // (verse data exists in `verses`; the v9 schema never tracked it
