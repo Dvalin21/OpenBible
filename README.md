@@ -14,6 +14,19 @@ Kotlin + Jetpack Compose + Material 3. API 29+.
 - **Notes** — Text, ink (Canvas), image, or all three. Notebooks. Auto verse linking via `Book Chap:Verse` detection. Split-screen Bible + Notes editor.
 - **Retro Pixel Theme** — 7"+ tablets get a pixelated Bible UI (aged parchment, ornamental borders, pixel font).
 
+## Screenshots
+
+| | |
+|---|---|
+| ![Home dashboard](screenshots/home.png) | ![Bible reader — KJV, Genesis 1](screenshots/reader_kjv.png) |
+| ![Translation picker](screenshots/reader_translations.png) | ![Strong's Concordance](screenshots/strongs.png) |
+| ![Strong's search results](screenshots/strongs_results.png) | ![Bible Geography](screenshots/geography.png) |
+| ![Parallel Traditions](screenshots/parallel.png) | ![Reading Plan](screenshots/reading_plan.png) |
+| ![Bookmarks](screenshots/bookmarks.png) | ![Notes](screenshots/notes.png) |
+| ![Settings](screenshots/settings.png) | ![Search](screenshots/search.png) |
+
+> **Search** uses SQLite FTS5 (standard on Android since API 24). The screenshot above shows the search entry UI; full-text results require an FTS5-capable device/emulator.
+
 ## Build
 
 ```shell
