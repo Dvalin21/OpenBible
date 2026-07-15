@@ -53,6 +53,8 @@ Captured on a 2960×1848 @ 240dpi (14.5") emulator:
 | ![Default translation](screenshots/tablet/24_settings_translations.png) | ![Study mode](screenshots/tablet/25_study_mode.png) |
 | ![Search UI](screenshots/tablet/26_search_ui.png) | |
 
+![Bible Geography — plotted map](screenshots/tablet/27_geography_map.png)
+
 ## Build
 
 ```shell
