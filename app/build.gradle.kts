@@ -14,8 +14,8 @@ android {
         applicationId = "com.openbible"
         minSdk = 29
         targetSdk = 34
-        versionCode = 5
-        versionName = "1.2.3"
+        versionCode = 6
+        versionName = "1.2.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -25,15 +25,27 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            val storeFileProp = project.findProperty("RELEASE_STORE_FILE") as String?
+            storeFile = file(storeFileProp ?: "debug.keystore")
+            storePassword = project.findProperty("RELEASE_STORE_PASSWORD") as String? ?: "android"
+            keyAlias = project.findProperty("RELEASE_KEY_ALIAS") as String? ?: "debug"
+            keyPassword = project.findProperty("RELEASE_KEY_PASSWORD") as String? ?: "android"
+        }
+    }
+
     buildTypes {
         release {
-            // ponytail: no release keystore committed — configure signing in local env / CI
+            // ponytail: signed with app/debug.keystore (alias=debug) so updates stay
+            // signature-compatible with prior releases; override via local.properties
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
         debug {
             isMinifyEnabled = false
