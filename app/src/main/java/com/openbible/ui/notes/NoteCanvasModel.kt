@@ -93,7 +93,7 @@ data class ImageElement(
 
 data class NotePage(
     val text: String = "",
-    val template: PageTemplate = PageTemplate.BLANK,
+    val template: PageTemplate = PageTemplate.RULED,
     val coverColor: Long? = null,
     val elements: List<NoteElement> = emptyList()
 )

@@ -345,6 +345,9 @@ private fun NavContent(
                 noteId = noteId,
                 onNavigateBack = { navController.popBackStack() }
             )
+            // ponytail: side-swap is fully local to BibleWithNotesScreen;
+            // onToggleNotesSide is wired to the composable default no-op,
+            // no navigation action needed.
         }
 
         composable(Routes.READING_PLANS) {

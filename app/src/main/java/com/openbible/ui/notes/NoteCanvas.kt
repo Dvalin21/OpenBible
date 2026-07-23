@@ -285,26 +285,38 @@ private fun nearResizeHandle(el: NoteElement, p: Offset): Boolean {
 /* ── Drawing helpers ───────────────────────────────────────────────────── */
 
 private fun drawTemplate(scope: DrawScope, template: PageTemplate, cover: Long?, size: Size) {
-    scope.drawRect(cover?.let { Color(it) } ?: Color.White)
-    val line = Color(0xFFCFD8DC)
+    // Notebook paper: cream background
+    val paper = Color(0xFFFFF8E7)  // warm cream/off-white
+    scope.drawRect(cover?.let { Color(it) } ?: paper)
+    val lineColor = Color(0xFFB0C4DE)  // soft blue horizontal lines
+    val marginColor = Color(0xFFFF6B6B)  // red margin line
     val step = 40f
+    val margin = 64f  // left margin width
     when (template) {
         PageTemplate.BLANK -> {}
         PageTemplate.RULED -> {
+            // Red margin line on the left
+            scope.drawLine(marginColor, Offset(margin, 0f), Offset(margin, size.height), strokeWidth = 1.5f)
+            // Blue horizontal lines, stopping at the margin
             var y = step
-            while (y < size.height) { scope.drawLine(line, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f); y += step }
+            while (y < size.height) {
+                scope.drawLine(lineColor, Offset(margin, y), Offset(size.width, y), strokeWidth = 0.8f)
+                y += step
+            }
+            // Top line
+            scope.drawLine(marginColor, Offset(margin, step), Offset(size.width, step), strokeWidth = 1.2f)
         }
         PageTemplate.GRID -> {
             var y = step
-            while (y < size.height) { scope.drawLine(line, Offset(0f, y), Offset(size.width, y), strokeWidth = 1f); y += step }
+            while (y < size.height) { scope.drawLine(lineColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 0.8f); y += step }
             var x = step
-            while (x < size.width) { scope.drawLine(line, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1f); x += step }
+            while (x < size.width) { scope.drawLine(lineColor, Offset(x, 0f), Offset(x, size.width), strokeWidth = 0.8f); x += step }
         }
         PageTemplate.DOTTED -> {
             var y = step
             while (y < size.height) {
                 var x = step
-                while (x < size.width) { scope.drawCircle(line, radius = 1.5f, center = Offset(x, y)); x += step }
+                while (x < size.width) { scope.drawCircle(lineColor, radius = 1.5f, center = Offset(x, y)); x += step }
                 y += step
             }
         }
