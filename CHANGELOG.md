@@ -1,9 +1,13 @@
 # Changelog
 
-## [1.2.6] - 2026-07-23
+## [1.2.8] - 2026-07-23
+### Fixed
+- **Notebook paper invisible in all three themes**: Previous fix used `onSurface.copy(alpha = 0.18f)` which was still too close to `surface` because the custom theme colors don't match default Material palette. Switched to `primary.copy(alpha = 0.30f)` — `primary` is always a warm accent that contrasts against every surface (light: brown #8B4513, dark: gold #C9954E, sepia: sienna #A0522D). Margin uses `primary.copy(alpha = 0.60f)`. Verified by pixel analysis: 26 ruled lines at exactly 40px intervals, warm brown (241,226,213) on (255,248,240) surface. Margin line present across full canvas height.
+
+## [1.2.7] - 2026-07-23
 ### Fixed
 - **Strong's search returned "random" results for words not in the concordance**: Removed `definition LIKE '%query%'` from the search query. Strong's Concordance now searches only by number, lemma, and transliteration — the actual dictionary identifiers. If a word isn't a Strong's number or a known lemma, it correctly shows "Nothing found" instead of matching English words buried in definitions.
-- **Notebook paper invisible in dark mode**: Template lines used `outlineVariant` which is nearly identical to `surface` in dark mode (both ~#2C2C2E) — lines were invisible. Changed to `onSurface.copy(alpha = 0.18f)` which provides visible-but-subtle lines in all themes. Margin line uses `primary.copy(alpha = 0.5f)`. Paper background uses `surface`. Verified in light, dark, and sepia modes.
+- **Notebook paper invisible in dark mode**: Template lines used `outlineVariant` which is nearly identical to `surface` in dark mode (both ~#2C2C2E) — lines were invisible. Changed to `onSurface.copy(alpha = 0.18f)` which provides visible-but-subtle lines in all themes. Margin line uses `primary.copy(alpha = 0.5f)`. Paper background uses `surface`. (Note: this fix was insufficient — see 1.2.8 for the correct solution.)
 
 ## [1.2.5] - 2026-07-23
 ### Fixed
