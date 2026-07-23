@@ -16,44 +16,35 @@ Kotlin + Jetpack Compose + Material 3. API 29+.
 
 ## Screenshots
 
-| | |
-|---|---|
-| ![Home dashboard](screenshots/home.png) | ![Bible reader — KJV, Genesis 1](screenshots/reader_kjv.png) |
-| ![Translation picker](screenshots/reader_translations.png) | ![Strong's Concordance](screenshots/strongs.png) |
-| ![Strong's search results](screenshots/strongs_results.png) | ![Bible Geography](screenshots/geography.png) |
-| ![Parallel Traditions](screenshots/parallel.png) | ![Reading Plan](screenshots/reading_plan.png) |
-| ![Bookmarks](screenshots/bookmarks.png) | ![Notes](screenshots/notes.png) |
-| ![Settings](screenshots/settings.png) | ![Search](screenshots/search.png) |
+Captured on a 6.8" phone (1080×2400) and a 14.5" tablet (2960×1848). Shows key features across both form factors plus themes.
 
-> **Search** uses SQLite FTS5 (standard on Android since API 24). The screenshot above shows the search entry UI; full-text results require an FTS5-capable device/emulator.
-
-### Study Mode (14.5" Tablet)
-
-Study Mode shows the Bible text and your Notes side-by-side, with a draggable divider and a **toggle to swap which side each pane is on** — ideal on tablets.
-
-![Study Mode — Bible + Notes split on a 14.5" tablet](screenshots/study_mode.png)
-
-### 14.5" Tablet Feature Tour
-
-Captured on a 2960×1848 @ 240dpi (14.5") emulator:
+### Phone — 6.8"
 
 | | |
 |---|---|
-| ![Dashboard](screenshots/tablet/01_dashboard.png) | ![Reader](screenshots/tablet/02_reader.png) |
-| ![Translations](screenshots/tablet/03_reader_translations.png) | ![WEB](screenshots/tablet/04_reader_web.png) |
-| ![Verse menu](screenshots/tablet/05_verse_menu.png) | ![Strong's](screenshots/tablet/06_strongs.png) |
-| ![Strong's results](screenshots/tablet/07_strongs_results.png) | ![Strong's entry](screenshots/tablet/08_strongs_entry.png) |
-| ![Geography](screenshots/tablet/10_geography.png) | ![Geography detail](screenshots/tablet/11_geography_detail.png) |
-| ![Parallel](screenshots/tablet/12_parallel.png) | ![Parallel detail](screenshots/tablet/13_parallel_detail.png) |
-| ![Parallel read](screenshots/tablet/14_parallel_read.png) | ![Reading plan](screenshots/tablet/15_reading_plan.png) |
-| ![Plan progress](screenshots/tablet/16_reading_plan_progress.png) | ![Bookmarks](screenshots/tablet/17_bookmarks.png) |
-| ![Bookmark open](screenshots/tablet/18_bookmark_open.png) | ![Notes](screenshots/tablet/19_notes.png) |
-| ![Notebook](screenshots/tablet/20_notebook_created.png) | ![Settings](screenshots/tablet/21_settings.png) |
-| ![Dark](screenshots/tablet/22_settings_dark.png) | ![Retro](screenshots/tablet/23_settings_retro.png) |
-| ![Default translation](screenshots/tablet/24_settings_translations.png) | ![Study mode](screenshots/tablet/25_study_mode.png) |
-| ![Search UI](screenshots/tablet/26_search_ui.png) | |
+| ![Home](screenshots/phone/home.png) | ![Bible Reader](screenshots/phone/bible.png) |
+| ![Search](screenshots/phone/search.png) | ![Strong's Concordance](screenshots/phone/strongs.png) |
+| ![Bible Geography](screenshots/phone/geography.png) | ![Parallel Traditions](screenshots/phone/parallel.png) |
+| ![Reading Plan](screenshots/phone/reading_plan.png) | ![Bookmarks](screenshots/phone/bookmarks.png) |
+| ![Notes](screenshots/phone/notes.png) | ![Settings](screenshots/phone/settings.png) |
+| ![Dark Theme](screenshots/phone/theme_dark.png) | ![Sepia Theme](screenshots/phone/theme_sepia.png) |
 
-![Bible Geography — plotted map](screenshots/tablet/27_geography_map.png)
+### Tablet — 14.5"
+
+| | |
+|---|---|
+| ![Home](screenshots/tablet/home.png) | ![Bible Reader](screenshots/tablet/bible.png) |
+| ![Search](screenshots/tablet/search.png) | ![Strong's Concordance](screenshots/tablet/strongs.png) |
+| ![Bible Geography](screenshots/tablet/geography.png) | ![Parallel Traditions](screenshots/tablet/parallel.png) |
+| ![Reading Plan](screenshots/tablet/reading_plan.png) | ![Bookmarks](screenshots/tablet/bookmarks.png) |
+| ![Notes](screenshots/tablet/notes.png) | ![Study Mode](screenshots/tablet/study_mode.png) |
+| ![Settings](screenshots/tablet/settings.png) | ![Dark Theme](screenshots/tablet/theme_dark.png) |
+
+### Themes
+
+| Light | Dark | Sepia | Retro (Tablet 7"+) |
+|---|---|---|---|
+| ![Light](screenshots/phone/settings.png) | ![Dark](screenshots/phone/theme_dark.png) | ![Sepia](screenshots/phone/theme_sepia.png) | ![Retro](screenshots/tablet/theme_retro.png) |
 
 ## Build
 
