@@ -76,9 +76,11 @@ fun NoteCanvas(
     }
 
     // ponytail: snapshot theme colors once before entering DrawScope (not @Composable in there)
+    // onSurface at low alpha gives visible-but-subtle lines in every theme
+    // (surface + outlineVariant are too close in dark mode — invisible)
     val themePaper = MaterialTheme.colorScheme.surface
-    val themeLine = MaterialTheme.colorScheme.outlineVariant
-    val themeMargin = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+    val themeLine = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f)
+    val themeMargin = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
     val bgColor = if (page.template == PageTemplate.BLANK) themePaper else Color.Transparent
 
     Canvas(

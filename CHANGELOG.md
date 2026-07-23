@@ -3,7 +3,7 @@
 ## [1.2.6] - 2026-07-23
 ### Fixed
 - **Strong's search returned "random" results for words not in the concordance**: Removed `definition LIKE '%query%'` from the search query. Strong's Concordance now searches only by number, lemma, and transliteration — the actual dictionary identifiers. If a word isn't a Strong's number or a known lemma, it correctly shows "Nothing found" instead of matching English words buried in definitions.
-- **Notebook paper invisible in dark mode**: Canvas background and template colors (ruled, grid, dotted) now use `MaterialTheme.colorScheme` instead of hardcoded cream/blue/red. Paper renders correctly in light, dark, and sepia themes.
+- **Notebook paper invisible in dark mode**: Template lines used `outlineVariant` which is nearly identical to `surface` in dark mode (both ~#2C2C2E) — lines were invisible. Changed to `onSurface.copy(alpha = 0.18f)` which provides visible-but-subtle lines in all themes. Margin line uses `primary.copy(alpha = 0.5f)`. Paper background uses `surface`. Verified in light, dark, and sepia modes.
 
 ## [1.2.5] - 2026-07-23
 ### Fixed
