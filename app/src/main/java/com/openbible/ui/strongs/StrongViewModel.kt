@@ -38,9 +38,6 @@ class StrongViewModel @Inject constructor(
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
 
-    /** Minimum chars before search triggers. Prevents trivial single-char matches on definitions. */
-    private val MIN_QUERY_LENGTH = 2
-
     fun search(query: String) {
         if (query.isBlank()) {
             _searchResults.value = emptyList()
@@ -48,22 +45,20 @@ class StrongViewModel @Inject constructor(
             return
         }
         val q = query.trim()
-        if (q.length < MIN_QUERY_LENGTH) {
-            _searchResults.value = emptyList()
-            _isSearching.value = false
-            return
-        }
         _isSearching.value = true
         viewModelScope.launch {
-            // If query looks like a Strong's number, try prefix match first
+            // If query looks like a Strong's number, prefer prefix match on number
             if (q.matches(Regex("^[GHgh]?\\d+$"))) {
-                val exact = strongDao.searchStrongNumbersByPrefix(q)
-                if (exact.isNotEmpty()) {
-                    _searchResults.value = exact
+                val prefixResults = strongDao.searchStrongNumbersByPrefix(q)
+                if (prefixResults.isNotEmpty()) {
+                    _searchResults.value = prefixResults
                     _isSearching.value = false
                     return@launch
                 }
             }
+            // Otherwise match by number, lemma, or transliteration only.
+            // Definition is excluded — if the word isn't a Strong's number
+            // or a known lemma/transliteration, show "Nothing found."
             _searchResults.value = strongDao.searchStrongNumbers(q)
             _isSearching.value = false
         }

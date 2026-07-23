@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.6] - 2026-07-23
+### Fixed
+- **Strong's search returned "random" results for words not in the concordance**: Removed `definition LIKE '%query%'` from the search query. Strong's Concordance now searches only by number, lemma, and transliteration — the actual dictionary identifiers. If a word isn't a Strong's number or a known lemma, it correctly shows "Nothing found" instead of matching English words buried in definitions.
+- **Notebook paper invisible in dark mode**: Canvas background and template colors (ruled, grid, dotted) now use `MaterialTheme.colorScheme` instead of hardcoded cream/blue/red. Paper renders correctly in light, dark, and sepia themes.
+
 ## [1.2.5] - 2026-07-23
 ### Fixed
 - **Notebook paper lines started 40px below canvas top**: RULED template now draws horizontal lines flush from y=0, matching real notebook paper layout flush with the pen toolbar area.
