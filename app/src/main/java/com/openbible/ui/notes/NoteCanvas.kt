@@ -297,14 +297,14 @@ private fun drawTemplate(scope: DrawScope, template: PageTemplate, cover: Long?,
         PageTemplate.RULED -> {
             // Red margin line on the left
             scope.drawLine(marginColor, Offset(margin, 0f), Offset(margin, size.height), strokeWidth = 1.5f)
-            // Blue horizontal lines, stopping at the margin
-            var y = step
+            // Blue horizontal lines — flush from the top (y=0)
+            var y = 0f
             while (y < size.height) {
                 scope.drawLine(lineColor, Offset(margin, y), Offset(size.width, y), strokeWidth = 0.8f)
                 y += step
             }
-            // Top line
-            scope.drawLine(marginColor, Offset(margin, step), Offset(size.width, step), strokeWidth = 1.2f)
+            // Top header line at y=0
+            scope.drawLine(marginColor, Offset(margin, 0f), Offset(size.width, 0f), strokeWidth = 1.2f)
         }
         PageTemplate.GRID -> {
             var y = step

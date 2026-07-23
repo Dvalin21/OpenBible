@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.2.5] - 2026-07-23
+### Fixed
+- **Notebook paper lines started 40px below canvas top**: RULED template now draws horizontal lines flush from y=0, matching real notebook paper layout flush with the pen toolbar area.
+
+## [1.2.4] - 2026-07-22
+### Fixed
+- **Prepopulated DB schema crash**: Importers now check schema compatibility before loading prepopulated data. All 64 locations load correctly on clean install.
+- **7 bugs across Parallel Traditions, Strong's Search, map, notes, Bible reader, navigation, and translation selection**: Comprehensive stability pass across remaining features.
+
+### Added
+- **Signed release builds**: APK now signed with release keystore for direct sideload distribution.
+
+## [1.2.3] - 2026-07-20
+### Fixed
+- **Migration FK crash**: Database migration from v8→v9→v10 hardened to handle composite PK changes without corrupting foreign key relationships.
+- **Books per-translation composite PK**: Fixed book ID collisions across translations. Each translation now has its own book entries.
+- **Translation picker now hides empty translations**: Translations with no imported books no longer appear in the Bible reader picker.
+- **Geography map now opens correctly**: Fixed `LocationMapScreen` navigation so "Bible Geography" from home screen opens the plotted map instead of crashing.
+
+## [1.2.2] - 2026-07-18
+### Added
+- **Rich note editor**: Unified page model with ink/text/both modes, tags, favorites, audio memos, full-text search across notes, and uncategorized notes view.
+- **Map zoom buttons**: + and - floating action buttons on the Bible map for pinch-to-zoom alternative on tablets and Chromebooks.
+- **Home screen scrollable cards**: All feature cards now accessible on small screens (content no longer cut off).
+
+### Changed
+- **Retro theme removed**: Simplified to Material 3 theme only.
+
 ## [1.2.1] - 2026-07-05
 ### Fixed
 - **Map not showing**: Added INTERNET + ACCESS_NETWORK_STATE permissions so osmdroid can download OpenStreetMap tiles (tiles cache to disk for offline reuse)
