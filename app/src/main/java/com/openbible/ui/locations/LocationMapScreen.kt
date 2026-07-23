@@ -2,12 +2,17 @@ package com.openbible.ui.locations
 
 import android.content.Context
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import android.content.pm.PackageManager
@@ -119,8 +124,39 @@ private fun BibleMapView(
         mapView.invalidate()
     }
 
-    AndroidView(
-        factory = { mapView },
-        modifier = modifier
-    )
+    Box(modifier = modifier) {
+        AndroidView(
+            factory = { mapView },
+            modifier = Modifier.fillMaxSize()
+        )
+
+        // Zoom controls overlay — bottom-right corner
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FloatingActionButton(
+                onClick = { mapView.controller.zoomIn() },
+                modifier = Modifier.size(44.dp),
+                shape = CircleShape,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp)
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = "Zoom in")
+            }
+            FloatingActionButton(
+                onClick = { mapView.controller.zoomOut() },
+                modifier = Modifier.size(44.dp),
+                shape = CircleShape,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 4.dp)
+            ) {
+                Icon(Icons.Filled.Remove, contentDescription = "Zoom out")
+            }
+        }
+    }
 }

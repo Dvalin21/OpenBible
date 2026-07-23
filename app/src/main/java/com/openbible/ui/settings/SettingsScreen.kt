@@ -17,7 +17,7 @@ import kotlin.math.roundToInt
  *
  * Sections:
  * 1. Display — theme mode, font sizes, line spacing
- * 2. Bible Reading — retro theme, page flip, default translation
+ * 2. Bible Reading — page flip, default translation
  * 3. Notifications — daily verse toggle and time
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -29,7 +29,6 @@ fun SettingsScreen(
     val fontSizeNumbers by viewModel.fontSizeVerseNumbers.collectAsState()
     val fontSizeText by viewModel.fontSizeVerseText.collectAsState()
     val lineSpacing by viewModel.lineSpacing.collectAsState()
-    val retroEnabled by viewModel.retroThemeEnabled.collectAsState()
     val pageFlipAnim by viewModel.pageFlipAnimation.collectAsState()
     val pageFlipSound by viewModel.pageFlipSound.collectAsState()
     val dailyVerseEnabled by viewModel.dailyVerseEnabled.collectAsState()
@@ -133,14 +132,6 @@ fun SettingsScreen(
             )
         }
         Spacer(modifier = Modifier.height(16.dp))
-
-        // Retro theme toggle
-        SettingsSwitch(
-            label = "Retro Pixel Bible Theme",
-            subtitle = "Pixel font, parchment background, ornamental borders (7\"+ tablets)",
-            checked = retroEnabled,
-            onCheckedChange = { viewModel.setRetroThemeEnabled(it) }
-        )
 
         // Page flip animation toggle
         SettingsSwitch(

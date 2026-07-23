@@ -12,11 +12,10 @@ Kotlin + Jetpack Compose + Material 3. API 29+.
 - **Personalization** — Bookmarks with tags. 5-color highlights. Reading history with resume. Dark/Light/Sepia themes. Font size controls (verse numbers + text).
 - **Daily Use** — Daily verse notification. Home screen widget (Glance). Reading plans (365-day). Text-to-speech per chapter.
 - **Notes** — Text, ink (Canvas), image, or all three. Notebooks. Auto verse linking via `Book Chap:Verse` detection. Split-screen Bible + Notes editor.
-- **Retro Pixel Theme** — 7"+ tablets get a pixelated Bible UI (aged parchment, ornamental borders, pixel font).
 
 ## Screenshots
 
-Captured on a 6.8" phone (1080×2400) and a 14.5" tablet (2960×1848). Shows key features across both form factors plus themes.
+Captured on a 6.8" phone (1080×2400) and a 14.5" tablet (2960×1848).
 
 ### Phone — 6.8"
 
@@ -24,10 +23,11 @@ Captured on a 6.8" phone (1080×2400) and a 14.5" tablet (2960×1848). Shows key
 |---|---|
 | ![Home](screenshots/phone/home.png) | ![Bible Reader](screenshots/phone/bible.png) |
 | ![Search](screenshots/phone/search.png) | ![Strong's Concordance](screenshots/phone/strongs.png) |
-| ![Bible Geography](screenshots/phone/geography.png) | ![Parallel Traditions](screenshots/phone/parallel.png) |
+| ![Bible Geography](screenshots/phone/geography.png) | ![Chapter Navigation](screenshots/phone/chapter_nav.png) |
 | ![Reading Plan](screenshots/phone/reading_plan.png) | ![Bookmarks](screenshots/phone/bookmarks.png) |
-| ![Notes](screenshots/phone/notes.png) | ![Settings](screenshots/phone/settings.png) |
-| ![Dark Theme](screenshots/phone/theme_dark.png) | ![Sepia Theme](screenshots/phone/theme_sepia.png) |
+| ![Notes](screenshots/phone/notes.png) | ![Study Mode](screenshots/phone/study_mode.png) |
+| ![Settings](screenshots/phone/settings.png) | ![Dark Theme](screenshots/phone/theme_dark.png) |
+| ![Sepia Theme](screenshots/phone/theme_sepia.png) | |
 
 ### Tablet — 14.5"
 
@@ -35,16 +35,11 @@ Captured on a 6.8" phone (1080×2400) and a 14.5" tablet (2960×1848). Shows key
 |---|---|
 | ![Home](screenshots/tablet/home.png) | ![Bible Reader](screenshots/tablet/bible.png) |
 | ![Search](screenshots/tablet/search.png) | ![Strong's Concordance](screenshots/tablet/strongs.png) |
-| ![Bible Geography](screenshots/tablet/geography.png) | ![Parallel Traditions](screenshots/tablet/parallel.png) |
+| ![Bible Geography](screenshots/tablet/geography.png) | ![Parallel Compare](screenshots/tablet/parallel.png) |
 | ![Reading Plan](screenshots/tablet/reading_plan.png) | ![Bookmarks](screenshots/tablet/bookmarks.png) |
 | ![Notes](screenshots/tablet/notes.png) | ![Study Mode](screenshots/tablet/study_mode.png) |
 | ![Settings](screenshots/tablet/settings.png) | ![Dark Theme](screenshots/tablet/theme_dark.png) |
-
-### Themes
-
-| Light | Dark | Sepia | Retro (Tablet 7"+) |
-|---|---|---|---|
-| ![Light](screenshots/phone/settings.png) | ![Dark](screenshots/phone/theme_dark.png) | ![Sepia](screenshots/phone/theme_sepia.png) | ![Retro](screenshots/tablet/theme_retro.png) |
+| ![Sepia Theme](screenshots/tablet/theme_sepia.png) | |
 
 ## Build
 

@@ -9,7 +9,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -33,14 +32,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -103,7 +95,6 @@ fun BibleScreen(
     val selectedTranslationId by viewModel.selectedTranslationId.collectAsState()
     val selectedBookId by viewModel.selectedBookId.collectAsState()
     val books by viewModel.books.collectAsState()
-    val retroConfig = LocalRetroPixel.current
 
     // ── Bookmarks, highlights, cross-refs for current chapter ────
     val bookmarkedIds by viewModel.bookmarkedVerseIds.collectAsState()
@@ -128,12 +119,8 @@ fun BibleScreen(
     val fontSizeVerseNumbers by prefs.fontSizeVerseNumbers.collectAsState(initial = 18f)
     val fontSizeVerseText by prefs.fontSizeVerseText.collectAsState(initial = 16f)
     val lineSpacing by prefs.lineSpacing.collectAsState(initial = 1.6f)
-    val retroEnabledPref by prefs.retroThemeEnabled.collectAsState(initial = true)
     val pageFlipAnimEnabled by prefs.pageFlipAnimation.collectAsState(initial = true)
     val pageFlipSoundEnabled by prefs.pageFlipSound.collectAsState(initial = true)
-
-    // Retro is enabled only when device is a tablet AND user hasn't disabled it
-    val retroEffective = retroConfig.enabled && retroEnabledPref
 
     // Canonical book number (1=Gen…40=Mat…66=Rev) for red-letter support
     val bookNumber = currentBook?.number ?: 1
@@ -374,45 +361,24 @@ fun BibleScreen(
                 Row(modifier = Modifier.fillMaxSize()) {
                     // Left pane: primary translation (full features)
                     Box(modifier = Modifier.weight(1f)) {
-                        if (retroEffective) {
-                            RetroBibleContent(
-                                verses = verses,
-                                bookNumber = bookNumber,
-                                chapter = selectedChapter,
-                                fontSizeNumbers = fontSizeVerseNumbers,
-                                fontSizeText = fontSizeVerseText,
-                                lineSpacing = lineSpacing,
-                                bookmarkedIds = bookmarkedIds,
-                                highlightMap = highlightMap,
-                                crossReferenceMap = crossReferenceMap,
-                                onBookmarkToggle = { viewModel.toggleBookmark(it) },
-                                onHighlightToggle = { id, color -> viewModel.toggleHighlight(id, color) },
-                                onStrongsClick = onStrongsClick,
-                                speakingVerseIndex = ttsState.currentVerseIndex,
-                                wordRange = ttsState.currentWordRange,
-                                listState = primaryListState,
-                                modifier = Modifier.padding(end = 2.dp)
-                            )
-                        } else {
-                            StandardBibleContent(
-                                verses = verses,
-                                bookNumber = bookNumber,
-                                chapter = selectedChapter,
-                                fontSizeNumbers = fontSizeVerseNumbers,
-                                fontSizeText = fontSizeVerseText,
-                                lineSpacing = lineSpacing,
-                                bookmarkedIds = bookmarkedIds,
-                                highlightMap = highlightMap,
-                                crossReferenceMap = crossReferenceMap,
-                                onBookmarkToggle = { viewModel.toggleBookmark(it) },
-                                onHighlightToggle = { id, color -> viewModel.toggleHighlight(id, color) },
-                                onStrongsClick = onStrongsClick,
-                                speakingVerseIndex = ttsState.currentVerseIndex,
-                                wordRange = ttsState.currentWordRange,
-                                listState = primaryListState,
-                                modifier = Modifier.padding(end = 2.dp)
-                            )
-                        }
+                        StandardBibleContent(
+                            verses = verses,
+                            bookNumber = bookNumber,
+                            chapter = selectedChapter,
+                            fontSizeNumbers = fontSizeVerseNumbers,
+                            fontSizeText = fontSizeVerseText,
+                            lineSpacing = lineSpacing,
+                            bookmarkedIds = bookmarkedIds,
+                            highlightMap = highlightMap,
+                            crossReferenceMap = crossReferenceMap,
+                            onBookmarkToggle = { viewModel.toggleBookmark(it) },
+                            onHighlightToggle = { id, color -> viewModel.toggleHighlight(id, color) },
+                            onStrongsClick = onStrongsClick,
+                            speakingVerseIndex = ttsState.currentVerseIndex,
+                            wordRange = ttsState.currentWordRange,
+                            listState = primaryListState,
+                            modifier = Modifier.padding(end = 2.dp)
+                        )
                     }
 
                     // Vertical divider
@@ -455,81 +421,42 @@ fun BibleScreen(
                     label = "pageFlip"
                 ) { targetChapter ->
                     Box(modifier = Modifier.fillMaxSize()) {
-                        if (retroEffective) {
-                            RetroBibleContent(
-                                verses = verses,
-                                bookNumber = bookNumber,
-                                chapter = targetChapter,
-                                fontSizeNumbers = fontSizeVerseNumbers,
-                                fontSizeText = fontSizeVerseText,
-                                lineSpacing = lineSpacing,
-                                bookmarkedIds = bookmarkedIds,
-                                highlightMap = highlightMap,
-                                crossReferenceMap = crossReferenceMap,
-                                onBookmarkToggle = { viewModel.toggleBookmark(it) },
-                                onHighlightToggle = { id, color -> viewModel.toggleHighlight(id, color) },
-                                onStrongsClick = onStrongsClick,
-                                speakingVerseIndex = ttsState.currentVerseIndex,
-                                wordRange = ttsState.currentWordRange,
-                                listState = primaryListState
-                            )
-                        } else {
-                            StandardBibleContent(
-                                verses = verses,
-                                bookNumber = bookNumber,
-                                chapter = selectedChapter,
-                                fontSizeNumbers = fontSizeVerseNumbers,
-                                fontSizeText = fontSizeVerseText,
-                                lineSpacing = lineSpacing,
-                                bookmarkedIds = bookmarkedIds,
-                                highlightMap = highlightMap,
-                                crossReferenceMap = crossReferenceMap,
-                                onBookmarkToggle = { viewModel.toggleBookmark(it) },
-                                onHighlightToggle = { id, color -> viewModel.toggleHighlight(id, color) },
-                                onStrongsClick = onStrongsClick,
-                                speakingVerseIndex = ttsState.currentVerseIndex,
-                                wordRange = ttsState.currentWordRange,
-                                listState = primaryListState
-                            )
-                        }
+                        StandardBibleContent(
+                            verses = verses,
+                            bookNumber = bookNumber,
+                            chapter = targetChapter,
+                            fontSizeNumbers = fontSizeVerseNumbers,
+                            fontSizeText = fontSizeVerseText,
+                            lineSpacing = lineSpacing,
+                            bookmarkedIds = bookmarkedIds,
+                            highlightMap = highlightMap,
+                            crossReferenceMap = crossReferenceMap,
+                            onBookmarkToggle = { viewModel.toggleBookmark(it) },
+                            onHighlightToggle = { id, color -> viewModel.toggleHighlight(id, color) },
+                            onStrongsClick = onStrongsClick,
+                            speakingVerseIndex = ttsState.currentVerseIndex,
+                            wordRange = ttsState.currentWordRange,
+                            listState = primaryListState
+                        )
                     }
                 }
             } else {
-                if (retroEffective) {
-                    RetroBibleContent(
-                        verses = verses,
-                        bookNumber = bookNumber,
-                        chapter = selectedChapter,
-                        fontSizeNumbers = fontSizeVerseNumbers,
-                        fontSizeText = fontSizeVerseText,
-                        lineSpacing = lineSpacing,
-                        bookmarkedIds = bookmarkedIds,
-                        highlightMap = highlightMap,
-                        crossReferenceMap = crossReferenceMap,
-                        onBookmarkToggle = { viewModel.toggleBookmark(it) },
-                        onHighlightToggle = { id, color -> viewModel.toggleHighlight(id, color) },
-                        onStrongsClick = onStrongsClick,
-                        speakingVerseIndex = ttsState.currentVerseIndex,
-                        listState = primaryListState
-                    )
-                } else {
-                    StandardBibleContent(
-                        verses = verses,
-                        bookNumber = bookNumber,
-                        chapter = selectedChapter,
-                        fontSizeNumbers = fontSizeVerseNumbers,
-                        fontSizeText = fontSizeVerseText,
-                        lineSpacing = lineSpacing,
-                        bookmarkedIds = bookmarkedIds,
-                        highlightMap = highlightMap,
-                        crossReferenceMap = crossReferenceMap,
-                        onBookmarkToggle = { viewModel.toggleBookmark(it) },
-                        onHighlightToggle = { id, color -> viewModel.toggleHighlight(id, color) },
-                        onStrongsClick = onStrongsClick,
-                        speakingVerseIndex = ttsState.currentVerseIndex,
-                        listState = primaryListState
-                    )
-                }
+                StandardBibleContent(
+                    verses = verses,
+                    bookNumber = bookNumber,
+                    chapter = selectedChapter,
+                    fontSizeNumbers = fontSizeVerseNumbers,
+                    fontSizeText = fontSizeVerseText,
+                    lineSpacing = lineSpacing,
+                    bookmarkedIds = bookmarkedIds,
+                    highlightMap = highlightMap,
+                    crossReferenceMap = crossReferenceMap,
+                    onBookmarkToggle = { viewModel.toggleBookmark(it) },
+                    onHighlightToggle = { id, color -> viewModel.toggleHighlight(id, color) },
+                    onStrongsClick = onStrongsClick,
+                    speakingVerseIndex = ttsState.currentVerseIndex,
+                    listState = primaryListState
+                )
             }
 
             // ── TTS Controls Overlay ─────────────────────────────
@@ -641,7 +568,6 @@ private fun StandardBibleContent(
                 verseNumber = verse.verse,
                 text = verse.text,
                 isRedLetter = redLetter,
-                isRetro = false,
                 fontSizeNumber = fontSizeNumbers,
                 fontSizeText = fontSizeText,
                 lineSpacing = lineSpacing,
@@ -665,170 +591,6 @@ private fun StandardBibleContent(
     }
 }
 
-// ── Retro Pixel Content (7"+ tablets) ──────────────────────────
-
-@Composable
-private fun RetroBibleContent(
-    verses: List<VerseEntity>,
-    bookNumber: Int,
-    chapter: Int,
-    fontSizeNumbers: Float,
-    fontSizeText: Float,
-    lineSpacing: Float,
-    bookmarkedIds: Set<Long>,
-    highlightMap: Map<Long, HighlightColor>,
-    crossReferenceMap: Map<Long, List<CrossReferenceDisplay>>,
-    onBookmarkToggle: (Long) -> Unit,
-    onHighlightToggle: (Long, HighlightColor) -> Unit,
-    onAddNote: (verseNumber: Int) -> Unit = {},
-    onStrongsClick: (verseId: Long) -> Unit = {},
-    speakingVerseIndex: Int = -1,
-    wordRange: IntRange? = null,
-    listState: LazyListState = rememberLazyListState(),
-    modifier: Modifier = Modifier
-) {
-    val retro = LocalRetroPixel.current
-    val isDark = MaterialTheme.colorScheme.background == DarkBackground
-    val parchmentColor = if (isDark) RetroParchmentDark else RetroParchment
-    val textColor = if (isDark) RetroTextDark else RetroText
-    val borderColor = if (isDark) RetroTextDark else RetroBorder
-    val goldColor = RetroGold
-
-    val expandedRefs = remember { mutableStateMapOf<Long, Boolean>() }
-
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = retro.pagePaddingHorizontal)
-    ) {
-        // ── Parchment Background Canvas ─────────────────────────
-        Canvas(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = retro.ornamentHeight + 4.dp, bottom = retro.ornamentHeight + 4.dp)
-        ) {
-            val w = size.width
-            val h = size.height
-
-            // Fill parchment background
-            drawRect(color = parchmentColor)
-
-            // Page-edge shadow (left side)
-            val shadowBrush = Brush.horizontalGradient(
-                colors = listOf(
-                    Color.Black.copy(alpha = 0.08f),
-                    Color.Transparent
-                ),
-                startX = 0f,
-                endX = retro.pageShadowWidth.toPx()
-            )
-            drawRect(
-                brush = shadowBrush,
-                topLeft = Offset.Zero,
-                size = Size(retro.pageShadowWidth.toPx(), h)
-            )
-
-            // Top ornamental gold line
-            val lineY = 0f
-            drawLine(
-                color = goldColor,
-                start = Offset(4.dp.toPx(), lineY),
-                end = Offset(w - 4.dp.toPx(), lineY),
-                strokeWidth = 2.dp.toPx()
-            )
-
-            // Second line (1dp below)
-            drawLine(
-                color = goldColor,
-                start = Offset(4.dp.toPx(), lineY + 3.dp.toPx()),
-                end = Offset(w - 4.dp.toPx(), lineY + 3.dp.toPx()),
-                strokeWidth = 1.dp.toPx()
-            )
-
-            // Corner ornaments (top-left and top-right squares)
-            val cornerSize = 4.dp.toPx()
-            drawRect(
-                color = goldColor,
-                topLeft = Offset(0f, lineY - cornerSize / 2),
-                size = Size(cornerSize, cornerSize)
-            )
-            drawRect(
-                color = goldColor,
-                topLeft = Offset(w - cornerSize, lineY - cornerSize / 2),
-                size = Size(cornerSize, cornerSize)
-            )
-
-            // Bottom ornamental gold line
-            val bottomY = h
-            drawLine(
-                color = goldColor,
-                start = Offset(4.dp.toPx(), bottomY),
-                end = Offset(w - 4.dp.toPx(), bottomY),
-                strokeWidth = 2.dp.toPx()
-            )
-            drawLine(
-                color = goldColor,
-                start = Offset(4.dp.toPx(), bottomY - 3.dp.toPx()),
-                end = Offset(w - 4.dp.toPx(), bottomY - 3.dp.toPx()),
-                strokeWidth = 1.dp.toPx()
-            )
-
-            // Corner ornaments (bottom-left and bottom-right)
-            drawRect(
-                color = goldColor,
-                topLeft = Offset(0f, bottomY - cornerSize / 2),
-                size = Size(cornerSize, cornerSize)
-            )
-            drawRect(
-                color = goldColor,
-                topLeft = Offset(w - cornerSize, bottomY - cornerSize / 2),
-                size = Size(cornerSize, cornerSize)
-            )
-        }
-
-        // ── Verse List ──────────────────────────────────────────
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = retro.ornamentHeight + 8.dp),
-            contentPadding = PaddingValues(
-                top = 8.dp,
-                bottom = retro.ornamentHeight + 80.dp
-            ),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            items(verses.withIndex().toList(), key = { it.value.id }) { (index, verse) ->
-                val redLetter = RedLetterData.isRedLetter(bookNumber, chapter, verse.verse)
-                VerseLine(
-                    verseNumber = verse.verse,
-                    text = verse.text,
-                    isRedLetter = redLetter,
-                    isRetro = true,
-                    fontSizeNumber = fontSizeNumbers,
-                    fontSizeText = fontSizeText,
-                    lineSpacing = lineSpacing,
-                    verseId = verse.id,
-                    currentChapter = chapter,
-                    isBookmarked = verse.id in bookmarkedIds,
-                    highlightColor = highlightMap[verse.id],
-                    crossRefs = crossReferenceMap[verse.id] ?: emptyList(),
-                    isExpanded = expandedRefs[verse.id] == true,
-                    isSpeaking = index == speakingVerseIndex,
-                    wordRange = if (index == speakingVerseIndex) wordRange else null,
-                    onToggleRefs = {
-                        expandedRefs[verse.id] = expandedRefs[verse.id] != true
-                    },
-                onBookmarkToggle = { onBookmarkToggle(verse.id) },
-                onHighlightToggle = { color -> onHighlightToggle(verse.id, color) },
-                onAddNote = onAddNote,
-                onStrongsClick = { onStrongsClick(verse.id) }
-            )
-        }
-    }
-}
-} // end RetroBibleContent
-
 // ── Simple Bible Content (secondary pane, no interactions) ──────
 
 @Composable
@@ -841,7 +603,6 @@ private fun SimpleBibleContent(
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
-    val pixelFont = FontFamily(Font(R.font.pixelify_sans))
 
     Column(modifier = modifier.fillMaxSize()) {
         // Translation label header
@@ -864,7 +625,7 @@ private fun SimpleBibleContent(
                 val annotated = buildAnnotatedString {
                     withStyle(
                         SpanStyle(
-                            fontFamily = pixelFont,
+                            fontFamily = FontFamily.SansSerif,
                             fontSize = fontSizeNumbers.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.secondary
@@ -898,7 +659,6 @@ private fun SimpleBibleContent(
 private fun VerseLine(
     verseNumber: Int,
     text: String,
-    isRetro: Boolean,
     fontSizeNumber: Float = 18f,
     fontSizeText: Float = 16f,
     lineSpacing: Float = 1.6f,
@@ -917,7 +677,6 @@ private fun VerseLine(
     onAddNote: (verseNumber: Int) -> Unit = {},
     onStrongsClick: () -> Unit = {}
 ) {
-    val pixelFont = FontFamily(Font(R.font.pixelify_sans))
     var showMenu by remember { mutableStateOf(false) }
     val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
 
@@ -953,12 +712,10 @@ private fun VerseLine(
         // Verse number
         withStyle(
             SpanStyle(
-                fontFamily = if (isRetro) pixelFont else FontFamily.SansSerif,
+                fontFamily = FontFamily.SansSerif,
                 fontSize = fontSizeNumber.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (isRetro) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.secondary,
-                letterSpacing = if (isRetro) 1.sp else 0.sp
+                color = MaterialTheme.colorScheme.secondary
             )
         ) {
             append("$verseNumber ")
@@ -966,17 +723,17 @@ private fun VerseLine(
 
         // Verse text with optional highlight background and word-level TTS glow
         val baseTextStyle = SpanStyle(
-            fontFamily = if (isRetro) pixelFont else FontFamily.Serif,
+            fontFamily = FontFamily.Serif,
             fontSize = fontSizeText.sp,
             color = verseColor,
             background = highlightBg ?: Color.Transparent
         )
 
         val wordGlowStyle = SpanStyle(
-            fontFamily = if (isRetro) pixelFont else FontFamily.Serif,
+            fontFamily = FontFamily.Serif,
             fontSize = fontSizeText.sp,
             color = verseColor,
-            background = com.openbible.ui.theme.RetroGold.copy(alpha = 0.45f)
+            background = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
         )
 
         val wordStart: Int? = if (wordRange != null && isSpeaking &&
@@ -999,8 +756,7 @@ private fun VerseLine(
 
     // Background colour for the currently spoken verse
     val speakingBg = if (isSpeaking) {
-        if (isRetro) com.openbible.ui.theme.RetroGold.copy(alpha = 0.12f)
-        else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
     } else Color.Transparent
 
     Column {

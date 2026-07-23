@@ -5,16 +5,15 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import com.openbible.navigation.OpenBibleNavGraph
-import com.openbible.ui.theme.LocalRetroPixel
 import com.openbible.ui.theme.OpenBibleTheme
-import com.openbible.ui.theme.rememberRetroPixelConfig
 import dagger.hilt.android.AndroidEntryPoint
 
 /**
@@ -39,20 +38,18 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeMode by preferences.themeMode.collectAsState(initial = com.openbible.data.model.ThemeMode.LIGHT)
             val defaultTranslation by preferences.defaultTranslation.collectAsState(initial = "kjv")
-            val retroConfig = rememberRetroPixelConfig()
+            val isTablet = LocalConfiguration.current.screenWidthDp >= 600
 
-            CompositionLocalProvider(LocalRetroPixel provides retroConfig) {
-                OpenBibleTheme(themeMode = themeMode) {
-                    OpenBibleNavGraph(
-                        isTablet = retroConfig.isTablet,
-                        defaultTranslation = defaultTranslation,
-                        initialTranslationId = pendingNav.value?.first,
-                        initialBookId = pendingNav.value?.second,
-                        initialChapter = pendingNav.value?.third,
-                        onNotificationConsumed = { pendingNav.value = null },
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
+            OpenBibleTheme(themeMode = themeMode) {
+                OpenBibleNavGraph(
+                    isTablet = isTablet,
+                    defaultTranslation = defaultTranslation,
+                    initialTranslationId = pendingNav.value?.first,
+                    initialBookId = pendingNav.value?.second,
+                    initialChapter = pendingNav.value?.third,
+                    onNotificationConsumed = { pendingNav.value = null },
+                    modifier = Modifier.fillMaxSize()
+                )
             }
         }
     }

@@ -64,7 +64,6 @@ fun BibleReaderScreen(
                             verseNumber = verse.verse,
                             text = verse.text,
                             isRedLetter = redLetter,
-                            isRetro = false,
                             verseId = verse.id,
                             crossRefs = crossReferenceMap[verse.id] ?: emptyList(),
                             isExpanded = expandedRefs[verse.id] == true,
@@ -86,7 +85,6 @@ fun BibleReaderScreen(
 private fun VerseLine(
     verseNumber: Int,
     text: String,
-    isRetro: Boolean,
     verseId: Long = 0L,
     isRedLetter: Boolean = false,
     crossRefs: List<CrossReferenceDisplay> = emptyList(),

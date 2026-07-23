@@ -40,9 +40,6 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val lineSpacing: StateFlow<Float> = prefs.lineSpacing
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 1.6f)
 
-    val retroThemeEnabled: StateFlow<Boolean> = prefs.retroThemeEnabled
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
-
     val pageFlipSound: StateFlow<Boolean> = prefs.pageFlipSound
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
@@ -79,10 +76,6 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun setLineSpacing(spacing: Float) {
         viewModelScope.launch { prefs.setLineSpacing(spacing) }
-    }
-
-    fun setRetroThemeEnabled(enabled: Boolean) {
-        viewModelScope.launch { prefs.setRetroThemeEnabled(enabled) }
     }
 
     fun setPageFlipSound(enabled: Boolean) {

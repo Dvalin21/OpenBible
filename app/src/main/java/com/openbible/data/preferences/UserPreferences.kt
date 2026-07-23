@@ -33,7 +33,6 @@ class UserPreferences(private val context: Context) {
         val KEY_FONT_SIZE = floatPreferencesKey("font_size")
         val KEY_FONT_SIZE_VERSES = floatPreferencesKey("font_size_verses")
         val KEY_LINE_SPACING = floatPreferencesKey("line_spacing")
-        val KEY_RETRO_THEME_ENABLED = booleanPreferencesKey("retro_theme_enabled")
         val KEY_PAGE_FLIP_SOUND = booleanPreferencesKey("page_flip_sound")
         val KEY_PAGE_FLIP_ANIMATION = booleanPreferencesKey("page_flip_animation")
         val KEY_DAILY_VERSE_ENABLED = booleanPreferencesKey("daily_verse_enabled")
@@ -100,16 +99,6 @@ class UserPreferences(private val context: Context) {
 
     suspend fun setLineSpacing(spacing: Float) {
         context.dataStore.edit { it[KEY_LINE_SPACING] = spacing }
-    }
-
-    // -- Retro Theme --
-
-    val retroThemeEnabled: Flow<Boolean> = context.dataStore.data.map { prefs ->
-        prefs[KEY_RETRO_THEME_ENABLED] ?: true
-    }
-
-    suspend fun setRetroThemeEnabled(enabled: Boolean) {
-        context.dataStore.edit { it[KEY_RETRO_THEME_ENABLED] = enabled }
     }
 
     // -- Page Flip --

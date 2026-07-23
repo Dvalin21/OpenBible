@@ -12,8 +12,6 @@ import androidx.compose.ui.unit.sp
  *
  * Body uses a serif font for comfortable long-form reading.
  * UI elements (labels, buttons) use sans-serif.
- * Retro pixel theme uses Pixelify Sans for chapter/verse numbers
- * and ornamental text.
  *
  * The serif font defaults to system serif if not bundled, keeping
  * APK size minimal.

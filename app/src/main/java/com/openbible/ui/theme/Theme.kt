@@ -59,10 +59,6 @@ private val SepiaColorScheme = lightColorScheme(
 
 /**
  * OpenBible theme with three mode support: Light, Dark, and Sepia.
- *
- * The retro pixel theme is applied separately on the Bible reading
- * screen for devices 7" and larger — it overrides the base theme
- * with pixelated fonts, borders, and parchment backgrounds.
  */
 @Composable
 fun OpenBibleTheme(
