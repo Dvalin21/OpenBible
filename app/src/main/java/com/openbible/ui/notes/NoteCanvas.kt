@@ -4,6 +4,7 @@ import android.graphics.BitmapFactory
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -74,10 +75,16 @@ fun NoteCanvas(
         onPageChanged(page.copy(elements = newElements))
     }
 
+    // ponytail: snapshot theme colors once before entering DrawScope (not @Composable in there)
+    val themePaper = MaterialTheme.colorScheme.surface
+    val themeLine = MaterialTheme.colorScheme.outlineVariant
+    val themeMargin = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+    val bgColor = if (page.template == PageTemplate.BLANK) themePaper else Color.Transparent
+
     Canvas(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(bgColor)
             .pointerInput(activeTool, penColor, penSize, page) {
                 awaitPointerEventScope {
                     canvasSize = size
@@ -237,7 +244,15 @@ fun NoteCanvas(
                 }
             }
     ) {
-        drawTemplate(this, page.template, page.coverColor, size)
+        drawTemplate(
+            scope = this,
+            template = page.template,
+            cover = page.coverColor,
+            size = size,
+            paperColor = themePaper,
+            lineColor = themeLine,
+            marginColor = themeMargin
+        )
         // Highlighters first (under ink), then ink, shapes, images.
         elements.filterIsInstance<InkElement>().filter { it.highlighter }.forEach { drawInk(this, it, true) }
         elements.filterIsInstance<InkElement>().filter { !it.highlighter }.forEach { drawInk(this, it, false) }
@@ -284,12 +299,16 @@ private fun nearResizeHandle(el: NoteElement, p: Offset): Boolean {
 
 /* ── Drawing helpers ───────────────────────────────────────────────────── */
 
-private fun drawTemplate(scope: DrawScope, template: PageTemplate, cover: Long?, size: Size) {
-    // Notebook paper: cream background
-    val paper = Color(0xFFFFF8E7)  // warm cream/off-white
-    scope.drawRect(cover?.let { Color(it) } ?: paper)
-    val lineColor = Color(0xFFB0C4DE)  // soft blue horizontal lines
-    val marginColor = Color(0xFFFF6B6B)  // red margin line
+private fun drawTemplate(
+    scope: DrawScope,
+    template: PageTemplate,
+    cover: Long?,
+    size: Size,
+    paperColor: Color = Color(0xFFFFF8E7),
+    lineColor: Color = Color(0xFFB0C4DE),
+    marginColor: Color = Color(0xFFFF6B6B)
+) {
+    scope.drawRect(cover?.let { Color(it) } ?: paperColor)
     val step = 40f
     val margin = 64f  // left margin width
     when (template) {

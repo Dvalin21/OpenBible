@@ -51,6 +51,15 @@ interface StrongDao {
     """)
     suspend fun searchStrongNumbers(query: String, limit: Int = 50): List<StrongNumberEntity>
 
+    /** Prefer prefix match on number when the query looks like a Strong's number. */
+    @Query("""
+        SELECT * FROM strong_numbers 
+        WHERE number LIKE :prefix || '%'
+        ORDER BY length(number), number
+        LIMIT :limit
+    """)
+    suspend fun searchStrongNumbersByPrefix(prefix: String, limit: Int = 20): List<StrongNumberEntity>
+
     @Query("SELECT * FROM strong_numbers ORDER BY number LIMIT :limit OFFSET :offset")
     suspend fun browseStrongNumbers(limit: Int = 100, offset: Int = 0): List<StrongNumberEntity>
 

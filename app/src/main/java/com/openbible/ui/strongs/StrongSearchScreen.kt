@@ -48,7 +48,16 @@ fun StrongSearchScreen(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
-            if (results.isEmpty() && query.isNotBlank()) {
+            if (query.isBlank()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                    Text(
+                        "Type a Strong's number (e.g. G1234) or a search term to find matching entries.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 32.dp)
+                    )
+                }
+            } else if (results.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
                     Text("No results for \"$query\"", style = MaterialTheme.typography.bodyLarge)
                 }

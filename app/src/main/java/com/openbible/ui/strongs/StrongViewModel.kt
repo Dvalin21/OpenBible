@@ -38,15 +38,33 @@ class StrongViewModel @Inject constructor(
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
 
+    /** Minimum chars before search triggers. Prevents trivial single-char matches on definitions. */
+    private val MIN_QUERY_LENGTH = 2
+
     fun search(query: String) {
         if (query.isBlank()) {
             _searchResults.value = emptyList()
             _isSearching.value = false
             return
         }
+        val q = query.trim()
+        if (q.length < MIN_QUERY_LENGTH) {
+            _searchResults.value = emptyList()
+            _isSearching.value = false
+            return
+        }
         _isSearching.value = true
         viewModelScope.launch {
-            _searchResults.value = strongDao.searchStrongNumbers(query.trim())
+            // If query looks like a Strong's number, try prefix match first
+            if (q.matches(Regex("^[GHgh]?\\d+$"))) {
+                val exact = strongDao.searchStrongNumbersByPrefix(q)
+                if (exact.isNotEmpty()) {
+                    _searchResults.value = exact
+                    _isSearching.value = false
+                    return@launch
+                }
+            }
+            _searchResults.value = strongDao.searchStrongNumbers(q)
             _isSearching.value = false
         }
     }
