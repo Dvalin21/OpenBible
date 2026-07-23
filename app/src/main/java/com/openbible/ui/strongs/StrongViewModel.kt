@@ -38,6 +38,10 @@ class StrongViewModel @Inject constructor(
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
 
+    /** Minimum chars before search triggers. Prevents trivial single-char
+     *  matches on definitions that make results seem random. */
+    private val MIN_QUERY_LENGTH = 2
+
     fun search(query: String) {
         if (query.isBlank()) {
             _searchResults.value = emptyList()
@@ -45,9 +49,15 @@ class StrongViewModel @Inject constructor(
             return
         }
         val q = query.trim()
+        if (q.length < MIN_QUERY_LENGTH) {
+            _searchResults.value = emptyList()
+            _isSearching.value = false
+            return
+        }
         _isSearching.value = true
         viewModelScope.launch {
-            // If query looks like a Strong's number, prefer prefix match on number
+            // If query looks like a Strong's number (G1234, H5, etc),
+            // prefer prefix match on number — follows BlueLetterBible pattern
             if (q.matches(Regex("^[GHgh]?\\d+$"))) {
                 val prefixResults = strongDao.searchStrongNumbersByPrefix(q)
                 if (prefixResults.isNotEmpty()) {
@@ -56,9 +66,10 @@ class StrongViewModel @Inject constructor(
                     return@launch
                 }
             }
-            // Otherwise match by number, lemma, or transliteration only.
-            // Definition is excluded — if the word isn't a Strong's number
-            // or a known lemma/transliteration, show "Nothing found."
+            // Search across number, lemma, transliteration, AND definition.
+            // Definition is included intentionally — matches Blue Letter Bible
+            // behavior where searching "love" returns G26 (agape), H157 (ahab), etc.
+            // Min query length prevents single-char definition noise.
             _searchResults.value = strongDao.searchStrongNumbers(q)
             _isSearching.value = false
         }

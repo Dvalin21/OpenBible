@@ -59,7 +59,8 @@ fun StrongSearchScreen(
                 }
             } else if (results.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
-                    Text("No results for \"$query\"", style = MaterialTheme.typography.bodyLarge)
+                    val msg = if (query.length < 2) "Type at least 2 characters to search" else "No results for \"$query\""
+                    Text(msg, style = MaterialTheme.typography.bodyLarge)
                 }
             } else {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {

@@ -44,7 +44,8 @@ interface StrongDao {
         SELECT * FROM strong_numbers 
         WHERE number LIKE '%' || :query || '%' 
            OR lemma LIKE '%' || :query || '%' 
-           OR transliteration LIKE '%' || :query || '%'
+           OR transliteration LIKE '%' || :query || '%' 
+           OR definition LIKE '%' || :query || '%'
         ORDER BY number
         LIMIT :limit
     """)
