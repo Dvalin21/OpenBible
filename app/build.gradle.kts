@@ -14,8 +14,8 @@ android {
         applicationId = "com.openbible"
         minSdk = 29
         targetSdk = 34
-        versionCode = 8
-        versionName = "1.2.6"
+        versionCode = 9
+        versionName = "1.2.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
