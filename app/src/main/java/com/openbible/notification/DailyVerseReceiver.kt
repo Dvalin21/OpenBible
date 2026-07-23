@@ -12,11 +12,9 @@ import com.openbible.MainActivity
 import com.openbible.OpenBibleApp
 import com.openbible.R
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 /**
@@ -75,9 +73,9 @@ class DailyVerseReceiver : BroadcastReceiver() {
 
         val openIntent = Intent(context, MainActivity::class.java).apply {
             action = Intent.ACTION_VIEW
-            putExtra("translationId", translationId)
-            putExtra("bookId", verse.bookId)
-            putExtra("chapter", verse.chapter)
+            putExtra("translationId", (translationId as String))
+            putExtra("bookId", (verse.bookId as Int))
+            putExtra("chapter", (verse.chapter as Int))
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val openPendingIntent = PendingIntent.getActivity(
@@ -105,23 +103,17 @@ class DailyVerseReceiver : BroadcastReceiver() {
         scheduleNext(context, prefs)
     }
 
-    private fun scheduleNext(context: Context, prefs: com.openbible.data.preferences.UserPreferences) {
-        val (hour, minute) = kotlinx.coroutines.runBlocking {
-            prefs.dailyVerseTime.firstOrNull() ?: Pair(7, 0)
-        }
+    private suspend fun scheduleNext(context: Context, prefs: com.openbible.data.preferences.UserPreferences) {
+        val (hour, minute) = prefs.dailyVerseTime.firstOrNull() ?: Pair(7, 0)
         DailyVerseScheduler.schedule(context, hour, minute)
     }
 
-    private fun rescheduleAfterBoot(context: Context) {
+    private suspend fun rescheduleAfterBoot(context: Context) {
         val prefs = (context.applicationContext as OpenBibleApp).userPreferences
-        val enabled = kotlinx.coroutines.runBlocking {
-            prefs.dailyVerseEnabled.firstOrNull() ?: true
-        }
+        val enabled = prefs.dailyVerseEnabled.firstOrNull() ?: true
         if (!enabled) return
 
-        val (hour, minute) = kotlinx.coroutines.runBlocking {
-            prefs.dailyVerseTime.firstOrNull() ?: Pair(7, 0)
-        }
+        val (hour, minute) = prefs.dailyVerseTime.firstOrNull() ?: Pair(7, 0)
         DailyVerseScheduler.schedule(context, hour, minute)
     }
 

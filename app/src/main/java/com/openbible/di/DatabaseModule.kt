@@ -6,6 +6,7 @@ import com.openbible.data.db.dao.BibleDao
 import com.openbible.data.db.dao.BookmarkDao
 import com.openbible.data.db.dao.CrossReferenceDao
 import com.openbible.data.db.dao.HighlightDao
+import com.openbible.data.db.dao.ImportDao
 import com.openbible.data.db.dao.NoteDao
 import com.openbible.data.db.dao.ReadingHistoryDao
 import com.openbible.data.db.dao.ReadingPlanDao
@@ -44,4 +45,5 @@ object DatabaseModule {
     @Provides fun provideStrongDao(db: OpenBibleDatabase): StrongDao = db.strongDao()
     @Provides fun provideLocationDao(db: OpenBibleDatabase): LocationDao = db.locationDao()
     @Provides fun provideParallelTraditionDao(db: OpenBibleDatabase): ParallelTraditionDao = db.parallelTraditionDao()
+    @Provides fun provideImportDao(db: OpenBibleDatabase): ImportDao = db.importDao()
 }

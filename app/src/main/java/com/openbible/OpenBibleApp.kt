@@ -1,6 +1,7 @@
 package com.openbible
 
 import android.app.Application
+import android.content.pm.ApplicationInfo
 import com.openbible.data.ReadingPlanSeeder
 import com.openbible.data.db.OpenBibleDatabase
 import com.openbible.data.locations.EventImporter
@@ -13,7 +14,9 @@ import com.openbible.notification.DailyVerseReceiver
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import timber.log.Timber
 import javax.inject.Inject
 
 /**
@@ -48,17 +51,20 @@ class OpenBibleApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
+            Timber.plant(Timber.DebugTree())
+        }
         DailyVerseReceiver.createNotificationChannel(this)
 
         // ponytail: fire-and-forget imports on first launch.
-        // Blocks IO thread briefly once; skips via SharedPreferences on subsequent launches.
-        CoroutineScope(Dispatchers.IO).launch {
-            strongImporter.importIfNeeded()
-            locationImporter.importIfNeeded()
-            eventImporter.importIfNeeded()
-            parallelTraditionImporter.importIfNeeded()
-            translationImporter.importMissing(database.openHelper.writableDatabase)
-            ReadingPlanSeeder.ensureSeeded(database.readingPlanDao(), database.bibleDao())
+        // Each importer runs in its own SupervisorJob so one failure doesn't block others.
+        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
+            try { strongImporter.importIfNeeded() } catch (e: Exception) { Timber.e(e, "StrongImporter failed") }
+            try { locationImporter.importIfNeeded() } catch (e: Exception) { Timber.e(e, "LocationImporter failed") }
+            try { eventImporter.importIfNeeded() } catch (e: Exception) { Timber.e(e, "EventImporter failed") }
+            try { parallelTraditionImporter.importIfNeeded() } catch (e: Exception) { Timber.e(e, "ParallelTraditionImporter failed") }
+            try { translationImporter.importMissing() } catch (e: Exception) { Timber.e(e, "TranslationImporter failed") }
+            try { ReadingPlanSeeder.ensureSeeded(database.readingPlanDao(), database.bibleDao()) } catch (e: Exception) { Timber.e(e, "ReadingPlanSeeder failed") }
         }
     }
 }

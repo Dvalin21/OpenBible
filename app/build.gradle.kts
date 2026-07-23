@@ -116,6 +116,7 @@ dependencies {
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.timber)
 
     // Hilt DI
     implementation(libs.hilt.android)

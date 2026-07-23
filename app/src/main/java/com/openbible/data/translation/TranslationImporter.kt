@@ -1,9 +1,9 @@
 package com.openbible.data.translation
 
-import android.content.ContentValues
 import android.content.Context
-import androidx.sqlite.db.SupportSQLiteDatabase
+import com.openbible.data.db.dao.ImportDao
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.firstOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,7 +24,8 @@ import javax.inject.Singleton
  */
 @Singleton
 class TranslationImporter @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val importDao: ImportDao
 ) {
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
@@ -32,7 +33,7 @@ class TranslationImporter @Inject constructor(
      * Attempts to import verse data for each translation file found in assets/translations/.
      * Called once per translation (tracks completion in SharedPreferences).
      */
-    suspend fun importMissing(db: SupportSQLiteDatabase) {
+    suspend fun importMissing() {
         val dir = "translations"
         val files: List<String>
         try {
@@ -44,20 +45,17 @@ class TranslationImporter @Inject constructor(
             if (prefs.getBoolean("imported_$file", false)) continue
             val translationId = file.removeSuffix(".db")
             // Check if verses already exist for this translation
-            val cursor = db.query("SELECT COUNT(*) FROM verses WHERE translationId = ?", arrayOf(translationId))
-            cursor.moveToFirst()
-            val existing = cursor.getLong(0)
-            cursor.close()
+            val existing = importDao.countVersesForTranslation(translationId)
             if (existing > 0) {
                 prefs.edit().putBoolean("imported_$file", true).apply()
                 continue
             }
-            doImport(db, translationId, file)
+            doImport(translationId, file)
             prefs.edit().putBoolean("imported_$file", true).apply()
         }
     }
 
-    private fun doImport(db: SupportSQLiteDatabase, translationId: String, assetFile: String) {
+    private suspend fun doImport(translationId: String, assetFile: String) {
         // Open the asset DB file
         val assetBytes: ByteArray
         try {
@@ -79,27 +77,22 @@ class TranslationImporter @Inject constructor(
             )
             val bookVerseCounts = mutableMapOf<Int, Int>()
             cursor.use { c ->
-                db.beginTransaction()
-                try {
-                    val values = ContentValues()
-                    while (c.moveToNext()) {
-                        val bookId = c.getInt(0)
-                        values.clear()
-                        values.put("translationId", translationId)
-                        values.put("bookId", bookId)
-                        values.put("chapter", c.getInt(1))
-                        values.put("verse", c.getInt(2))
-                        values.put("text", c.getString(3))
-                        db.insert("verses", android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE, values)
-                        bookVerseCounts[bookId] = bookVerseCounts.getOrDefault(bookId, 0) + 1
-                    }
-                    db.setTransactionSuccessful()
-                    android.util.Log.i(TAG, "Imported $translationId from $assetFile")
-                } finally {
-                    db.endTransaction()
+                val verses = mutableListOf<com.openbible.data.db.entity.VerseEntity>()
+                while (c.moveToNext()) {
+                    val bookId = c.getInt(0)
+                    verses.add(com.openbible.data.db.entity.VerseEntity(
+                        id = 0, // auto-generated
+                        translationId = translationId,
+                        bookId = bookId,
+                        chapter = c.getInt(1),
+                        verse = c.getInt(2),
+                        text = c.getString(3)
+                    ))
+                    bookVerseCounts[bookId] = bookVerseCounts.getOrDefault(bookId, 0) + 1
                 }
+                importDao.insertVerses(verses)
             }
-            seedBooks(db, translationId, bookVerseCounts)
+            seedBooks(translationId, bookVerseCounts)
         }
         tempFile.delete()
     }
@@ -113,51 +106,32 @@ class TranslationImporter @Inject constructor(
      * translation-independent) and `INSERT OR IGNORE` so existing rows are left
      * untouched.
      */
-    private fun seedBooks(
-        db: SupportSQLiteDatabase,
+    private suspend fun seedBooks(
         translationId: String,
         bookVerseCounts: Map<Int, Int>
     ) {
         if (bookVerseCounts.isEmpty()) return
-        val meta = mutableMapOf<Int, BookMeta>()
-        db.query("SELECT id, name, abbreviation, number, chapterCount, testament FROM books WHERE translationId = 'kjv'")
-            .use { t ->
-                while (t.moveToNext()) {
-                    meta[t.getInt(0)] = BookMeta(
-                        t.getString(1), t.getString(2), t.getInt(3), t.getInt(4), t.getString(5)
-                    )
-                }
+        val kjvBooks = importDao.getKjvBooks().firstOrNull() ?: return
+        val booksToInsert = mutableListOf<com.openbible.data.db.entity.BookEntity>()
+        for ((bookId, count) in bookVerseCounts) {
+            kjvBooks.firstOrNull { it.id == bookId }?.let { meta ->
+                booksToInsert.add(com.openbible.data.db.entity.BookEntity(
+                    translationId = translationId,
+                    id = bookId,
+                    name = meta.name,
+                    abbreviation = meta.abbreviation,
+                    number = meta.number,
+                    chapterCount = meta.chapterCount,
+                    testament = meta.testament,
+                    totalVerses = count
+                ))
             }
-        db.beginTransaction()
-        try {
-            val values = ContentValues()
-            for ((bookId, count) in bookVerseCounts) {
-                val m = meta[bookId] ?: continue
-                values.clear()
-                values.put("translationId", translationId)
-                values.put("id", bookId)
-                values.put("name", m.name)
-                values.put("abbreviation", m.abbr)
-                values.put("number", m.number)
-                values.put("chapterCount", m.chapterCount)
-                values.put("testament", m.testament)
-                values.put("totalVerses", count)
-                db.insert("books", android.database.sqlite.SQLiteDatabase.CONFLICT_IGNORE, values)
-            }
-            db.setTransactionSuccessful()
-            android.util.Log.i(TAG, "Seeded ${bookVerseCounts.size} books for $translationId")
-        } finally {
-            db.endTransaction()
+        }
+        if (booksToInsert.isNotEmpty()) {
+            importDao.insertBooks(booksToInsert)
+            android.util.Log.i(TAG, "Seeded ${booksToInsert.size} books for $translationId")
         }
     }
-
-    private data class BookMeta(
-        val name: String,
-        val abbr: String,
-        val number: Int,
-        val chapterCount: Int,
-        val testament: String
-    )
 
     companion object {
         private const val TAG = "TranslationImporter"

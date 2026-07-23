@@ -12,6 +12,7 @@ import com.openbible.data.db.dao.BibleDao
 import com.openbible.data.db.dao.BookmarkDao
 import com.openbible.data.db.dao.CrossReferenceDao
 import com.openbible.data.db.dao.HighlightDao
+import com.openbible.data.db.dao.ImportDao
 import com.openbible.data.db.dao.LocationDao
 import com.openbible.data.db.dao.NoteDao
 import com.openbible.data.db.dao.ParallelTraditionDao
@@ -101,6 +102,7 @@ abstract class OpenBibleDatabase : RoomDatabase() {
     abstract fun strongDao(): StrongDao
     abstract fun locationDao(): LocationDao
     abstract fun parallelTraditionDao(): ParallelTraditionDao
+    abstract fun importDao(): ImportDao
 
     companion object {
         private const val DATABASE_NAME = "openbible.db"

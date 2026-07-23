@@ -10,7 +10,10 @@ import androidx.room.PrimaryKey
  * Created automatically when a user types a verse reference (e.g., "John 3:16")
  * in a note — the text is detected by regex and linked to the verse.
  *
- * Cascading deletes: removing either the note or the verse removes the link.
+ * Cascading deletes (standard join-table behavior):
+ * - Removing a NOTE removes its links (CASCADE on noteId FK)
+ * - Removing a VERSE removes its links (CASCADE on verseId FK)
+ * Neither operation deletes the other parent entity.
  */
 @Entity(
     tableName = "note_verse_links",
