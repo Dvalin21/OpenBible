@@ -40,7 +40,7 @@ interface CrossReferenceDao {
                b.abbreviation AS toBookAbbreviation,
                COALESCE(v.text, '') AS toVerseSnippet
         FROM cross_references cr
-        INNER JOIN books b ON b.id = cr.toBookId
+        INNER JOIN books b ON b.id = cr.toBookId AND b.translationId = 'kjv'
         LEFT JOIN verses v ON v.translationId = 'kjv'
             AND v.bookId = cr.toBookId
             AND v.chapter = cr.toChapter
@@ -57,7 +57,7 @@ interface CrossReferenceDao {
                b.abbreviation AS toBookAbbreviation,
                COALESCE(v.text, '') AS toVerseSnippet
         FROM cross_references cr
-        INNER JOIN books b ON b.id = cr.toBookId
+        INNER JOIN books b ON b.id = cr.toBookId AND b.translationId = 'kjv'
         LEFT JOIN verses v ON v.translationId = 'kjv'
             AND v.bookId = cr.toBookId
             AND v.chapter = cr.toChapter
