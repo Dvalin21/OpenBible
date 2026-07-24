@@ -301,9 +301,11 @@ fun NoteEditorScreen(
                 ToolSettingsRow(
                     penSize = state.penSize,
                     penColor = state.penColor,
+                    penType = state.penType,
                     showColorPicker = showColorPicker,
                     onSizeChange = viewModel::setPenSize,
                     onColorChange = viewModel::setPenColor,
+                    onPenTypeChange = viewModel::setPenType,
                     onToggleColorPicker = { showColorPicker = !showColorPicker },
                     onUndo = viewModel::undo,
                     onRedo = viewModel::redo
@@ -327,6 +329,7 @@ fun NoteEditorScreen(
                     shapeType = state.shapeType,
                     penColor = state.penColor,
                     penSize = state.penSize,
+                    penType = state.penType,
                     selectedElementId = state.selectedElementId,
                     onPageChanged = viewModel::commitActivePage,
                     onSelectedElementChanged = viewModel::setSelectedElement,
@@ -345,6 +348,7 @@ fun NoteEditorScreen(
                         shapeType = state.shapeType,
                         penColor = state.penColor,
                         penSize = state.penSize,
+                        penType = state.penType,
                         selectedElementId = state.selectedElementId,
                         onPageChanged = viewModel::commitActivePage,
                         onSelectedElementChanged = viewModel::setSelectedElement,
@@ -445,9 +449,11 @@ private fun PageRow(
 private fun ToolSettingsRow(
     penSize: Float,
     penColor: Long,
+    penType: PenType,
     showColorPicker: Boolean,
     onSizeChange: (Float) -> Unit,
     onColorChange: (Long) -> Unit,
+    onPenTypeChange: (PenType) -> Unit,
     onToggleColorPicker: () -> Unit,
     onUndo: () -> Unit,
     onRedo: () -> Unit
@@ -458,27 +464,98 @@ private fun ToolSettingsRow(
             .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
             .padding(12.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Size", style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(40.dp))
-            Slider(value = penSize, onValueChange = onSizeChange, valueRange = 0.5f..40f, modifier = Modifier.weight(1f))
-            Text("%.1f".format(penSize), style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(36.dp))
+        // ── Pen type selector (Samsung Notes style) ──
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            PenType.entries.forEach { type ->
+                val isSelected = type == penType
+                val icon = when (type) {
+                    PenType.BALLPOINT -> Icons.Default.Edit
+                    PenType.FOUNTAIN -> Icons.Default.Create
+                    PenType.BRUSH -> Icons.Default.Brush
+                    PenType.PENCIL -> Icons.Outlined.ModeEdit
+                    PenType.MARKER -> Icons.Default.Highlight
+                }
+                val label = when (type) {
+                    PenType.BALLPOINT -> "Ball"
+                    PenType.FOUNTAIN -> "Fountain"
+                    PenType.BRUSH -> "Brush"
+                    PenType.PENCIL -> "Pencil"
+                    PenType.MARKER -> "Marker"
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    IconButton(
+                        onClick = { onPenTypeChange(type) },
+                        modifier = Modifier
+                            .size(32.dp)
+                            .then(if (isSelected) Modifier.background(MaterialTheme.colorScheme.primaryContainer, CircleShape) else Modifier)
+                    ) {
+                        Icon(icon, contentDescription = label, modifier = Modifier.size(18.dp),
+                            tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
+                    }
+                    Text(label, style = MaterialTheme.typography.labelSmall,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // ── Quick size presets (Samsung Notes style) ──
+        val sizePresets = listOf(2f, 5f, 10f, 20f, 35f)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Size", style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(32.dp))
+            sizePresets.forEach { preset ->
+                val isSelected = kotlin.math.abs(penSize - preset) < 1f
+                val dotSize = (preset / 40f * 20f).coerceIn(4f, 20f)
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .then(if (isSelected) Modifier.background(MaterialTheme.colorScheme.primaryContainer) else Modifier)
+                        .clickable { onSizeChange(preset) }
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(dotSize.dp)
+                            .background(MaterialTheme.colorScheme.onSurface, CircleShape)
+                    )
+                }
+            }
+            // Custom slider
+            Slider(
+                value = penSize, onValueChange = onSizeChange,
+                valueRange = 0.5f..40f,
+                modifier = Modifier.weight(1f)
+            )
+            Text("%.1f".format(penSize), style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(32.dp))
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // ── Color / Undo / Redo ──
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
                     .size(28.dp)
                     .clip(CircleShape)
                     .background(Color(penColor))
-                    .border(2.dp, MaterialTheme.colorScheme.outline, CircleShape)
                     .clickable { onToggleColorPicker() }
             )
-            Spacer(modifier = Modifier.width(4.dp))
-            @Suppress("DEPRECATION")
-            IconButton(onClick = onUndo, modifier = Modifier.size(32.dp)) { Icon(Icons.Filled.Undo, contentDescription = "Undo", modifier = Modifier.size(18.dp)) }
-            @Suppress("DEPRECATION")
-            IconButton(onClick = onRedo, modifier = Modifier.size(32.dp)) { Icon(Icons.Filled.Redo, contentDescription = "Redo", modifier = Modifier.size(18.dp)) }
+            Spacer(modifier = Modifier.weight(1f))
+            IconButton(onClick = onUndo, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Default.Undo, contentDescription = "Undo", modifier = Modifier.size(18.dp))
+            }
+            IconButton(onClick = onRedo, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Default.Redo, contentDescription = "Redo", modifier = Modifier.size(18.dp))
+            }
         }
-        if (showColorPicker) Spacer(modifier = Modifier.height(4.dp))
     }
 }
 

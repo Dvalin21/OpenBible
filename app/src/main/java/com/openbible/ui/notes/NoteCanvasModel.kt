@@ -19,6 +19,20 @@ enum class DrawTool { SELECT, PEN, HIGHLIGHTER, SHAPE, ERASER }
 enum class ShapeType { LINE, RECTANGLE, OVAL, ARROW }
 enum class PageTemplate { BLANK, RULED, GRID, DOTTED }
 
+/** Pen type variants — each renders differently on the canvas. */
+enum class PenType {
+    /** Uniform width, full opacity. Classic ballpoint. */
+    BALLPOINT,
+    /** Pressure-responsive width (thick on hard press, thin on light). */
+    FOUNTAIN,
+    /** Wide, semi-transparent, soft edges. */
+    BRUSH,
+    /** Thin, slightly rough texture via jittered points. */
+    PENCIL,
+    /** Wide, flat, semi-transparent marker. */
+    MARKER
+}
+
 data class ElementTransform(
     val tx: Float = 0f,
     val ty: Float = 0f,
@@ -43,6 +57,7 @@ data class InkElement(
     val color: Long,
     val width: Float,
     val highlighter: Boolean,
+    val penType: PenType = PenType.BALLPOINT,
     override val transform: ElementTransform = ElementTransform()
 ) : NoteElement {
     override fun withTransform(t: ElementTransform) = copy(transform = t)
@@ -200,6 +215,7 @@ private fun elementToJson(e: NoteElement): JSONObject = when (e) {
     is InkElement -> JSONObject().apply {
         put("t", "ink"); put("id", e.id); put("c", e.color)
         put("w", e.width.toDouble()); put("hl", e.highlighter)
+        put("pt", e.penType.name)
         val pts = JSONArray()
         e.points.forEach { p -> pts.put(JSONArray().apply { put(p.x.toDouble()); put(p.y.toDouble()) }) }
         put("pts", pts); put("tf", tfToJson(e.transform))
@@ -234,6 +250,7 @@ private fun elementFromJson(obj: JSONObject): NoteElement? = try {
                 color = obj.optLong("c", 0xFF000000),
                 width = obj.optDouble("w", 2.0).toFloat(),
                 highlighter = obj.optBoolean("hl", false),
+                penType = try { PenType.valueOf(obj.optString("pt", "BALLPOINT")) } catch (_: Exception) { PenType.BALLPOINT },
                 transform = tfFromJson(obj.optJSONArray("tf"))
             )
         }

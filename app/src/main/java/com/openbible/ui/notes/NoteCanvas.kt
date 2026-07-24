@@ -38,6 +38,7 @@ fun NoteCanvas(
     shapeType: ShapeType,
     penColor: Long,
     penSize: Float,
+    penType: PenType,
     selectedElementId: String?,
     onPageChanged: (NotePage) -> Unit,
     onSelectedElementChanged: (String?) -> Unit,
@@ -111,8 +112,15 @@ fun NoteCanvas(
                                                 id = UUID.randomUUID().toString(),
                                                 points = penPoints,
                                                 color = penColor,
-                                                width = if (isHl) maxOf(penSize, 14f) else penSize * touch.pressure.coerceIn(0.25f, 1f),
-                                                highlighter = isHl
+                                                width = when (penType) {
+                                                    PenType.MARKER -> maxOf(penSize, 14f)
+                                                    PenType.BRUSH -> maxOf(penSize, 8f)
+                                                    PenType.PENCIL -> penSize * 0.6f
+                                                    PenType.FOUNTAIN -> penSize * touch.pressure.coerceIn(0.25f, 1f)
+                                                    else -> penSize * touch.pressure.coerceIn(0.25f, 1f)
+                                                },
+                                                highlighter = isHl,
+                                                penType = penType
                                             )
                                             commit(elements + stroke)
                                         }
@@ -347,15 +355,69 @@ private fun drawTemplate(
 private fun drawInk(scope: DrawScope, el: InkElement, highlight: Boolean) {
     if (el.points.size < 2) return
     val pts = el.points.map { it.apply(el.transform) }
-    val path = Path().apply {
-        moveTo(pts[0].x, pts[0].y)
-        for (i in 1 until pts.size) lineTo(pts[i].x, pts[i].y)
+    val color = Color(el.color)
+    when {
+        highlight -> {
+            // Highlighter: wide, semi-transparent
+            val path = Path().apply {
+                moveTo(pts[0].x, pts[0].y)
+                for (i in 1 until pts.size) lineTo(pts[i].x, pts[i].y)
+            }
+            scope.drawPath(path, color.copy(alpha = 0.4f),
+                style = Stroke(width = el.width, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        }
+        el.penType == PenType.MARKER -> {
+            // Marker: wide, semi-transparent, flat tip
+            val path = Path().apply {
+                moveTo(pts[0].x, pts[0].y)
+                for (i in 1 until pts.size) lineTo(pts[i].x, pts[i].y)
+            }
+            scope.drawPath(path, color.copy(alpha = 0.6f),
+                style = Stroke(width = el.width, cap = StrokeCap.Square, join = StrokeJoin.Round))
+        }
+        el.penType == PenType.BRUSH -> {
+            // Brush: soft edges via double-pass (wide + narrow)
+            val path = Path().apply {
+                moveTo(pts[0].x, pts[0].y)
+                for (i in 1 until pts.size) lineTo(pts[i].x, pts[i].y)
+            }
+            scope.drawPath(path, color.copy(alpha = 0.3f),
+                style = Stroke(width = el.width * 1.5f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+            scope.drawPath(path, color,
+                style = Stroke(width = el.width * 0.7f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        }
+        el.penType == PenType.PENCIL -> {
+            // Pencil: thin, slightly rough via jittered offsets
+            val path = Path().apply {
+                moveTo(pts[0].x, pts[0].y)
+                for (i in 1 until pts.size) {
+                    val jitter = (i % 3 - 1) * 0.5f
+                    lineTo(pts[i].x + jitter, pts[i].y + jitter)
+                }
+            }
+            scope.drawPath(path, color.copy(alpha = 0.85f),
+                style = Stroke(width = el.width, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        }
+        el.penType == PenType.FOUNTAIN -> {
+            // Fountain: pressure-responsive width (already baked into width per-point,
+            // but we render a clean path with round caps)
+            val path = Path().apply {
+                moveTo(pts[0].x, pts[0].y)
+                for (i in 1 until pts.size) lineTo(pts[i].x, pts[i].y)
+            }
+            scope.drawPath(path, color,
+                style = Stroke(width = el.width, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        }
+        else -> {
+            // Ballpoint: uniform, solid
+            val path = Path().apply {
+                moveTo(pts[0].x, pts[0].y)
+                for (i in 1 until pts.size) lineTo(pts[i].x, pts[i].y)
+            }
+            scope.drawPath(path, color,
+                style = Stroke(width = el.width, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        }
     }
-    scope.drawPath(
-        path = path,
-        color = Color(el.color).let { if (highlight) it.copy(alpha = 0.4f) else it },
-        style = Stroke(width = el.width, cap = StrokeCap.Round, join = StrokeJoin.Round)
-    )
 }
 
 private fun drawPathFromPoints(scope: DrawScope, points: List<Offset>, color: Color, width: Float, highlight: Boolean) {
