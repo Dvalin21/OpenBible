@@ -1,5 +1,6 @@
 package com.openbible.ui.bookmarks
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,9 +17,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 
-/**
- * Bookmarks screen — all saved bookmarks grouped by tags.
- *
+/** Bookmarks screen — all saved bookmarks grouped by tags.
  * Each bookmark shows book abbreviation, chapter:verse, verse text preview,
  * and optional label/tags. Tap to navigate, swipe or tap icon to delete.
  */
@@ -33,7 +32,7 @@ fun BookmarksScreen(
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
-        // ── Header ──────────────────────────────────────────────
+        // Header
         Text(
             text = "Bookmarks",
             style = MaterialTheme.typography.headlineLarge,
@@ -49,7 +48,6 @@ fun BookmarksScreen(
         )
 
         if (bookmarks.isEmpty()) {
-            // Empty state
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -107,7 +105,6 @@ private fun BookmarkCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.Top
         ) {
-            // Bookmark icon
             Icon(
                 imageVector = Icons.Filled.Bookmark,
                 contentDescription = "Bookmarked",
@@ -119,9 +116,7 @@ private fun BookmarkCard(
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Content
             Column(modifier = Modifier.weight(1f)) {
-                // Reference line
                 Text(
                     text = bookmark.citation,
                     style = MaterialTheme.typography.titleSmall,
@@ -129,7 +124,6 @@ private fun BookmarkCard(
                     color = MaterialTheme.colorScheme.primary
                 )
 
-                // Verse text preview (first line)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = bookmark.text.take(120) + if (bookmark.text.length > 120) "…" else "",
@@ -138,7 +132,6 @@ private fun BookmarkCard(
                     maxLines = 2
                 )
 
-                // Tags
                 if (!bookmark.tags.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(6.dp))
                     val tagList = bookmark.tags.split(",").map { it.trim() }.filter { it.isNotBlank() }
@@ -165,7 +158,6 @@ private fun BookmarkCard(
                     }
                 }
 
-                // Translation
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = bookmark.translationId.uppercase(),
@@ -174,7 +166,6 @@ private fun BookmarkCard(
                 )
             }
 
-            // Delete button
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Filled.Delete,

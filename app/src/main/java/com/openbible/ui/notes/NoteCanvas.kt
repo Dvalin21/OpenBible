@@ -54,6 +54,10 @@ fun NoteCanvas(
     var shapeEnd by remember(activeTool) { mutableStateOf<Offset?>(null) }
     var eraserPath by remember(activeTool) { mutableStateOf<List<Offset>>(emptyList()) }
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
+    // Track whether the current stylus/touch pointer is down (Compose 1.6
+    // PointerInputChange has no isDown; we track it ourselves so up-commit fires
+    // even when changedToUp() is unreliable on some AVD touch drivers).
+    var pointerIsDown by remember { mutableStateOf(false) }
 
     // Selection / drag state
     var draggingId by remember { mutableStateOf<String?>(null) }
@@ -103,10 +107,12 @@ fun NoteCanvas(
                                 val isHl = activeTool == DrawTool.HIGHLIGHTER
                                 when {
                                     touch.changedToDown() -> {
+                                        pointerIsDown = true
                                         penPoints = listOf(touch.position)
                                         onSelectedElementChanged(null)
                                     }
-                                    touch.changedToUp() -> {
+                                    touch.changedToUp() || !pointerIsDown -> {
+                                        pointerIsDown = false
                                         if (penPoints.size > 1) {
                                             val stroke = InkElement(
                                                 id = UUID.randomUUID().toString(),
@@ -139,11 +145,13 @@ fun NoteCanvas(
                             DrawTool.SHAPE -> {
                                 when {
                                     touch.changedToDown() -> {
+                                        pointerIsDown = true
                                         shapeStart = touch.position
                                         shapeEnd = touch.position
                                         onSelectedElementChanged(null)
                                     }
-                                    touch.changedToUp() -> {
+                                    touch.changedToUp() || !pointerIsDown -> {
+                                        pointerIsDown = false
                                         val s = shapeStart; val e = shapeEnd
                                         if (s != null && e != null && (s - e).getDistance() > 3f) {
                                             val shape = ShapeElement(
@@ -166,8 +174,12 @@ fun NoteCanvas(
 
                             DrawTool.ERASER -> {
                                 when {
-                                    touch.changedToDown() -> eraserPath = listOf(touch.position)
-                                    touch.changedToUp() -> {
+                                    touch.changedToDown() -> {
+                                        pointerIsDown = true
+                                        eraserPath = listOf(touch.position)
+                                    }
+                                    touch.changedToUp() || !pointerIsDown -> {
+                                        pointerIsDown = false
                                         if (eraserPath.isNotEmpty()) {
                                             val threshold = (penSize * 3f).coerceAtLeast(10f)
                                             val remaining = elements.filterNot { el ->
@@ -191,6 +203,7 @@ fun NoteCanvas(
                             DrawTool.SELECT -> {
                                 when {
                                     touch.changedToDown() -> {
+                                        pointerIsDown = true
                                         // Resize handle of currently selected element?
                                         val sel = elements.firstOrNull { it.id == selectedElementId }
                                         if (sel != null && nearResizeHandle(sel, touch.position)) {
@@ -213,7 +226,8 @@ fun NoteCanvas(
                                             }
                                         }
                                     }
-                                    touch.changedToUp() -> {
+                                    touch.changedToUp() || !pointerIsDown -> {
+                                        pointerIsDown = false
                                         resizing = false
                                         draggingId = null
                                         if (dirty) commit(elements)
