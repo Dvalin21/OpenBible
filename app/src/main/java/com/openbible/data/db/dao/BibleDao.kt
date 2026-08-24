@@ -17,7 +17,7 @@ data class BookChapterCount(
 )
 
 /** Translations with FTS5 tables and shipped verse data. */
-private val FTS_TRANSLATIONS = listOf("kjv", "web", "asv", "ylt", "bbe", "nkjv")
+private val FTS_TRANSLATIONS = listOf("kjv", "web", "asv", "ylt", "bbe", "nkjv", "nasb", "esv", "csb")
 
 /**
  * DAO for read-only Bible text queries.
