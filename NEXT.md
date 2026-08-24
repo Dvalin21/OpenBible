@@ -39,8 +39,8 @@ the stable structural issues below.
    - ReadingPlanSeeder JSON readings column (§11.6) — low priority
    - VerseEntity.id stability contract undocumented (§11.2) — matters more now
      that import_translations.py shares the id space
-3. Keith decision pending: map tile source for English labels — LEFT AS-IS per
-   Keith ("will live with it or find another avenue")
+3. Pending decision: map tile source for English labels — LEFT AS-IS per
+   the owner ("will live with it or find another avenue")
 
 ## Done when
 - Tablet AVD run: NavigationRail visible, no text line >~90 chars on reading
@@ -50,7 +50,7 @@ the stable structural issues below.
 
 ## Constraints
 - Personal use — copyright OK for NASB/ESV/CSB; do not redistribute the APK publicly
-- Map left as-is unless Keith picks a new tile source
+- Map left as-is unless a new tile source is picked a new tile source
 - Never regenerate VerseEntity.id assignments casually — cross-references break
 - Debug package: com.openbible.debug/com.openbible.MainActivity
 - Emulators: emulator-5554 and emulator-5556 both live this session

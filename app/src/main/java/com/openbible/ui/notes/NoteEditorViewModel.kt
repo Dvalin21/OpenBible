@@ -17,7 +17,7 @@ import javax.inject.Inject
 data class NoteEditorState(
     val note: NoteEntity? = null,
     val title: String = "",
-    // New notes default to ink (Samsung Notes behavior: writing surface first).
+    // New notes default to ink (writing surface first, like a paper notebook).
     // Existing notes load their saved penMode in loadNote().
     val penMode: PenMode = PenMode.INK,
     val linkedVerseIds: List<Long> = emptyList(),

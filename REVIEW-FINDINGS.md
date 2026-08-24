@@ -1,7 +1,7 @@
 # OpenBible Full Code Review — Findings
 Date: 2026-08-24 · HEAD: 8cd1b43 (with ~8 modified files, uncommitted) · Build: GREEN (`compileDebugKotlin --rerun-tasks`)
 
-Scope: full repo review at `/home/keith/projects/openbible/`. Report-only — nothing was changed.
+Scope: full repo review at `<project-root>/`. Report-only — nothing was changed.
 
 Every claim below was verified against the shipped prepopulated DB (`app/src/main/assets/databases/openbible.db`, 142MB), the source datasets, or compiler output this session. File:line references included.
 
@@ -44,7 +44,7 @@ Decision needed from you before anyone codes this.
 - `NoteEditorViewModel.kt:20` — `NoteEditorState.penMode: PenMode = PenMode.TEXT`. A brand-new note (`seedNewNote`, line 106) keeps TEXT.
 - In TEXT mode the body is a plain `BasicTextField` (`NoteEditorScreen.kt:344-347`). There is **no handwriting-to-text conversion anywhere in the codebase** (no OCR/ink-recognition dependency) — what you observed is simply the keyboard text field receiving your touches.
 - The mode toggle is an unlabeled icon cycling TEXT→INK→BOTH (`NoteEditorScreen.kt:203-220`); nothing tells the user ink exists.
-- Samsung-Notes-parity gaps in the ink implementation itself (see P1-4/P2 items below): eraser deletes whole strokes by bounding box, fountain-pen bakes a single pressure value per stroke, no palm rejection, no stroke smoothing.
+- Notes-app-parity gaps in the ink implementation itself (see P1-4/P2 items below): eraser deletes whole strokes by bounding box, fountain-pen bakes a single pressure value per stroke, no palm rejection, no stroke smoothing.
 
 Minimum fix: default new notes to INK (or BOTH), label the mode toggle, and surface the tool row when a pen/stylus is detected.
 
@@ -62,7 +62,7 @@ Minimum fix: default new notes to INK (or BOTH), label the mode toggle, and surf
 `NoteEditorScreen.kt:258` wires `onCreateClick = onNotebooksClick`, and `onNotebooksClick` defaults to `{}` — `NavGraph.kt:306-325` never passes it. When a user has no notebooks, the editor shows "No notebooks — Create one" and the button is dead. Classic fake affordance. Fix: pass a real navigation (or an inline create dialog) or remove the button.
 
 ### P1-4. Eraser destroys entire strokes by bounding-box intersection
-`NoteCanvas.kt:184-193`: an erase gesture deletes any element whose **bounding rectangle** (plus threshold) intersects the eraser path's bounding rectangle. Drawing near (not through) a long diagonal stroke erases it completely. Samsung Notes erases what you actually rub over. Fix: point-segment distance against the stored polyline, split stroke at intersection instead of deleting whole element.
+`NoteCanvas.kt:184-193`: an erase gesture deletes any element whose **bounding rectangle** (plus threshold) intersects the eraser path's bounding rectangle. Drawing near (not through) a long diagonal stroke erases it completely. leading notes apps erases what you actually rub over. Fix: point-segment distance against the stored polyline, split stroke at intersection instead of deleting whole element.
 
 ### P1-5. Fountain pen pressure sampled once per stroke
 `NoteCanvas.kt:125`: width = `penSize * touch.pressure` evaluated from the FINAL pointer event and applied to the whole stroke. Pressure variation across the stroke is discarded, so the "pressure-responsive" pen (advertised in `NoteCanvasModel.kt:26-27`) renders uniform width. Needs per-point width capture (`List<Pair<Offset, Float>>`) and variable-width rendering.
@@ -121,4 +121,4 @@ Compiler flags these two lines (Java overload ambiguity). Behaviorally fine toda
 ## Root causes (cross-cutting)
 1. **The data pipeline is unverified.** P0-1 (empty lemma), P1-6 (missing NKJV), and the gitignored prepopulated DB share one cause: nothing checks that imported columns are actually populated. A 10-line row-count/non-null assertion in `import_bible.py` would have caught both.
 2. **Feature shells shipped ahead of behavior.** NKJV wiring, "Create one" button, verse-click, NoteDetail doc — each layer believes another layer owns the functionality.
-3. **Samsung-Notes parity is visual, not behavioral.** Pen types/size presets mimic the UI, but erase granularity and pressure handling — the parts users actually feel — were not ported.
+3. **Notes-app parity is visual, not behavioral.** Pen types/size presets mimic the UI, but erase granularity and pressure handling — the parts users actually feel — were not ported.

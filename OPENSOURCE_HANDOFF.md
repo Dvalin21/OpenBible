@@ -134,7 +134,7 @@ target for highlights/bookmarks/history.
 
 ## 6. Data Import Pipeline (`data/import_bible.py`)
 
-Location: `/home/keith/projects/openbible/data/import_bible.py`
+Location: `<project-root>/data/import_bible.py`
 
 Flow:
 1. Fetches Bible text from scrollmapper sources (KJV, WEB, ASV)
@@ -483,5 +483,5 @@ The app declares support for 7"–14.5" tablets in `PROJECT_REGISTRY.md` and `fa
 - `applicationIdSuffix = ".debug"` → package is `com.openbible.debug`, not `com.openbible`. Launch component: `com.openbible.debug/com.openbible.MainActivity`.
 - Emulator AVD name: `ob_verify`. Launch with `emulator -avd ob_verify -no-window -gpu swiftshader_indirect` (headless) or with display.
 - KVM available: `/dev/kvm` exists, readable+writable.
-- Android SDK: `/home/keith/Android/Sdk`, platforms android-34 + android-35, system image android-34/default/x86_64.
+- Android SDK: `<android-sdk>`, platforms android-34 + android-35, system image android-34/default/x86_64.
 - Xvfb on `:99` for headless screenshots: `Xvfb :99 -screen 0 1920x1080x24 -ac -nolisten tcp -dpi 96 &`

@@ -502,7 +502,7 @@ private fun ToolSettingsRow(
             .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
             .padding(12.dp)
     ) {
-        // ── Pen type selector (Samsung Notes style) ──
+        // ── Pen type selector ──
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(2.dp),
@@ -541,7 +541,7 @@ private fun ToolSettingsRow(
         }
         Spacer(modifier = Modifier.height(8.dp))
 
-        // ── Quick size presets (Samsung Notes style) ──
+        // ── Quick size presets ──
         val sizePresets = listOf(2f, 5f, 10f, 20f, 35f)
         Row(
             verticalAlignment = Alignment.CenterVertically,

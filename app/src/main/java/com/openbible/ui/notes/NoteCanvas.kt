@@ -297,7 +297,7 @@ fun NoteCanvas(
 
 /**
  * Erase [elements] along [path] with an eraser radius of [eraserSize]/2.
- * Samsung-Notes behavior: only what is actually rubbed over disappears.
+ * Notes-app behavior: only what is actually rubbed over disappears.
  * - Ink strokes: split at erased segments (a rub across the middle leaves both ends).
  * - Shapes/images: removed when the path passes within radius of their geometry.
  */
