@@ -42,10 +42,10 @@ interface StrongDao {
 
     @Query("""
         SELECT * FROM strong_numbers 
-        WHERE number LIKE '%' || :query || '%' 
-           OR lemma LIKE '%' || :query || '%' 
-           OR transliteration LIKE '%' || :query || '%' 
-           OR definition LIKE '%' || :query || '%'
+        WHERE number LIKE '%' || :query || '%' COLLATE NOCASE
+           OR lemma LIKE '%' || :query || '%' COLLATE NOCASE
+           OR transliteration LIKE '%' || :query || '%' COLLATE NOCASE
+           OR definition LIKE '%' || :query || '%' COLLATE NOCASE
         ORDER BY number
         LIMIT :limit
     """)
@@ -54,7 +54,7 @@ interface StrongDao {
     /** Prefer prefix match on number when the query looks like a Strong's number. */
     @Query("""
         SELECT * FROM strong_numbers 
-        WHERE number LIKE :prefix || '%'
+        WHERE number LIKE (:prefix || '%') COLLATE NOCASE
         ORDER BY length(number), number
         LIMIT :limit
     """)

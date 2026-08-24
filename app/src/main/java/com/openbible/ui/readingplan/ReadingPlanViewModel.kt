@@ -34,18 +34,23 @@ class ReadingPlanViewModel(application: Application) : AndroidViewModel(applicat
     private val bookNames = ConcurrentHashMap<Int, String>()
 
     init {
-        // ponytail: load book names via coroutine, ConcurrentHashMap handles concurrent reads
-        viewModelScope.launch {
-            bibleDao.getBooks("kjv").first().forEach { book ->
-                bookNames[book.id] = book.name
-            }
-        }
+        // Removed: async book name load. Names are now loaded synchronously
+        // in initialize() before the first render to avoid stale "Book X" display.
     }
 
     // ── Plan List ───────────────────────────────────────────────
 
     val plans: StateFlow<List<ReadingPlanEntity>> = planDao.getAllPlans()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // ── Book name cache (loaded synchronously before first render) ──
+
+    /** Load book names for KJV into the cache. Called once in initialize(). */
+    private suspend fun loadBookNames() {
+        bibleDao.getBooks("kjv").first().forEach { book ->
+            bookNames[book.id] = book.name
+        }
+    }
 
     // ── Active Plan State ───────────────────────────────────────
 
@@ -100,6 +105,9 @@ class ReadingPlanViewModel(application: Application) : AndroidViewModel(applicat
     /** Seed plans on first access and auto-start the first plan. */
     fun initialize() {
         viewModelScope.launch {
+            // Load book name cache synchronously before first render — fixes
+            // stale "Book X" when the async init load hadn't completed yet.
+            loadBookNames()
             ReadingPlanSeeder.ensureSeeded(planDao, bibleDao)
 
             // Auto-select first plan if none active

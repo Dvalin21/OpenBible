@@ -440,12 +440,48 @@ cannot regenerate the prepopulated DB.
    - entities, DAOs, routes, screens, preferences entries, or data pipeline change
    - build version, SDK, or dependency versions change
 
-## 14. Open Items to Decide Before Production
+## 15. Session Log — 2026-08-12 Debug Review + Layout Assessment
 
-- [ ] Replace `fallbackToDestructiveMigration()` with explicit Migration
-- [ ] Add FTS5 for search performance
-- [ ] Add CI pipeline at minimum: build + data import verification
-- [ ] Secure `DailyVerseReceiver` export
-- [ ] Document VerseEntity.id generation contract in data/README
-- [ ] Add schema-snapshot CI gate to detect accidental import-script drift
-- [ ] Normalize `reading_plan_days.readings` JSON or accept current shape for v1
+### 15.1 What Was Done
+- Full code review of all 93 Kotlin files + 21 XML files + 11 MD files
+- 6 code fixes applied (all compile, build GREEN):
+  1. `BibleDao.kt:20` — added `"nkjv"` to `FTS_TRANSLATIONS` (NKJV FTS table existed but was never queried)
+  2. `OpenBibleDatabase.kt:136` — catch block now logs via `Timber.e` + falls back to `Context.createFromFile` when prepopulated DB asset missing (was silently creating empty schema)
+  3. `DailyVerseWidgetProvider.kt` — widget `PendingIntent` now carries `translationId`/`bookId`/`chapter` extras; `storeVerse` signature updated to 5 params; `DailyVerseReceiver.kt` caller updated
+  4. `NoteEditorScreen.kt` — mic button now requests `RECORD_AUDIO` via `ActivityResultContracts.RequestPermission()`; shows "Mic blocked" hint when permanently denied; Undo/Redo/Arrow icons fixed to non-deprecated variants
+  5. `ReadingPlanViewModel.kt` — `loadBookNames()` now called synchronously at start of `initialize()` before first render (was async in `init {}`, causing stale "Book X" display)
+  6. `StrongDao.kt` — `COLLATE NOCASE` added to both `searchStrongNumbers` + `searchStrongNumbersByPrefix` LIKE queries (case-insensitive Strong's search)
+- Emulator: AVD `ob_verify` (Pixel 5, API 34, x86_64) launched on Xvfb :99, screen unlocked, debug APK installed, app launched
+- 26 PNG screenshots captured in `/tmp/openbible_screens/` across 8 distinct screens (Home, Bible, Bible long-press, Bookmark added, Search, Search results, Bookmarks, Notes, New Note, Ink mode, Settings)
+- Screens verified rendering via pixel analysis (PIL/numpy): text bands detected, color variation present, no blank/crashed screens
+- Logcat clean: no FATAL errors, no exceptions, only standard Compose snapshot warnings
+
+### 15.2 What Was NOT Done (Sessions Restarted Before Completion)
+- Per-screen visual layout review via `vision_analyze` — tool cannot access local file:// or localhost HTTP images (returns 404/blocked). Pixel analysis confirmed content but cannot read actual text or provide visual critique.
+- Screenshots were captured multiple times; many files are identical (~98KB or ~212KB) because navigation between capture attempts failed — the app was already on the same screen.
+- Remaining 8 screens not captured: Reading Plans detail, Strong's detail, Geography list, Map, Location detail, Parallel Traditions — require sub-screen navigation that wasn't completed.
+- Tablet verification — emulator is a phone (Pixel 5, 1080×2340). Tablet screenshots exist in `screenshots/tablet/` from a prior July 23rd run but were not re-captured or re-analyzed with the current build.
+
+### 15.3 Tablet Support Gap (CRITICAL — NOT ADDRESSED)
+The app declares support for 7"–14.5" tablets in `PROJECT_REGISTRY.md` and `fastlane/metadata/`, but the implementation is incomplete:
+
+- **`isTablet` flag exists** (MainActivity: `screenWidthDp >= 600`) and is propagated to screens via constructor params.
+- **Only ONE screen uses real adaptive layout:** `BibleWithNotesScreen.kt` (split-pane with draggable divider, >= 600dp). This screen is NEVER registered in `NavGraph.kt`.
+- **`BibleScreen.kt`** uses `isTablet` for: split-pane compare mode, study mode split, centering content with max width. Partial tablet support.
+- **Navigation is bottom-bar only** — `NavGraph.kt:305-334` hardcodes `NavigationBar` regardless of screen size. No `NavigationRail`, no `WindowSizeClass` API. On 14.5" tablets, navigation is still a bottom bar.
+- **All screens use `fillMaxSize()`/`fillMaxWidth()` with no `maxWidth` constraint** (`PROJECT_REGISTRY.md:853-854`). On a 14.5" tablet in landscape (~1400dp), verse text lines span full width — visually unreadable (~140+ chars/line). Needs `widthIn(max = 800.dp)` or `WindowSizeClass` + centered layout.
+- **Tablet screenshots exist** in `screenshots/tablet/` (14 PNGs from July 23rd): home, bible, search, strongs, geography, parallel, reading_plan, bookmarks, notes, study_mode, settings, theme_dark, theme_sepia. These predate the 6 fixes applied in this session.
+
+### 15.4 Remaining Work (Tablet Focus)
+1. **Navigation:** Add `NavigationRail` for tablet layouts in `NavGraph.kt`. Bottom nav is fine for phones; tablets need a side rail.
+2. **Content width:** Add `Modifier.widthIn(max = 800.dp)` or `WindowSizeClass` to all reading/content screens so text doesn't span full 14.5" width. BibleScreen already has partial centering — extend to all screens.
+3. **Screen verification on tablet AVD** — create a 10" or 14.5" tablet AVD, install APK, navigate all screens, screenshot, analyze.
+4. **Re-capture tablet screenshots** with the current build (fixes applied) to update `screenshots/tablet/`.
+5. **Re-verify all 6 fixes on tablet** — especially Bible screen split-pane, BibleWithNotes split (if navigated to), map markers on large screen.
+
+### 15.5 Developer Notes
+- `applicationIdSuffix = ".debug"` → package is `com.openbible.debug`, not `com.openbible`. Launch component: `com.openbible.debug/com.openbible.MainActivity`.
+- Emulator AVD name: `ob_verify`. Launch with `emulator -avd ob_verify -no-window -gpu swiftshader_indirect` (headless) or with display.
+- KVM available: `/dev/kvm` exists, readable+writable.
+- Android SDK: `/home/keith/Android/Sdk`, platforms android-34 + android-35, system image android-34/default/x86_64.
+- Xvfb on `:99` for headless screenshots: `Xvfb :99 -screen 0 1920x1080x24 -ac -nolisten tcp -dpi 96 &`

@@ -65,7 +65,7 @@ class DailyVerseReceiver : BroadcastReceiver() {
         val reference = "$bookName ${verse.chapter}:${verse.verse}"
 
         // Store verse data for the home screen widget
-        DailyVerseWidgetProvider.storeVerse(context, verse.text, reference)
+        DailyVerseWidgetProvider.storeVerse(context, verse.text, reference, translationId, verse.bookId, verse.chapter)
         DailyVerseWidgetProvider.refreshAll(context)
 
         // Build the notification

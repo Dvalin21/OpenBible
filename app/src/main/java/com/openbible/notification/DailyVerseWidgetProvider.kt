@@ -35,6 +35,9 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
         private const val PREFS_NAME = "widget_verse"
         private const val KEY_TEXT = "verse_text"
         private const val KEY_REF = "verse_ref"
+        private const val KEY_TRANSLATION_ID = "translation_id"
+        private const val KEY_BOOK_ID = "book_id"
+        private const val KEY_CHAPTER = "chapter"
 
         /** Build and push the RemoteViews for one widget instance. */
         fun updateWidget(
@@ -46,14 +49,20 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
             val verseText = prefs.getString(KEY_TEXT, null)
                 ?: "In the beginning God created the heavens and the earth."
             val verseRef = prefs.getString(KEY_REF, null) ?: "Genesis 1:1"
+            val translationId = prefs.getString(KEY_TRANSLATION_ID, null) ?: "kjv"
+            val bookId = prefs.getInt(KEY_BOOK_ID, 1)
+            val chapter = prefs.getInt(KEY_CHAPTER, 1)
 
             val views = RemoteViews(context.packageName, R.layout.widget_daily_verse)
             views.setTextViewText(R.id.widget_verse_text, verseText)
             views.setTextViewText(R.id.widget_verse_ref, verseRef)
 
-            // Tap opens the Bible app
+            // Tap opens the Bible app to the verse shown on the widget
             val intent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra("translationId", translationId)
+                putExtra("bookId", bookId)
+                putExtra("chapter", chapter)
             }
             val pendingIntent = PendingIntent.getActivity(
                 context,
@@ -67,11 +76,14 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
         }
 
         /** Store verse data for the widget to read. */
-        fun storeVerse(context: Context, text: String, reference: String) {
+        fun storeVerse(context: Context, text: String, reference: String, translationId: String, bookId: Int, chapter: Int) {
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .edit()
                 .putString(KEY_TEXT, text)
                 .putString(KEY_REF, reference)
+                .putString(KEY_TRANSLATION_ID, translationId)
+                .putInt(KEY_BOOK_ID, bookId)
+                .putInt(KEY_CHAPTER, chapter)
                 .apply()
         }
 

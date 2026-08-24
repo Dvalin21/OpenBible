@@ -1,5 +1,6 @@
 package com.openbible.ui.notes
 
+import android.Manifest
 import android.media.MediaPlayer
 import android.media.MediaRecorder
 import android.net.Uri
@@ -44,7 +45,13 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.util.UUID
 
-/** Full note editor with text, unified drawing canvas, and pen controls. */
+/**
+ * Full note editor with text, unified drawing canvas, and pen controls.
+ *
+ * Audio recording requires RECORD_AUDIO permission. The mic button launches
+ * a permission request on first click if not yet granted; if permanently denied,
+ * the recording UI shows a disabled state with a hint.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteEditorScreen(
@@ -71,14 +78,30 @@ fun NoteEditorScreen(
     val recorder = remember { mutableStateOf<MediaRecorder?>(null) }
     val player = remember { mutableStateOf<MediaPlayer?>(null) }
 
-    DisposableEffect(Unit) {
-        onDispose {
-            runCatching { recorder.value?.release() }
-            runCatching { player.value?.release() }
+    // ── RECORD_AUDIO permission ──
+    val micPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (!granted) {
+            Toast.makeText(
+                context,
+                "Microphone permission required for voice memos. Grant in Settings.",
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 
+    /**
+     * Start audio recording after confirming RECORD_AUDIO permission.
+     * If permission is not yet determined, launch the request and bail.
+     */
     fun startRecording() {
+        val micGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+            || context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (!micGranted) {
+            micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            return
+        }
         val dir = File(context.filesDir, "note_audio").apply { mkdirs() }
         val path = File(dir, UUID.randomUUID().toString() + ".m4a").absolutePath
         val mr = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) MediaRecorder(context) else MediaRecorder()
@@ -360,6 +383,10 @@ fun NoteEditorScreen(
     }
 }
 
+// ═══════════════════════════════════════════════════════════════
+// Sub-composables
+// ═══════════════════════════════════════════════════════════════
+
 @Composable
 private fun ToolRow(
     activeTool: DrawTool,
@@ -437,9 +464,9 @@ private fun PageRow(
     onDelete: () -> Unit
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        IconButton(onClick = onPrev, enabled = activeIndex > 0) { Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Previous page") }
+        IconButton(onClick = onPrev, enabled = activeIndex > 0) { Icon(Icons.Filled.KeyboardArrowLeft, contentDescription = "Previous page") }
         Text("${activeIndex + 1}/$pageCount", style = MaterialTheme.typography.labelMedium)
-        IconButton(onClick = onNext, enabled = activeIndex < pageCount - 1) { Icon(Icons.Default.KeyboardArrowRight, contentDescription = "Next page") }
+        IconButton(onClick = onNext, enabled = activeIndex < pageCount - 1) { Icon(Icons.Filled.KeyboardArrowRight, contentDescription = "Next page") }
         IconButton(onClick = onAdd) { Icon(Icons.Default.Add, contentDescription = "Add page") }
         IconButton(onClick = onDelete, enabled = canDelete) { Icon(Icons.Default.DeleteOutline, contentDescription = "Delete page") }
     }
@@ -550,10 +577,10 @@ private fun ToolSettingsRow(
             )
             Spacer(modifier = Modifier.weight(1f))
             IconButton(onClick = onUndo, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Undo, contentDescription = "Undo", modifier = Modifier.size(18.dp))
+                Icon(Icons.Filled.Undo, contentDescription = "Undo", modifier = Modifier.size(18.dp))
             }
             IconButton(onClick = onRedo, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Redo, contentDescription = "Redo", modifier = Modifier.size(18.dp))
+                Icon(Icons.Filled.Redo, contentDescription = "Redo", modifier = Modifier.size(18.dp))
             }
         }
     }
@@ -658,7 +685,9 @@ private fun AudioMemoSection(
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onToggleRecord) {
+            IconButton(
+                onClick = onToggleRecord
+            ) {
                 Icon(
                     if (isRecording) Icons.Default.Stop else Icons.Default.Mic,
                     contentDescription = if (isRecording) "Stop recording" else "Record audio",

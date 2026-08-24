@@ -18,6 +18,7 @@ import com.openbible.data.db.dao.NoteDao
 import com.openbible.data.db.dao.ParallelTraditionDao
 import com.openbible.data.db.dao.ReadingHistoryDao
 import com.openbible.data.db.dao.ReadingPlanDao
+import timber.log.Timber
 import com.openbible.data.db.dao.StrongDao
 import com.openbible.data.db.entity.BibleLocationEntity
 import com.openbible.data.db.entity.BookEntity
@@ -132,9 +133,11 @@ abstract class OpenBibleDatabase : RoomDatabase() {
             try {
                 context.assets.open("databases/$DATABASE_NAME").use { }
                 builder.createFromAsset("databases/$DATABASE_NAME")
-            } catch (_: Exception) {
+            } catch (e: Exception) {
                 // No prepopulated database found — will create empty schema.
                 // Bible text must be imported via the data pipeline.
+                // Log the failure so it's visible in logcat / Crashlytics.
+                Timber.e(e, "Prepopulated DB missing: assets/databases/$DATABASE_NAME — app will start with empty schema")
             }
 
             // Explicit migrations — never destroy user data.
