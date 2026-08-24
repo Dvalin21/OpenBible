@@ -200,6 +200,7 @@ fun NoteEditorScreen(
                     }
                 },
                 actions = {
+                    // Pen mode toggle — labeled so users can find ink mode.
                     IconButton(onClick = {
                         viewModel.setPenMode(
                             when (state.penMode) {
@@ -209,14 +210,24 @@ fun NoteEditorScreen(
                             }
                         )
                     }) {
-                        Icon(
-                            when (state.penMode) {
-                                PenMode.TEXT -> Icons.Outlined.EditNote
-                                PenMode.INK -> Icons.Outlined.Draw
-                                PenMode.BOTH -> Icons.Outlined.Brush
-                            },
-                            contentDescription = "Toggle pen mode"
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                when (state.penMode) {
+                                    PenMode.TEXT -> Icons.Outlined.EditNote
+                                    PenMode.INK -> Icons.Outlined.Draw
+                                    PenMode.BOTH -> Icons.Outlined.Brush
+                                },
+                                contentDescription = "Pen mode",
+                            )
+                            Text(
+                                when (state.penMode) {
+                                    PenMode.TEXT -> "Text"
+                                    PenMode.INK -> "Ink"
+                                    PenMode.BOTH -> "Both"
+                                },
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
                     }
                     if (state.penMode != PenMode.TEXT) {
                         IconButton(onClick = { showAdvanced = !showAdvanced }) {

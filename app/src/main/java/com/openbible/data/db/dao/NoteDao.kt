@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import com.openbible.data.db.entity.NoteEntity
 import com.openbible.data.db.entity.NoteAudioEntity
@@ -27,8 +28,17 @@ interface NoteDao {
     @Update
     suspend fun updateNotebook(notebook: NotebookEntity)
 
+    @Query("UPDATE notes SET notebookId = NULL WHERE notebookId = :notebookId")
+    suspend fun detachNotesFromNotebook(notebookId: Long)
+
     @Delete
     suspend fun deleteNotebook(notebook: NotebookEntity)
+
+    @Transaction
+    suspend fun deleteNotebookAndDetachNotes(notebook: NotebookEntity) {
+        detachNotesFromNotebook(notebook.id)
+        deleteNotebook(notebook)
+    }
 
     // -- Notes --
 

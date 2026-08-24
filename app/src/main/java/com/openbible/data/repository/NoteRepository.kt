@@ -27,7 +27,7 @@ class NoteRepository @Inject constructor(
         )
     }
 
-    suspend fun deleteNotebook(notebook: NotebookEntity) = noteDao.deleteNotebook(notebook)
+    suspend fun deleteNotebook(notebook: NotebookEntity) = noteDao.deleteNotebookAndDetachNotes(notebook)
     suspend fun updateNotebook(notebook: NotebookEntity) = noteDao.updateNotebook(notebook)
 
     // -- Notes --

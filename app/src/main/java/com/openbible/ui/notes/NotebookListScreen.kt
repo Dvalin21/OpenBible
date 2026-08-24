@@ -69,8 +69,11 @@ fun NotebookListScreen(
 
     val query = search.trim().lowercase()
     val filteredNotes = allNotes.filter { note ->
+        // Search plain note text only — matching raw pagesJson produced nonsense
+        // hits on JSON syntax and element metadata.
+        val pageText = pagesFromJson(note.pagesJson).joinToString(" ") { it.text }
         val matchesQuery = query.isEmpty() ||
-            listOf(note.title, note.contentText ?: "", note.tags ?: "", note.pagesJson ?: "")
+            listOf(note.title, note.contentText ?: "", note.tags ?: "", pageText)
                 .any { it.lowercase().contains(query) }
         val matchesFav = !showFavoritesOnly || note.isFavorite
         matchesQuery && matchesFav

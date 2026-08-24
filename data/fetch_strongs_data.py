@@ -102,13 +102,17 @@ def convert_lexicon_entry(key: str, entry: dict, language: str) -> dict:
     # The lexicon format in kjvstudy is H1 not H0001, but the interlinear uses G3779 format
     # Let's use the original format from the data
     
-    definition = entry.get("definition", entry.get("strongs_def", ""))
+    # Source fields differ per language: greek.json uses lemma/translit,
+    # hebrew.json uses lemma/xlit/pron. (2026-08-24 fix: previously read
+    # "word"/"transliteration" which exist in NEITHER file — all 5,523 Greek
+    # entries shipped with empty lemma+transliteration, breaking Strong's search.)
+    definition = entry.get("strongs_def", entry.get("definition", ""))
     
     return {
         "number": raw_num,
-        "lemma": entry.get("word", entry.get("lemma", "")),
-        "transliteration": entry.get("transliteration", entry.get("xlit", "")),
-        "pronunciation": entry.get("pronunciation", entry.get("pron", "")),
+        "lemma": entry.get("lemma", entry.get("word", "")),
+        "transliteration": entry.get("translit", entry.get("xlit", entry.get("transliteration", ""))),
+        "pronunciation": entry.get("pron", entry.get("pronunciation", "")),
         "partOfSpeech": None,  # Not in kjvstudy data, would need morph data
         "definition": definition,
         "derivation": entry.get("derivation", ""),

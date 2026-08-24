@@ -305,17 +305,40 @@ class BibleViewModel(application: Application) : AndroidViewModel(application) {
     // ── Default Translation from Preferences ────────────────────
 
     init {
+        // ponytail: apply prefs ONCE at init. Continuous collectors fought with
+        // explicit route navigation — lastReadingPosition re-emits on every
+        // recordReading() and would clobber a just-selected book/chapter.
+        viewModelScope.launch {
+            val default = preferences.defaultTranslation.first()
+            _selectedTranslationId.value = default
+        }
+        viewModelScope.launch {
+            val last = preferences.lastReadingPosition.first()
+            val (translationId, bookId, chapter) = last
+            translationId?.let { _selectedTranslationId.value = it }
+            _selectedBookId.value = bookId
+            _selectedChapter.value = chapter
+        }
         viewModelScope.launch {
             preferences.defaultTranslation.collect { translationId ->
-                _selectedTranslationId.value = translationId
+                // Later default changes apply only while the user hasn't navigated
+                // to an explicit route target this session (tracked by initialNavConsumed).
+                if (!initialNavConsumed) _selectedTranslationId.value = translationId
             }
         }
-        viewModelScope.launch {
-            preferences.lastReadingPosition.collect { (translationId, bookId, chapter) ->
-                translationId?.let { _selectedTranslationId.value = it }
-                _selectedBookId.value = bookId
-                _selectedChapter.value = chapter
-            }
-        }
+    }
+
+    /** Set true after a BIBLE_CHAPTER route applies its arguments, so pref
+     *  collectors can no longer override explicit navigation. */
+    var initialNavConsumed = false
+        private set
+
+    /** Apply route arguments from bible/{t}/{b}/{c}; called by the screen's
+     *  LaunchedEffect. Marks prefs as non-authoritative for this session. */
+    fun applyInitialNavigation(translationId: String?, bookId: Int?, chapter: Int?) {
+        if (translationId != null) _selectedTranslationId.value = translationId
+        if (bookId != null) _selectedBookId.value = bookId
+        if (chapter != null) _selectedChapter.value = chapter
+        initialNavConsumed = true
     }
 }

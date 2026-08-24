@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -38,6 +39,10 @@ fun BibleWithNotesScreen(
     modifier: Modifier = Modifier
 ) {
     val screenWidthDp = LocalConfiguration.current.screenWidthDp.dp
+
+    // Side-swap is owned here so the top-bar button and divider chevron share one state.
+    var notesOnLeftState by remember { mutableStateOf(notesOnLeft) }
+    val toggleSide = { notesOnLeftState = !notesOnLeftState; onToggleNotesSide() }
 
     // Load Bible data
     val verses by bibleViewModel.verses.collectAsState()
@@ -108,9 +113,32 @@ fun BibleWithNotesScreen(
     } else {
         // Wide screen: side-by-side split
         var splitRatio by remember { mutableStateOf(0.5f) }
-        var notesOnLeftState by remember { mutableStateOf(notesOnLeft) }
 
-        Row(modifier = modifier.fillMaxSize()) {
+        // Top bar with the side-swap toggle (explicit, always visible)
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Study Mode", style = MaterialTheme.typography.titleMedium) },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    actions = {
+                        TextButton(onClick = toggleSide) {
+                            Icon(
+                                Icons.Default.SwapHoriz,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(if (notesOnLeftState) "Notes left" else "Notes right")
+                        }
+                    }
+                )
+            }
+        ) { scaffoldPadding ->
+            Row(modifier = Modifier.fillMaxSize().padding(scaffoldPadding)) {
             val biblePane = @Composable {
                 BibleReaderScreen(
                     verses = verses,
@@ -151,7 +179,7 @@ fun BibleWithNotesScreen(
                             }
                     )
                     IconButton(
-                        onClick = { notesOnLeftState = !notesOnLeftState; onToggleNotesSide() },
+                        onClick = toggleSide,
                         modifier = Modifier.align(Alignment.Center)
                     ) {
                         Icon(
@@ -171,6 +199,7 @@ fun BibleWithNotesScreen(
                 Box(modifier = Modifier.weight(1f - splitRatio)) { biblePane() }
                 divider()
                 Box(modifier = Modifier.weight(splitRatio)) { notesPane() }
+            }
             }
         }
     }

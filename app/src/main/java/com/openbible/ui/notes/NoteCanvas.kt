@@ -177,19 +177,12 @@ fun NoteCanvas(
                                     touch.changedToDown() -> {
                                         pointerIsDown = true
                                         eraserPath = listOf(touch.position)
+                                        onSelectedElementChanged(null)
                                     }
                                     touch.changedToUp() || !pointerIsDown -> {
                                         pointerIsDown = false
                                         if (eraserPath.isNotEmpty()) {
-                                            val threshold = (penSize * 3f).coerceAtLeast(10f)
-                                            val remaining = elements.filterNot { el ->
-                                                val b = el.transformedBounds()
-                                                eraserPath.any { ep ->
-                                                    ep.x in (b.left - threshold)..(b.right + threshold) &&
-                                                    ep.y in (b.top - threshold)..(b.bottom + threshold)
-                                                }
-                                            }
-                                            commit(remaining)
+                                            commit(eraseElements(elements, eraserPath, penSize * 3f))
                                         }
                                         eraserPath = emptyList()
                                     }
@@ -301,6 +294,94 @@ fun NoteCanvas(
 }
 
 /* ── Geometry helpers ──────────────────────────────────────────────────── */
+
+/**
+ * Erase [elements] along [path] with an eraser radius of [eraserSize]/2.
+ * Samsung-Notes behavior: only what is actually rubbed over disappears.
+ * - Ink strokes: split at erased segments (a rub across the middle leaves both ends).
+ * - Shapes/images: removed when the path passes within radius of their geometry.
+ */
+fun eraseElements(elements: List<NoteElement>, path: List<Offset>, eraserSize: Float): List<NoteElement> {
+    if (path.isEmpty()) return elements
+    val radius = (eraserSize / 2f).coerceAtLeast(6f)
+    val result = mutableListOf<NoteElement>()
+    for (el in elements) {
+        when (el) {
+            is InkElement -> {
+                val pts = el.points
+                if (pts.size < 2) { result.add(el); continue }
+                val segments = mutableListOf<Pair<Offset, Offset>>()
+                var strokeTouched = false
+                for (i in 0 until pts.size - 1) {
+                    val a = pts[i].apply(el.transform)
+                    val b = pts[i + 1].apply(el.transform)
+                    // Segment width also counts: use max(radius, half stroke width)
+                    val r = maxOf(radius, el.width * el.transform.scale / 2f)
+                    if (path.any { segNearPoint(a, b, it, r) }) {
+                        strokeTouched = true
+                    } else {
+                        segments.add(a to b)
+                    }
+                }
+                if (!strokeTouched) { result.add(el); continue }
+                // Rebuild surviving runs as new strokes (transform baked in)
+                var run = mutableListOf<Offset>()
+                fun flush() {
+                    if (run.size >= 2) {
+                        result.add(el.copy(points = run.toList(), transform = ElementTransform()))
+                    }
+                    run = mutableListOf()
+                }
+                if (segments.isNotEmpty()) run.add(segments.first().first)
+                for ((a, b) in segments) { run.add(b) }
+                flush()
+            }
+            is ShapeElement -> {
+                val p1 = el.p1.apply(el.transform)
+                val p2 = el.p2.apply(el.transform)
+                val r = maxOf(radius, el.width / 2f)
+                val touched =
+                    path.any { segNearPoint(p1, p2, it, r) } ||
+                    (el.shape != ShapeType.LINE && path.any {
+                        rectEdgeNearPoint(p1, p2, it, r)
+                    })
+                if (!touched) result.add(el)
+            }
+            is ImageElement -> {
+                val b = el.transformedBounds()
+                val touched = path.any {
+                    it.x in (b.left - radius)..(b.right + radius) &&
+                    it.y in (b.top - radius)..(b.bottom + radius)
+                }
+                if (!touched) result.add(el)
+            }
+        }
+    }
+    return result
+}
+
+/** True when segment a-b passes within r of p. */
+private fun segNearPoint(a: Offset, b: Offset, p: Offset, r: Float): Boolean {
+    val abx = b.x - a.x; val aby = b.y - a.y
+    val lenSq = abx * abx + aby * aby
+    val t = if (lenSq == 0f) 0f else (((p.x - a.x) * abx + (p.y - a.y) * aby) / lenSq).coerceIn(0f, 1f)
+    val cx = a.x + t * abx; val cy = a.y + t * aby
+    return (p.x - cx) * (p.x - cx) + (p.y - cy) * (p.y - cy) <= r * r
+}
+
+/** Rectangle/oval edge near point (conservative: perimeter check). */
+private fun rectEdgeNearPoint(p1: Offset, p2: Offset, p: Offset, r: Float): Boolean {
+    val tl = Offset(minOf(p1.x, p2.x), minOf(p1.y, p2.y))
+    val br = Offset(maxOf(p1.x, p2.x), maxOf(p1.y, p2.y))
+    val corners = listOf(
+        Offset(tl.x, tl.y), Offset(br.x, tl.y),
+        Offset(br.x, br.y), Offset(tl.x, br.y)
+    )
+    for (i in 0 until 4) {
+        if (segNearPoint(corners[i], corners[(i + 1) % 4], p, r)) return true
+    }
+    return false
+}
 
 fun NoteElement.transformedBounds(): Rect {
     val b = boundsOriginal()

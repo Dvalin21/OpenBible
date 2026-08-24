@@ -173,16 +173,20 @@ fun BibleScreen(
 
     // Apply initial navigation if provided
     LaunchedEffect(initialTranslationId, initialBookId, initialChapter) {
-        if (initialTranslationId != null) viewModel.selectTranslation(initialTranslationId)
-        if (initialBookId != null) viewModel.selectBook(initialBookId)
-        if (initialChapter != null) viewModel.selectChapter(initialChapter)
+        viewModel.applyInitialNavigation(initialTranslationId, initialBookId, initialChapter)
     }
 
-    // Record reading + play page flip sound on chapter change
-    var prevChapter by remember { mutableStateOf(selectedChapter) }
-    LaunchedEffect(selectedChapter) {
-        viewModel.recordReading()
+    // Record reading + play page flip sound on chapter change.
+    // ponytail: skip recording until verses for the TARGET chapter are actually
+    // loaded — otherwise the first composition records a spurious read of the
+    // ViewModel's pre-navigation state (e.g. Genesis 1) on every cold nav.
+    var prevChapter by remember { mutableStateOf<Int?>(null) }
+    val versesLoadedForChapter = verses.isNotEmpty() &&
+        verses.first().chapter == selectedChapter && verses.first().bookId == selectedBookId
+    LaunchedEffect(selectedChapter, versesLoadedForChapter) {
+        if (!versesLoadedForChapter) return@LaunchedEffect
         if (prevChapter != selectedChapter) {
+            viewModel.recordReading()
             if (pageFlipSoundEnabled && pageFlipSoundId != 0) {
                 soundPool.play(pageFlipSoundId, 0.6f, 0.6f, 1, 0, 1f)
             }

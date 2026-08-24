@@ -320,7 +320,8 @@ private fun NavContent(
             NoteEditorScreen(
                 noteId = noteId,
                 initialTitle = initialTitle,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNotebooksClick = { navController.navigate(Routes.NOTES) }
             )
         }
 

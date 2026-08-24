@@ -826,14 +826,18 @@ def import_strongs_data(cursor):
             continue
         entries = json.loads(data.decode("utf-8"))
         batch = []
+        # Source fields differ per language: greek.json uses lemma/translit,
+        # hebrew.json uses lemma/xlit/pron. (2026-08-24 fix: previously read
+        # "word"/"transliteration" which exist in NEITHER file — all 5,523 Greek
+        # entries were imported with empty lemma+transliteration.)
         for key, entry in entries.items():
             batch.append((
                 key,
-                entry.get("word", ""),
-                entry.get("transliteration", entry.get("xlit", "")),
-                entry.get("pronunciation", entry.get("pron", "")),
+                entry.get("lemma", entry.get("word", "")),
+                entry.get("translit", entry.get("xlit", entry.get("transliteration", ""))),
+                entry.get("pron", entry.get("pronunciation", "")),
                 None,
-                entry.get("definition", entry.get("strongs_def", "")),
+                entry.get("strongs_def", entry.get("definition", "")),
                 entry.get("derivation", ""),
                 0,
                 lang,

@@ -17,7 +17,9 @@ import javax.inject.Inject
 data class NoteEditorState(
     val note: NoteEntity? = null,
     val title: String = "",
-    val penMode: PenMode = PenMode.TEXT,
+    // New notes default to ink (Samsung Notes behavior: writing surface first).
+    // Existing notes load their saved penMode in loadNote().
+    val penMode: PenMode = PenMode.INK,
     val linkedVerseIds: List<Long> = emptyList(),
     val notebooks: List<NotebookEntity> = emptyList(),
     val activeNotebookId: Long? = null,
@@ -54,10 +56,15 @@ class NoteEditorViewModel @Inject constructor(
     private val _state = MutableStateFlow(NoteEditorState())
     val state: StateFlow<NoteEditorState> = _state.asStateFlow()
 
-    // ponytail: undo/redo as stacks of full pages-JSON snapshots.
-    // One snapshot per committed edit (stroke, shape, move, template, page add/del).
+    // ponytail: undo/redo as stacks of full pages-JSON snapshots, capped so a
+    // long ink session can't grow MBs on the heap. Upgrade to element-level
+    // ops only if 50 steps proves too few.
     private val undoStack = mutableListOf<String>()
     private val redoStack = mutableListOf<String>()
+
+    private companion object {
+        const val MAX_UNDO_STEPS = 50
+    }
 
     init {
         viewModelScope.launch {
@@ -259,6 +266,7 @@ class NoteEditorViewModel @Inject constructor(
 
     private fun pushUndo() {
         undoStack.add(pagesToJson(_state.value.pages))
+        if (undoStack.size > MAX_UNDO_STEPS) undoStack.removeAt(0)
         redoStack.clear()
     }
 

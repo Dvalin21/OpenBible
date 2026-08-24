@@ -64,7 +64,9 @@ data class InkElement(
     override fun boundsOriginal(): androidx.compose.ui.geometry.Rect {
         if (points.isEmpty()) return androidx.compose.ui.geometry.Rect.Zero
         var minX = Float.MAX_VALUE; var minY = Float.MAX_VALUE
-        var maxX = Float.MIN_VALUE; var maxY = Float.MIN_VALUE
+        // Float.MIN_VALUE is the smallest POSITIVE float, not -inf — using it as
+        // the initial max corrupted bounds for strokes entirely at x/y <= 0.
+        var maxX = -Float.MAX_VALUE; var maxY = -Float.MAX_VALUE
         for (p in points) {
             if (p.x < minX) minX = p.x
             if (p.y < minY) minY = p.y
