@@ -10,7 +10,8 @@ import androidx.room.PrimaryKey
  */
 @Entity(
     tableName = "bookmarks",
-    indices = [Index("verseId"), Index("createdAt")]
+    // ponytail: one bookmark per verse — unique makes REPLACE inserts real upserts
+    indices = [Index(value = ["verseId"], unique = true), Index("createdAt")]
 )
 data class BookmarkEntity(
     @PrimaryKey(autoGenerate = true)

@@ -16,8 +16,8 @@ data class BookChapterCount(
     val chapterCount: Int
 )
 
-/** Translations with FTS5 tables and shipped verse data. */
-private val FTS_TRANSLATIONS = listOf("kjv", "web", "asv", "ylt", "bbe", "nkjv", "nasb", "esv", "csb")
+/** Translations with FTS5 tables and shipped verse data. Must match OpenBibleDatabase.FTS_ALL. */
+internal val FTS_TRANSLATIONS = listOf("kjv", "web", "asv", "ylt", "bbe", "nasb", "esv", "csb", "dra", "geneva")
 
 /**
  * DAO for read-only Bible text queries.
@@ -170,13 +170,19 @@ interface BibleDao {
         return searchFtsWithBookRaw(SimpleSQLiteQuery(sql, args))
     }
 
-    // -- Batch lookups --
+    // -- Batch lookups (empty lists return empty results — Room generates `IN ()` otherwise) --
 
     @Query("SELECT * FROM verses WHERE id IN (:verseIds)")
-    suspend fun getVersesByIds(verseIds: List<Long>): List<VerseEntity>
+    suspend fun getVersesByIdsInternal(verseIds: List<Long>): List<VerseEntity>
+
+    suspend fun getVersesByIds(verseIds: List<Long>): List<VerseEntity> =
+        if (verseIds.isEmpty()) emptyList() else getVersesByIdsInternal(verseIds)
 
     @Query("SELECT * FROM books WHERE translationId = :translationId AND id IN (:bookIds)")
-    suspend fun getBooksByIds(translationId: String, bookIds: List<Int>): List<BookEntity>
+    suspend fun getBooksByIdsInternal(translationId: String, bookIds: List<Int>): List<BookEntity>
+
+    suspend fun getBooksByIds(translationId: String, bookIds: List<Int>): List<BookEntity> =
+        if (bookIds.isEmpty()) emptyList() else getBooksByIdsInternal(translationId, bookIds)
 
     // -- Random verse (for daily verse notification) --
 
@@ -198,19 +204,27 @@ interface BibleDao {
           AND verse IN (:verses)
         ORDER BY verse
     """)
-    suspend fun getVersesByRefs(
+    suspend fun getVersesByRefsInternal(
         translationId: String,
         bookId: Int,
         chapter: Int,
         verses: List<Int>
     ): List<VerseEntity>
 
+    suspend fun getVersesByRefs(
+        translationId: String,
+        bookId: Int,
+        chapter: Int,
+        verses: List<Int>
+    ): List<VerseEntity> =
+        if (verses.isEmpty()) emptyList() else getVersesByRefsInternal(translationId, bookId, chapter, verses)
+
     companion object {
         /** Strip FTS5 special characters from a user query string.
-         *  FTS5 MATCH syntax uses: " * ( ) + - | ^ ! ~ < > = [ ] { }
+         *  FTS5 MATCH syntax uses: " * ( ) + - | ^ ! : ~ < > = [ ] { }
          *  We remove these so the input becomes space-separated words (FTS5 implicit AND). */
         fun sanitizeFtsQuery(query: String): String {
-            return query.replace(Regex("""['"*()+\-|^!<>=~\[\]{}]"""), " ")
+            return query.replace(Regex("""['"*():+\-|^!<>=~\[\]{}]"""), " ")
                 .replace(Regex("\\s+"), " ")
                 .trim()
         }

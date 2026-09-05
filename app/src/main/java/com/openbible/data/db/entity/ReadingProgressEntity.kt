@@ -17,7 +17,9 @@ import androidx.room.PrimaryKey
         childColumns = ["planId"],
         onDelete = ForeignKey.CASCADE
     )],
-    indices = [Index("planId")]
+    // ponytail: one row per (plan, day) — unique makes REPLACE a real upsert;
+    // composite also covers planId-only queries via leftmost prefix
+    indices = [Index(value = ["planId", "dayNumber"], unique = true)]
 )
 data class ReadingProgressEntity(
     @PrimaryKey(autoGenerate = true)

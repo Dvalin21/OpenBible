@@ -50,51 +50,80 @@ class TranslationImporter @Inject constructor(
                 prefs.edit().putBoolean("imported_$file", true).apply()
                 continue
             }
-            doImport(translationId, file)
-            prefs.edit().putBoolean("imported_$file", true).apply()
+            // ponytail: flag only on success — a failed import must retry next launch
+            if (doImport(translationId, file)) {
+                prefs.edit().putBoolean("imported_$file", true).apply()
+            }
         }
     }
 
-    private suspend fun doImport(translationId: String, assetFile: String) {
+    /**
+     * @return true if verses were imported, false on any failure (caller must
+     * not set the done-flag so the import retries next launch).
+     */
+    private suspend fun doImport(translationId: String, assetFile: String): Boolean {
         // Open the asset DB file
         val assetBytes: ByteArray
         try {
             assetBytes = context.assets.open("translations/$assetFile").use { it.readBytes() }
         } catch (_: Exception) {
             android.util.Log.w(TAG, "Cannot open translation asset: $assetFile")
-            return
+            return false
         }
         // Write to temp file so SQLite can open it
         val tempFile = java.io.File(context.cacheDir, assetFile)
-        tempFile.writeBytes(assetBytes)
-
-        val importDb = android.database.sqlite.SQLiteDatabase.openDatabase(
-            tempFile.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY
-        )
-        importDb.use { source ->
-            val cursor = source.rawQuery(
-                "SELECT bookId, chapter, verse, text FROM verses ORDER BY bookId, chapter, verse", null
-            )
-            val bookVerseCounts = mutableMapOf<Int, Int>()
-            cursor.use { c ->
-                val verses = mutableListOf<com.openbible.data.db.entity.VerseEntity>()
-                while (c.moveToNext()) {
-                    val bookId = c.getInt(0)
-                    verses.add(com.openbible.data.db.entity.VerseEntity(
-                        id = 0, // auto-generated
-                        translationId = translationId,
-                        bookId = bookId,
-                        chapter = c.getInt(1),
-                        verse = c.getInt(2),
-                        text = c.getString(3)
-                    ))
-                    bookVerseCounts[bookId] = bookVerseCounts.getOrDefault(bookId, 0) + 1
-                }
-                importDao.insertVerses(verses)
-            }
-            seedBooks(translationId, bookVerseCounts)
+        try {
+            tempFile.writeBytes(assetBytes)
+        } catch (_: Exception) {
+            android.util.Log.w(TAG, "Cannot stage translation asset: $assetFile")
+            return false
         }
-        tempFile.delete()
+
+        try {
+            val importDb = android.database.sqlite.SQLiteDatabase.openDatabase(
+                tempFile.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY
+            )
+            importDb.use { source ->
+                val cursor = source.rawQuery(
+                    "SELECT bookId, chapter, verse, text FROM verses ORDER BY bookId, chapter, verse", null
+                )
+                val bookVerseCounts = mutableMapOf<Int, Int>()
+                cursor.use { c ->
+                    // verses.id is a globally-unique rowid shared across translations
+                    // (prepopulated DB uses 1..MAX dense). Allocate ours above MAX
+                    // so IGNORE doesn't silently drop every row after the first.
+                    var nextId = importDao.getMaxVerseId() + 1
+                    val batch = ArrayList<com.openbible.data.db.entity.VerseEntity>(500)
+                    while (c.moveToNext()) {
+                        val bookId = c.getInt(0)
+                        batch.add(com.openbible.data.db.entity.VerseEntity(
+                            id = nextId++,
+                            translationId = translationId,
+                            bookId = bookId,
+                            chapter = c.getInt(1),
+                            verse = c.getInt(2),
+                            text = c.getString(3)
+                        ))
+                        bookVerseCounts[bookId] = bookVerseCounts.getOrDefault(bookId, 0) + 1
+                        if (batch.size >= 500) {
+                            importDao.insertVerses(batch.toList())
+                            batch.clear()
+                        }
+                    }
+                    if (batch.isNotEmpty()) {
+                        importDao.insertVerses(batch.toList())
+                    }
+                }
+                if (bookVerseCounts.isEmpty()) return false
+                seedBooks(translationId, bookVerseCounts)
+            }
+        } catch (_: Exception) {
+            android.util.Log.w(TAG, "Failed importing translation asset: $assetFile")
+            return false
+        } finally {
+            tempFile.delete()
+        }
+        return true
     }
 
     /**

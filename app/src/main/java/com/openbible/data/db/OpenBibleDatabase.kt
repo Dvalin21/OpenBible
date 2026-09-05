@@ -62,6 +62,15 @@ import com.openbible.data.db.entity.VerseStrongLinkEntity
  * Version 10: kept composite book PK (see MIGRATION_9_10).
  * Version 11: added pagesJson column to notes (unified multi-page note model).
  * Version 12: added isFavorite column to notes + note_audio table (audio memos).
+ * Version 13: FTS5 tables for every shipped translation (dra, geneva, nasb,
+ *            esv, csb added; kjv, web, asv, ylt, bbe already existed).
+ *            Rebuilds the verses_ai/ad/au triggers to cover all 10 so every
+ *            searchable translation is indexed on insert. Must match
+ *            BibleDao.FTS_TRANSLATIONS.
+ * Version 14: uniqueness for user-data keys (bookmarks.verseId,
+ *            highlights(verseId,color), reading_progress(planId,dayNumber),
+ *            note_verse_links(noteId,verseId)) so REPLACE/IGNORE inserts are
+ *            real upserts/no-ops instead of silent duplicate accumulators.
  */
 @Database(
     entities = [
@@ -87,10 +96,9 @@ import com.openbible.data.db.entity.VerseStrongLinkEntity
         LocationEventEntity::class,
         ParallelTraditionEntity::class
     ],
-    version = 12,
+    version = 14,
     exportSchema = true
-)
-@TypeConverters(Converters::class)
+)@TypeConverters(Converters::class)
 abstract class OpenBibleDatabase : RoomDatabase() {
 
     abstract fun bibleDao(): BibleDao
@@ -141,7 +149,7 @@ abstract class OpenBibleDatabase : RoomDatabase() {
             }
 
             // Explicit migrations — never destroy user data.
-            builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
+            builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
 
             return builder.build()
         }
@@ -446,6 +454,94 @@ abstract class OpenBibleDatabase : RoomDatabase() {
             db.execSQL("CREATE INDEX IF NOT EXISTS index_note_audio_noteId ON note_audio(noteId)")
         }
 
+        /**
+         * Version 12 → 13: FTS5 tables for every supported translation.
+         *
+         * MIGRATION_5_6 created only kjv, web, asv, ylt, bbe, nkjv. The asset
+         * pipeline later added nasb, esv, csb (tables present in the prepop DB
+         * but missing on fresh-install/migrated DBs → search crashed with
+         * SQLiteException), and dra, geneva never had FTS at all.
+         * Keep in sync with BibleDao.FTS_TRANSLATIONS.
+         */
+        private val FTS_ALL = listOf(
+            "kjv", "web", "asv", "ylt", "bbe",
+            "nasb", "esv", "csb", "dra", "geneva"
+        )
+
+        private val MIGRATION_12_13 = Migration(12, 13) { db ->
+            // nkjv/nlt/mev are out of scope — drop the empty orphan nkjv FTS
+            // table (0 verses reference it).
+            db.execSQL("DROP TABLE IF EXISTS verses_fts_nkjv")
+            // Rebuild every FTS table as a PLAIN fts5 table, exactly matching
+            // data/import_bible.py. MIGRATION_5_6 wrongly used external-content
+            // tables (content='verses'), on which INSERT..SELECT fails with
+            // "no such column: T.verseId" — killing every verse insert and any
+            // backfill over non-empty verses. DROP+recreate normalizes all
+            // DB populations (prepop plain, v5-upgrade content=, fresh empty).
+            for (t in FTS_ALL) {
+                db.execSQL("DROP TABLE IF EXISTS verses_fts_${t}")
+                db.execSQL("""
+                    CREATE VIRTUAL TABLE verses_fts_${t} USING fts5(
+                        text,
+                        bookId UNINDEXED,
+                        chapter UNINDEXED,
+                        verse UNINDEXED,
+                        verseId UNINDEXED,
+                        tokenize='porter unicode61'
+                    )
+                """)
+            }
+
+            // Triggers covered only the original 6 — drop and rebuild for all 10.
+            db.execSQL("DROP TRIGGER IF EXISTS verses_ai")
+            db.execSQL("DROP TRIGGER IF EXISTS verses_ad")
+            db.execSQL("DROP TRIGGER IF EXISTS verses_au")
+            val aiSelects = FTS_ALL.joinToString("\n") {
+                "INSERT INTO verses_fts_${it}(rowid, text, bookId, chapter, verse, verseId) " +
+                "SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = '${it}';"
+            }
+            val deletes = FTS_ALL.joinToString("\n") {
+                "DELETE FROM verses_fts_${it} WHERE rowid = old.id;"
+            }
+            db.execSQL("CREATE TRIGGER verses_ai AFTER INSERT ON verses BEGIN\n$aiSelects\nEND")
+            db.execSQL("CREATE TRIGGER verses_ad AFTER DELETE ON verses BEGIN\n$deletes\nEND")
+            db.execSQL("CREATE TRIGGER verses_au AFTER UPDATE ON verses BEGIN\n$deletes\n$aiSelects\nEND")
+
+            // Tables are freshly rebuilt above — repopulate all 10 from verses.
+            for (t in FTS_ALL) {
+                db.execSQL("""
+                    INSERT INTO verses_fts_${t}(rowid, text, bookId, chapter, verse, verseId)
+                    SELECT id, text, bookId, chapter, verse, id FROM verses WHERE translationId = '${t}'
+                """)
+            }
+        }
+
+        /**
+         * Version 13 → 14: enforce one-row-per-key on user data.
+         *
+         * Inserts use REPLACE/IGNORE on autogenerated ids, which never
+         * conflict — so duplicates accumulated silently. Unique indexes turn
+         * them into real upserts/no-ops. Dedupe first (keep earliest row),
+         * keeping the exact index names Room expects (see 14.json).
+         */
+        private val MIGRATION_13_14 = Migration(13, 14) { db ->
+            db.execSQL("DELETE FROM bookmarks WHERE id NOT IN (SELECT MIN(id) FROM bookmarks GROUP BY verseId)")
+            db.execSQL("DROP INDEX IF EXISTS index_bookmarks_verseId")
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_bookmarks_verseId ON bookmarks(verseId)")
+
+            db.execSQL("DELETE FROM highlights WHERE id NOT IN (SELECT MIN(id) FROM highlights GROUP BY verseId, color)")
+            db.execSQL("DROP INDEX IF EXISTS index_highlights_verseId")
+            db.execSQL("DROP INDEX IF EXISTS index_highlights_color")
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_highlights_verseId_color ON highlights(verseId, color)")
+
+            db.execSQL("DELETE FROM reading_progress WHERE id NOT IN (SELECT MIN(id) FROM reading_progress GROUP BY planId, dayNumber)")
+            db.execSQL("DROP INDEX IF EXISTS index_reading_progress_planId")
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_reading_progress_planId_dayNumber ON reading_progress(planId, dayNumber)")
+
+            db.execSQL("DELETE FROM note_verse_links WHERE id NOT IN (SELECT MIN(id) FROM note_verse_links GROUP BY noteId, verseId)")
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_note_verse_links_noteId_verseId ON note_verse_links(noteId, verseId)")
+        }
+
         private val MIGRATION_5_6 = Migration(5, 6) { db ->
             db.execSQL("""
                 CREATE VIRTUAL TABLE IF NOT EXISTS verses_fts_kjv USING fts5(
@@ -454,8 +550,6 @@ abstract class OpenBibleDatabase : RoomDatabase() {
                     chapter UNINDEXED,
                     verse UNINDEXED,
                     verseId UNINDEXED,
-                    content='verses',
-                    content_rowid='id',
                     tokenize='porter unicode61'
                 )
             """)
@@ -466,8 +560,6 @@ abstract class OpenBibleDatabase : RoomDatabase() {
                     chapter UNINDEXED,
                     verse UNINDEXED,
                     verseId UNINDEXED,
-                    content='verses',
-                    content_rowid='id',
                     tokenize='porter unicode61'
                 )
             """)
@@ -478,8 +570,6 @@ abstract class OpenBibleDatabase : RoomDatabase() {
                     chapter UNINDEXED,
                     verse UNINDEXED,
                     verseId UNINDEXED,
-                    content='verses',
-                    content_rowid='id',
                     tokenize='porter unicode61'
                 )
             """)
@@ -490,8 +580,6 @@ abstract class OpenBibleDatabase : RoomDatabase() {
                     chapter UNINDEXED,
                     verse UNINDEXED,
                     verseId UNINDEXED,
-                    content='verses',
-                    content_rowid='id',
                     tokenize='porter unicode61'
                 )
             """)
@@ -502,8 +590,6 @@ abstract class OpenBibleDatabase : RoomDatabase() {
                     chapter UNINDEXED,
                     verse UNINDEXED,
                     verseId UNINDEXED,
-                    content='verses',
-                    content_rowid='id',
                     tokenize='porter unicode61'
                 )
             """)
@@ -514,8 +600,6 @@ abstract class OpenBibleDatabase : RoomDatabase() {
                     chapter UNINDEXED,
                     verse UNINDEXED,
                     verseId UNINDEXED,
-                    content='verses',
-                    content_rowid='id',
                     tokenize='porter unicode61'
                 )
             """)

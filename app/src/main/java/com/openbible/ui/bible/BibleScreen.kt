@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -695,8 +696,8 @@ private fun VerseLine(
         }
     }
 
-    // ponytail: isDark via system theme. Follows app theme toggle.
-    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    // ponytail: darkness from the live scheme (Light/Dark/Sepia/Auto), not the system
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val verseColor = if (isRedLetter) Color(RedLetterData.redLetterColor(isDark))
                      else MaterialTheme.colorScheme.onBackground
 

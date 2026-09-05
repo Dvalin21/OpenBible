@@ -22,11 +22,17 @@ object ReadingPlanSeeder {
 
     /**
      * Seed if no plans exist. Safe to call repeatedly — checks first.
+     * A half-seeded plan from a crashed first launch is wiped and rebuilt
+     * (days/progress CASCADE off the plan row).
      */
     suspend fun ensureSeeded(dao: ReadingPlanDao, bibleDao: BibleDao) {
         // Check if already seeded
         val existing = dao.getAllPlansOnce()
-        if (existing.isNotEmpty()) return
+        if (existing.isNotEmpty()) {
+            val plan = existing.first()
+            if (dao.getPlanDayCount(plan.id) >= PLAN_DURATION) return
+            dao.deletePlanById(plan.id)
+        }
 
         // Get chapter counts per book (canonical order)
         val bookCounts = bibleDao.getBookChapterCounts("kjv")
@@ -53,9 +59,11 @@ object ReadingPlanSeeder {
 
         // Distribute every chapter evenly across PLAN_DURATION days.
         // First `extra` days get one extra chapter so all chapters are covered.
+        // Days are inserted in one transaction — no half plans on crash.
         val base = allChapters.size / PLAN_DURATION
         val extra = allChapters.size % PLAN_DURATION
         var chapterIndex = 0
+        val days = ArrayList<ReadingPlanDayEntity>(PLAN_DURATION)
         for (day in 1..PLAN_DURATION) {
             val count = base + if (day <= extra) 1 else 0
 
@@ -77,7 +85,7 @@ object ReadingPlanSeeder {
                 }
             }.toString()
 
-            dao.insertDay(
+            days.add(
                 ReadingPlanDayEntity(
                     planId = planId,
                     dayNumber = day,
@@ -86,5 +94,6 @@ object ReadingPlanSeeder {
                 )
             )
         }
+        dao.insertDays(days)
     }
 }

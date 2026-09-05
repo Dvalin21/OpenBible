@@ -70,10 +70,13 @@ class NoteRepository @Inject constructor(
     }
 
     suspend fun deleteNote(note: NoteEntity) {
-        // Best-effort cleanup of audio files before the row (and its
-        // note_audio children via CASCADE) is removed.
+        // Best-effort cleanup of attachment files before the row (and its
+        // note_audio/note_images children via CASCADE) is removed.
         runCatching {
             noteDao.getAudiosForNote(note.id).first().forEach { File(it.filePath).delete() }
+        }
+        runCatching {
+            noteDao.getImagesForNote(note.id).first().forEach { File(it.filePath).delete() }
         }
         noteDao.deleteNote(note)
     }
@@ -82,14 +85,29 @@ class NoteRepository @Inject constructor(
 
     fun getAudiosForNote(noteId: Long): Flow<List<NoteAudioEntity>> = noteDao.getAudiosForNote(noteId)
     suspend fun insertAudio(audio: NoteAudioEntity): Long = noteDao.insertAudio(audio)
-    suspend fun deleteAudio(audio: NoteAudioEntity) = noteDao.deleteAudio(audio)
-    suspend fun deleteAllAudiosForNote(noteId: Long) = noteDao.deleteAllAudiosForNote(noteId)
+    suspend fun deleteAudio(audio: NoteAudioEntity) {
+        runCatching { File(audio.filePath).delete() }
+        noteDao.deleteAudio(audio)
+    }
+    suspend fun deleteAllAudiosForNote(noteId: Long) {
+        val paths = runCatching {
+            noteDao.getAudiosForNote(noteId).first().map { it.filePath }
+        }.getOrDefault(emptyList())
+        noteDao.deleteAllAudiosForNote(noteId)
+        paths.forEach { runCatching { File(it).delete() } }
+    }
 
     // -- Images --
 
     fun getImagesForNote(noteId: Long): Flow<List<NoteImageEntity>> = noteDao.getImagesForNote(noteId)
     suspend fun insertImage(image: NoteImageEntity): Long = noteDao.insertImage(image)
-    suspend fun deleteAllImagesForNote(noteId: Long) = noteDao.deleteAllImagesForNote(noteId)
+    suspend fun deleteAllImagesForNote(noteId: Long) {
+        val paths = runCatching {
+            noteDao.getImagesForNote(noteId).first().map { it.filePath }
+        }.getOrDefault(emptyList())
+        noteDao.deleteAllImagesForNote(noteId)
+        paths.forEach { runCatching { File(it).delete() } }
+    }
 
     // -- Verse Links --
 

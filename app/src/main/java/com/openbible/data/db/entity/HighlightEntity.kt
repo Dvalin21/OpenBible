@@ -12,7 +12,8 @@ import com.openbible.data.model.HighlightColor
  */
 @Entity(
     tableName = "highlights",
-    indices = [Index("verseId"), Index("color")]
+    // ponytail: one highlight per verse per color — unique makes REPLACE inserts real upserts
+    indices = [Index(value = ["verseId", "color"], unique = true)]
 )
 data class HighlightEntity(
     @PrimaryKey(autoGenerate = true)

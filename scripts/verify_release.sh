@@ -23,6 +23,60 @@ echo "  OpenBible Release Verification"
 echo "══════════════════════════════════════════════════════════════"
 echo ""
 
+# ── Phase 0: Prepop DB + Version Consistency ────────────────────────
+echo "── Phase 0: Prepop DB + Versions ──────────────────────────────"
+
+DB="$PROJECT_DIR/app/src/main/assets/databases/openbible.db"
+if [ ! -f "$DB" ]; then
+    fail "Prepop DB missing at $DB (gitignored — run data/import_bible.py)"
+else
+    DB_SIZE=$(stat --printf="%s" "$DB" 2>/dev/null || stat -f%z "$DB" 2>/dev/null)
+    if [ "$DB_SIZE" -gt 100000000 ]; then
+        pass "Prepop DB present ($(( DB_SIZE / 1024 / 1024 )) MB)"
+    else
+        fail "Prepop DB suspiciously small ($DB_SIZE bytes — partial import?)"
+    fi
+    DB_CHECK=$(python3 - "$DB" <<'EOF' 2>&1 || true
+import re, sqlite3, sys
+db = sqlite3.connect(sys.argv[1])
+print("user_version=%d" % db.execute("PRAGMA user_version").fetchone()[0])
+names = [r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'verses_fts_%'")]
+fts = sorted(n for n in names if not re.search(r'_(config|content|data|docsize|idx)$', n))
+print("fts=" + ",".join(fts))
+for t in ["kjv","web","asv","ylt","bbe","nasb","esv","csb","dra","geneva"]:
+    n = db.execute("SELECT COUNT(*) FROM verses WHERE translationId=?", (t,)).fetchone()[0]
+    print(f"verses_{t}={n}")
+EOF
+)
+    ROOM_VERSION=$(grep -oP 'version\s*=\s*\K[0-9]+' "$PROJECT_DIR/app/src/main/java/com/openbible/data/db/OpenBibleDatabase.kt" | head -1)
+    DB_VERSION=$(echo "$DB_CHECK" | grep -oP '^user_version=\K[0-9]+' || echo "?")
+    if [ "$DB_VERSION" = "$ROOM_VERSION" ]; then
+        pass "Prepop user_version ($DB_VERSION) matches @Database version"
+    else
+        fail "Prepop user_version ($DB_VERSION) != @Database version ($ROOM_VERSION) — run data/fix_schema.py"
+    fi
+    THIN=$(echo "$DB_CHECK" | grep -E '^verses_' | awk -F= '$2 < 30000' || true)
+    if [ -z "$THIN" ]; then
+        pass "All 10 translations have 30,000+ verses"
+    else
+        fail "Thin translations in prepop DB: $THIN"
+    fi
+    FTS_LINE=$(echo "$DB_CHECK" | grep -oP '^fts=\K.*' || echo "")
+    EXPECTED_FTS="verses_fts_asv,verses_fts_bbe,verses_fts_csb,verses_fts_dra,verses_fts_esv,verses_fts_geneva,verses_fts_kjv,verses_fts_nasb,verses_fts_web,verses_fts_ylt"
+    if [ "$FTS_LINE" = "$EXPECTED_FTS" ]; then
+        pass "All 10 FTS tables present in prepop DB"
+    else
+        fail "FTS tables mismatch in prepop DB: $FTS_LINE"
+    fi
+fi
+
+APP_VERSION=$(grep -oP 'versionName\s*=\s*"\K[^"]+' "$PROJECT_DIR/app/build.gradle.kts" | head -1)
+if grep -q "\[$APP_VERSION\]\|\[$APP_VERSION " "$PROJECT_DIR/CHANGELOG.md"; then
+    pass "CHANGELOG documents app version $APP_VERSION"
+else
+    fail "CHANGELOG has no entry for app version $APP_VERSION"
+fi
+
 # ── Phase 1: Unit Tests ─────────────────────────────────────────────
 echo "── Phase 1: Unit Tests ────────────────────────────────────────"
 

@@ -6,7 +6,7 @@ database shipped with the app.
 ## Prerequisites
 
 ```bash
-pip3 install requests
+pip3 install requests lxml
 ```
 
 ## Usage
@@ -26,6 +26,11 @@ cp openbible.db ../app/src/main/assets/databases/
 | KJV | King James Version | Public domain | scrollmapper GitHub |
 | WEB | World English Bible | Public domain | scrollmapper GitHub |
 | ASV | American Standard Version | Public domain | scrollmapper GitHub |
+| BBE | Bible in Basic English | Public domain | open-bibles USFX |
+| YLT | Young's Literal Translation | Public domain | redempti/bible_database |
+| DRA | Douay-Rheims 1899 American Edition | Public domain | scrollmapper GitHub |
+| Geneva | Geneva Bible 1599 | Public domain | scrollmapper GitHub |
+| NASB/ESV/CSB | (personal-use imports) | See source | jburson JSON via `import_translations.py` |
 
 ## Schema
 

@@ -30,9 +30,12 @@ class EventImporter @Inject constructor(
         if (prefs.getBoolean(PREFS_KEY_IMPORTED, false)) return true
         return withContext(Dispatchers.IO) {
             try {
-                doImport()
-                prefs.edit().putBoolean(PREFS_KEY_IMPORTED, true).apply()
-                true
+                // ponytail: flag only when rows actually landed — missing/empty
+                // assets must retry next launch, not poison the flag
+                if (doImport()) {
+                    prefs.edit().putBoolean(PREFS_KEY_IMPORTED, true).apply()
+                    true
+                } else false
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "Event import failed", e)
                 false
@@ -40,20 +43,22 @@ class EventImporter @Inject constructor(
         }
     }
 
-    private suspend fun doImport() {
+    private suspend fun doImport(): Boolean {
         if (locationDao.eventCount() > 0) {
             android.util.Log.i(TAG, "Event data already present, skipping")
-            return
+            return true
         }
 
-        val json = loadAsset("locations/events.json") ?: return
+        val json = loadAsset("locations/events.json") ?: return false
         val events = parseEvents(JSONArray(json))
         if (events.isNotEmpty()) {
             events.chunked(100).forEach { batch ->
                 locationDao.insertAllEvents(batch)
             }
             android.util.Log.i(TAG, "Imported ${events.size} location events")
+            return true
         }
+        return false
     }
 
     private fun loadAsset(path: String): String? {
@@ -68,21 +73,25 @@ class EventImporter @Inject constructor(
     private fun parseEvents(arr: JSONArray): List<LocationEventEntity> {
         val result = mutableListOf<LocationEventEntity>()
         for (i in 0 until arr.length()) {
-            val obj = arr.getJSONObject(i)
-            result.add(
-                LocationEventEntity(
-                    id = obj.getString("id"),
-                    locationId = obj.getString("locationId"),
-                    title = obj.getString("title"),
-                    description = obj.getString("description"),
-                    reference = obj.getString("reference"),
-                    bookId = obj.getInt("bookId"),
-                    chapter = obj.getInt("chapter"),
-                    category = obj.getString("category"),
-                    era = obj.getString("era"),
-                    sortOrder = obj.optInt("sortOrder", 0)
+            try {
+                val obj = arr.getJSONObject(i)
+                result.add(
+                    LocationEventEntity(
+                        id = obj.getString("id"),
+                        locationId = obj.getString("locationId"),
+                        title = obj.getString("title"),
+                        description = obj.getString("description"),
+                        reference = obj.getString("reference"),
+                        bookId = obj.getInt("bookId"),
+                        chapter = obj.getInt("chapter"),
+                        category = obj.getString("category"),
+                        era = obj.getString("era"),
+                        sortOrder = obj.optInt("sortOrder", 0)
+                    )
                 )
-            )
+            } catch (_: Exception) {
+                android.util.Log.w(TAG, "Skipping malformed event row $i")
+            }
         }
         return result
     }

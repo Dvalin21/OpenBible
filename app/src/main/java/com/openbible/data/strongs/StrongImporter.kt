@@ -34,9 +34,12 @@ class StrongImporter @Inject constructor(
         if (prefs.getBoolean(PREFS_KEY_IMPORTED, false)) return true
         return withContext(Dispatchers.IO) {
             try {
-                doImport()
-                prefs.edit().putBoolean(PREFS_KEY_IMPORTED, true).apply()
-                true
+                // ponytail: flag only when rows actually landed — missing/empty
+                // assets must retry next launch, not poison the flag
+                if (doImport()) {
+                    prefs.edit().putBoolean(PREFS_KEY_IMPORTED, true).apply()
+                    true
+                } else false
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "Strong's import failed", e)
                 false
@@ -44,19 +47,23 @@ class StrongImporter @Inject constructor(
         }
     }
 
-    private suspend fun doImport() {
+    private suspend fun doImport(): Boolean {
         // Check if data already present (e.g. from prepopulated DB)
         if (strongDao.strongNumberCount() > 0) {
             android.util.Log.i(TAG, "Strong's data already present, skipping import")
-            return
+            return true
         }
 
+        var imported = false
         // Import strong numbers
         val numbersJson = loadAsset("strongs/strong_numbers.json")
         if (numbersJson != null) {
             val numbers = parseStrongNumbers(JSONArray(numbersJson))
             if (numbers.isNotEmpty()) {
-                strongDao.insertAllStrongNumbers(numbers)
+                numbers.chunked(500).forEach { batch ->
+                    strongDao.insertAllStrongNumbers(batch)
+                }
+                imported = true
                 android.util.Log.i(TAG, "Imported ${numbers.size} Strong's numbers")
             }
         }
@@ -70,9 +77,11 @@ class StrongImporter @Inject constructor(
                 links.chunked(500).forEach { batch ->
                     strongDao.insertAllVerseLinks(batch)
                 }
+                imported = true
                 android.util.Log.i(TAG, "Imported ${links.size} verse-strong links")
             }
         }
+        return imported
     }
 
     private fun loadAsset(path: String): String? {
@@ -87,20 +96,27 @@ class StrongImporter @Inject constructor(
     private fun parseStrongNumbers(arr: JSONArray): List<StrongNumberEntity> {
         val result = mutableListOf<StrongNumberEntity>()
         for (i in 0 until arr.length()) {
-            val obj = arr.getJSONObject(i)
-            result.add(
-                StrongNumberEntity(
-                    number = obj.getString("number"),
-                    lemma = obj.optString("lemma", ""),
-                    transliteration = obj.optString("transliteration", ""),
-                    pronunciation = if (obj.has("pronunciation")) obj.getString("pronunciation") else null,
-                    partOfSpeech = if (obj.has("partOfSpeech")) obj.getString("partOfSpeech") else null,
-                    definition = obj.optString("definition", ""),
-                    derivation = if (obj.has("derivation")) obj.getString("derivation") else null,
-                    usageCount = obj.optInt("usageCount", 0),
-                    language = obj.optString("language", "Greek")
+            try {
+                val obj = arr.getJSONObject(i)
+                val number = obj.getString("number")
+                result.add(
+                    StrongNumberEntity(
+                        number = number,
+                        lemma = obj.optString("lemma", ""),
+                        transliteration = obj.optString("transliteration", ""),
+                        pronunciation = if (obj.has("pronunciation")) obj.getString("pronunciation") else null,
+                        partOfSpeech = if (obj.has("partOfSpeech")) obj.getString("partOfSpeech") else null,
+                        definition = obj.optString("definition", ""),
+                        derivation = if (obj.has("derivation")) obj.getString("derivation") else null,
+                        usageCount = obj.optInt("usageCount", 0),
+                        // ponytail: G… = Greek, H… = Hebrew — don't mislabel gaps as Greek
+                        language = obj.optString("language", null)
+                            ?: if (number.startsWith("H")) "Hebrew" else "Greek"
+                    )
                 )
-            )
+            } catch (_: Exception) {
+                android.util.Log.w(TAG, "Skipping malformed Strong's row $i")
+            }
         }
         return result
     }
@@ -108,16 +124,20 @@ class StrongImporter @Inject constructor(
     private fun parseVerseLinks(arr: JSONArray): List<VerseStrongLinkEntity> {
         val result = mutableListOf<VerseStrongLinkEntity>()
         for (i in 0 until arr.length()) {
-            val obj = arr.getJSONObject(i)
-            result.add(
-                VerseStrongLinkEntity(
-                    verseId = obj.getLong("verseId"),
-                    strongNumber = obj.getString("strongNumber"),
-                    wordPosition = obj.getInt("wordPosition"),
-                    originalWord = obj.optString("originalWord", ""),
-                    transliteration = if (obj.has("transliteration")) obj.getString("transliteration") else null
+            try {
+                val obj = arr.getJSONObject(i)
+                result.add(
+                    VerseStrongLinkEntity(
+                        verseId = obj.getLong("verseId"),
+                        strongNumber = obj.getString("strongNumber"),
+                        wordPosition = obj.getInt("wordPosition"),
+                        originalWord = obj.optString("originalWord", ""),
+                        transliteration = if (obj.has("transliteration")) obj.getString("transliteration") else null
+                    )
                 )
-            )
+            } catch (_: Exception) {
+                android.util.Log.w(TAG, "Skipping malformed verse-link row $i")
+            }
         }
         return result
     }

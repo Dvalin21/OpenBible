@@ -186,7 +186,8 @@ def create_database(output_path: str):
     conn = sqlite3.connect(output_path)
     cursor = conn.cursor()
     cursor.execute("PRAGMA journal_mode=WAL;")
-    cursor.execute("PRAGMA synchronous=OFF;")
+    # ponytail: NORMAL not OFF — OFF corrupts the DB on crash mid-import
+    cursor.execute("PRAGMA synchronous=NORMAL;")
     cursor.execute("PRAGMA cache_size=-128000;")
 
     create_tables(cursor)
@@ -195,6 +196,10 @@ def create_database(output_path: str):
     # Import Bible texts
     total_verses = 0
     global_verse_id = 1
+    # ponytail: every translation is required — a missing one used to ship a
+    # silent partial DB. Collect failures and refuse to ship (see gate below).
+    failures: list = []
+    MIN_VERSES = 30000
 
     # First: translations from midvash/bible-data JSON
     for tid, info in TRANSLATIONS.items():
@@ -204,10 +209,15 @@ def create_database(output_path: str):
         print(f"\n[{tid}] Downloading {info['name']}...")
         data = download_file(BASE_URL.format(slug=slug))
         if not data:
-            print(f"  WARNING: No data for {tid}")
+            print(f"  ERROR: No data for {tid}", file=sys.stderr)
+            failures.append(tid)
             continue
         inserted, global_verse_id = import_json_translation(cursor, tid, data, global_verse_id)
         print(f"  Inserted {inserted:,} verses")
+        if inserted < MIN_VERSES:
+            print(f"  ERROR: {tid} yielded only {inserted:,} verses", file=sys.stderr)
+            failures.append(tid)
+            continue
         total_verses += inserted
 
     # BBE from XML source
@@ -218,11 +228,17 @@ def create_database(output_path: str):
         try:
             inserted, global_verse_id = import_usfx_xml(cursor, "bbe", bbe_data, global_verse_id)
             print(f"  Inserted {inserted:,} verses")
-            total_verses += inserted
+            if inserted < MIN_VERSES:
+                print(f"  ERROR: bbe yielded only {inserted:,} verses", file=sys.stderr)
+                failures.append("bbe")
+            else:
+                total_verses += inserted
         except Exception as e:
-            print(f"  ERROR parsing BBE XML: {e}")
+            print(f"  ERROR parsing BBE XML: {e}", file=sys.stderr)
+            failures.append("bbe")
     else:
-        print("  WARNING: No BBE data")
+        print("  ERROR: No BBE data", file=sys.stderr)
+        failures.append("bbe")
 
     # YLT from redempti/bible_database JSON (full OT+NT, public domain)
     ylt_url = f"{REDEMPTI_BASE}/json/t_ylt.json"
@@ -232,13 +248,24 @@ def create_database(output_path: str):
         try:
             inserted, global_verse_id = import_redempti_json(cursor, "ylt", ylt_data, global_verse_id)
             print(f"  Inserted {inserted:,} verses")
-            total_verses += inserted
+            if inserted < MIN_VERSES:
+                print(f"  ERROR: ylt yielded only {inserted:,} verses", file=sys.stderr)
+                failures.append("ylt")
+            else:
+                total_verses += inserted
         except Exception as e:
-            print(f"  ERROR parsing YLT JSON: {e}")
+            print(f"  ERROR parsing YLT JSON: {e}", file=sys.stderr)
+            failures.append("ylt")
     else:
-        print("  WARNING: No YLT data")
+        print("  ERROR: No YLT data", file=sys.stderr)
+        failures.append("ylt")
 
     print(f"\nTotal verses across all translations: {total_verses:,}")
+    if failures:
+        print(f"\n  FATAL: {len(failures)} translation(s) failed: {', '.join(failures)}", file=sys.stderr)
+        print("  Refusing to ship a partial database — fix the source and rerun.", file=sys.stderr)
+        conn.close()
+        sys.exit(1)
     conn.commit()
 
     # Reading plans

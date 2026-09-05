@@ -78,6 +78,16 @@ fun NoteEditorScreen(
     val recorder = remember { mutableStateOf<MediaRecorder?>(null) }
     val player = remember { mutableStateOf<MediaPlayer?>(null) }
 
+    // ponytail: mic/player handles die with the screen — no leaks on navigate-away
+    DisposableEffect(Unit) {
+        onDispose {
+            runCatching { recorder.value?.release() }
+            runCatching { player.value?.release() }
+            recorder.value = null
+            player.value = null
+        }
+    }
+
     // ── RECORD_AUDIO permission ──
     val micPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -96,8 +106,9 @@ fun NoteEditorScreen(
      * If permission is not yet determined, launch the request and bail.
      */
     fun startRecording() {
-        val micGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
-            || context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        // ponytail: RECORD_AUDIO is runtime-dangerous on every API level —
+        // no SDK check (that confusion was with POST_NOTIFICATIONS on TIRAMISU+)
+        val micGranted = context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED
         if (!micGranted) {
             micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
             return

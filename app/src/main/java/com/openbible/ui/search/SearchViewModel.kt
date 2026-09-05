@@ -92,11 +92,16 @@ class SearchViewModel(application: Application) : AndroidViewModel(application) 
         _isSearching.value = true
         _hasSearched.value = true
 
-        val translationId = _selectedTranslation.value
-        _results.value = if (translationId.isNotBlank()) {
-            bibleDao.searchVersesWithBook(translationId, q)
-        } else {
-            bibleDao.searchAllTranslations(q)
+        // ponytail: FTS MATCH can still throw on hostile input — never kill the search
+        _results.value = try {
+            val translationId = _selectedTranslation.value
+            if (translationId.isNotBlank()) {
+                bibleDao.searchVersesWithBook(translationId, q)
+            } else {
+                bibleDao.searchAllTranslations(q)
+            }
+        } catch (_: Exception) {
+            emptyList()
         }
 
         _isSearching.value = false

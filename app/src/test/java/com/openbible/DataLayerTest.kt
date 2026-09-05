@@ -172,11 +172,34 @@ class DataLayerTest {
         coEvery { planDao.getAllPlansOnce() } returns listOf(
             ReadingPlanEntity(name = "Existing", description = null, durationDays = 365, isPrebuilt = true)
         )
+        coEvery { planDao.getPlanDayCount(any()) } returns 365
 
         runBlocking {
             ReadingPlanSeeder.ensureSeeded(planDao, bibleDao)
         }
         // getAllPlansOnce was called, but getBookChapterCounts was NOT
+        coVerify(exactly = 0) { bibleDao.getBookChapterCounts(any()) }
+    }
+
+    @Test
+    fun `ReadingPlanSeeder rebuilds half-seeded plan`() {
+        val planDao = mockk<ReadingPlanDao>(relaxed = true)
+        val bibleDao = mockk<BibleDao>()
+
+        coEvery { planDao.getAllPlansOnce() } returns listOf(
+            ReadingPlanEntity(id = 7, name = "Partial", description = null, durationDays = 365, isPrebuilt = true)
+        )
+        coEvery { planDao.getPlanDayCount(7) } returns 12
+        coEvery { bibleDao.getBookChapterCounts("kjv") } returns listOf(
+            com.openbible.data.db.dao.BookChapterCount(bookId = 1, chapterCount = 50)
+        )
+        coEvery { planDao.insertPlan(any()) } returns 8
+
+        runBlocking {
+            ReadingPlanSeeder.ensureSeeded(planDao, bibleDao)
+        }
+        coVerify { planDao.deletePlanById(7) }
+        coVerify { planDao.insertDays(match { it.size == 365 }) }
     }
 
     // ── InkStroke Serialization ──────────────────────────────────
@@ -600,7 +623,8 @@ class DataLayerTest {
                     title = "Sermon notes",
                     contentText = null,
                     penStrokes = null,
-                    penMode = PenMode.TEXT,
+                    // ponytail: new notes default to INK (NoteEditorViewModel:22)
+                    penMode = PenMode.INK,
                     tags = "faith,sermon",
                     color = null,
                     pagesJson = any(),

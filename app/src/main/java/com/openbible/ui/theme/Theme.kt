@@ -82,7 +82,8 @@ fun OpenBibleTheme(
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val window = (view.context as Activity).window
+            // ponytail: safe cast — previews and non-Activity hosts have no window
+            val window = (view.context as? Activity)?.window ?: return@SideEffect
             window.statusBarColor = colorScheme.background.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars =
                 effectiveMode != ThemeMode.DARK

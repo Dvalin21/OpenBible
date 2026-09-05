@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.openbible.data.db.entity.ReadingPlanDayEntity
 import com.openbible.data.db.entity.ReadingPlanEntity
 import com.openbible.data.db.entity.ReadingProgressEntity
@@ -36,6 +37,19 @@ interface ReadingPlanDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDay(day: ReadingPlanDayEntity): Long
+
+    /** Batch day insert in one transaction — seeding 365 days one-by-one is
+     *  slow and a crash mid-loop leaves a half plan. */
+    @Transaction
+    suspend fun insertDays(days: List<ReadingPlanDayEntity>) {
+        days.forEach { insertDay(it) }
+    }
+
+    @Query("SELECT COUNT(*) FROM reading_plan_days WHERE planId = :planId")
+    suspend fun getPlanDayCount(planId: Long): Int
+
+    @Query("DELETE FROM reading_plans WHERE id = :planId")
+    suspend fun deletePlanById(planId: Long)
 
     // -- Progress --
 

@@ -31,7 +31,8 @@ import androidx.room.PrimaryKey
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("noteId"), Index("verseId")]
+    // ponytail: no duplicate links — unique makes IGNORE inserts real no-ops
+    indices = [Index("noteId"), Index("verseId"), Index(value = ["noteId", "verseId"], unique = true)]
 )
 data class NoteVerseLinkEntity(
     @PrimaryKey(autoGenerate = true)

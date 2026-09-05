@@ -24,6 +24,9 @@ interface ImportDao {
     @Query("SELECT COUNT(*) FROM verses WHERE translationId = :translationId")
     suspend fun countVersesForTranslation(translationId: String): Long
 
+    @Query("SELECT COALESCE(MAX(id), 0) FROM verses")
+    suspend fun getMaxVerseId(): Long
+
     @Query("SELECT * FROM books WHERE translationId = 'kjv' ORDER BY number")
     fun getKjvBooks(): Flow<List<BookEntity>>
 }

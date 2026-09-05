@@ -145,8 +145,8 @@ class BibleViewModel(application: Application) : AndroidViewModel(application) {
                     val kjvVerses = bibleDao.getVerses("kjv", bookId, chapter)
                     val kjvVerseIds = kjvVerses.first().map { it.id }
 
-                    // Get cross-refs for KJV verse IDs
-                    val refs = crossReferenceDao.getCrossReferencesOnce(kjvVerseIds)
+                    // Get cross-refs for KJV verse IDs (snippets in current translation)
+                    val refs = crossReferenceDao.getCrossReferencesOnce(kjvVerseIds, verseList.first().translationId)
 
                     // Map from KJV verse ID → current verse ID
                     // All share the same (bookId, chapter, verse) numbering

@@ -30,9 +30,12 @@ class ParallelTraditionImporter @Inject constructor(
         if (prefs.getBoolean(PREFS_KEY_IMPORTED, false)) return true
         return withContext(Dispatchers.IO) {
             try {
-                doImport()
-                prefs.edit().putBoolean(PREFS_KEY_IMPORTED, true).apply()
-                true
+                // ponytail: flag only when rows actually landed — missing/empty
+                // assets must retry next launch, not poison the flag
+                if (doImport()) {
+                    prefs.edit().putBoolean(PREFS_KEY_IMPORTED, true).apply()
+                    true
+                } else false
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "Parallel tradition import failed", e)
                 false
@@ -40,20 +43,22 @@ class ParallelTraditionImporter @Inject constructor(
         }
     }
 
-    private suspend fun doImport() {
+    private suspend fun doImport(): Boolean {
         if (parallelTraditionDao.count() > 0) {
             android.util.Log.i(TAG, "Parallel tradition data already present, skipping")
-            return
+            return true
         }
 
-        val json = loadAsset("locations/parallel_traditions.json") ?: return
+        val json = loadAsset("locations/parallel_traditions.json") ?: return false
         val entries = parseEntries(JSONArray(json))
         if (entries.isNotEmpty()) {
             entries.chunked(100).forEach { batch ->
                 parallelTraditionDao.insertAll(batch)
             }
             android.util.Log.i(TAG, "Imported ${entries.size} parallel traditions")
+            return true
         }
+        return false
     }
 
     private fun loadAsset(path: String): String? {
@@ -68,27 +73,31 @@ class ParallelTraditionImporter @Inject constructor(
     private fun parseEntries(arr: JSONArray): List<ParallelTraditionEntity> {
         val result = mutableListOf<ParallelTraditionEntity>()
         for (i in 0 until arr.length()) {
-            val obj = arr.getJSONObject(i)
-            result.add(
-                ParallelTraditionEntity(
-                    id = obj.getString("id"),
-                    // ponytail: absent/empty eventId → null (optString returns "" when missing)
-                    eventId = obj.optString("eventId").takeIf { it.isNotEmpty() },
-                    biblicalReference = obj.getString("biblicalReference"),
-                    biblicalBookId = obj.getInt("biblicalBookId"),
-                    biblicalChapter = obj.getInt("biblicalChapter"),
-                    culture = obj.getString("culture"),
-                    documentName = obj.getString("documentName"),
-                    title = obj.getString("title"),
-                    description = obj.getString("description"),
-                    similarities = obj.getString("similarities"),
-                    differences = obj.getString("differences"),
-                    scholarlyNote = obj.optString("scholarlyNote", null),
-                    dateRange = obj.optString("dateRange", null),
-                    category = obj.getString("category"),
-                    sortOrder = obj.optInt("sortOrder", 0)
+            try {
+                val obj = arr.getJSONObject(i)
+                result.add(
+                    ParallelTraditionEntity(
+                        id = obj.getString("id"),
+                        // ponytail: absent/empty eventId → null (optString returns "" when missing)
+                        eventId = obj.optString("eventId").takeIf { it.isNotEmpty() },
+                        biblicalReference = obj.getString("biblicalReference"),
+                        biblicalBookId = obj.getInt("biblicalBookId"),
+                        biblicalChapter = obj.getInt("biblicalChapter"),
+                        culture = obj.getString("culture"),
+                        documentName = obj.getString("documentName"),
+                        title = obj.getString("title"),
+                        description = obj.getString("description"),
+                        similarities = obj.getString("similarities"),
+                        differences = obj.getString("differences"),
+                        scholarlyNote = obj.optString("scholarlyNote", null),
+                        dateRange = obj.optString("dateRange", null),
+                        category = obj.getString("category"),
+                        sortOrder = obj.optInt("sortOrder", 0)
+                    )
                 )
-            )
+            } catch (_: Exception) {
+                android.util.Log.w(TAG, "Skipping malformed tradition row $i")
+            }
         }
         return result
     }

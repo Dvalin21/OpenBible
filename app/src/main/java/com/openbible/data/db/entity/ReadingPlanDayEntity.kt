@@ -7,9 +7,13 @@ import androidx.room.PrimaryKey
 
 /**
  * A single day within a reading plan, containing one or more readings.
- * Readings stored as JSON array of {bookId, chapterStart, chapterEnd} objects.
+ * Readings stored as JSON array of {bookId, chapter} objects (one row per
+ * chapter; a day with N chapters holds N objects).
  *
- * Example: "[{\"bookId\":1,\"chapterStart\":1,\"chapterEnd\":3}]"
+ * Example: "[{\"bookId\":1,\"chapter\":1},{\"bookId\":1,\"chapter\":2}]"
+ *
+ * (Older docs mention {bookId, chapterStart, chapterEnd}; the reader accepts
+ * both shapes, but the seeder only ever writes {bookId, chapter}.)
  *
  * JSON is simple, queryable via LIKE in emergencies, and avoids another join table.
  * The reading plan's day count is bounded (max 365), so each plan has at most 365 rows.
