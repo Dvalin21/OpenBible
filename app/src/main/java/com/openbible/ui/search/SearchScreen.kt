@@ -3,6 +3,7 @@ package com.openbible.ui.search
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
@@ -62,26 +63,29 @@ fun SearchScreen(
             shape = MaterialTheme.shapes.large
         )
 
-        // ── Translation Filter Chips ────────────────────────────
+        // ── Translation Filter Chips (scrollable — 10 translations never fit) ──
         if (translations.isNotEmpty()) {
-            Row(
+            LazyRow(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                    .padding(vertical = 4.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // "All" filter
-                FilterChip(
-                    selected = selectedTranslation.isEmpty(),
-                    onClick = { viewModel.searchAll() },
-                    label = { Text("All") }
-                )
+                item(key = "all") {
+                    FilterChip(
+                        selected = selectedTranslation.isEmpty(),
+                        onClick = { viewModel.searchAll() },
+                        label = { Text("All", maxLines = 1) }
+                    )
+                }
 
-                translations.forEach { t ->
+                items(translations, key = { it.id }) { t ->
                     FilterChip(
                         selected = selectedTranslation == t.id,
                         onClick = { viewModel.selectTranslation(t.id) },
-                        label = { Text(t.abbreviation) }
+                        label = { Text(t.abbreviation, maxLines = 1) }
                     )
                 }
             }

@@ -40,6 +40,10 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.Font
@@ -218,17 +222,29 @@ fun BibleScreen(
                     }
                 },
                 actions = {
-                    // Translation picker
-                    IconButton(onClick = { showTranslationPicker = true }) {
+                    // Translation picker (chevron = tappable)
+                    IconButton(
+                        onClick = { showTranslationPicker = true },
+                        modifier = Modifier.semantics {
+                            contentDescription = "Change translation, current ${selectedTranslationId.uppercase()}"
+                            role = Role.Button
+                        }
+                    ) {
                         Text(
-                            text = selectedTranslationId.uppercase(),
+                            text = "${selectedTranslationId.uppercase()} ▾",
                             style = MaterialTheme.typography.labelLarge
                         )
                     }
-                    // Chapter/Book selector
-                    IconButton(onClick = { showSelector = true }) {
+                    // Chapter/Book selector (chevron = tappable)
+                    IconButton(
+                        onClick = { showSelector = true },
+                        modifier = Modifier.semantics {
+                            contentDescription = "Choose book and chapter, current chapter $selectedChapter"
+                            role = Role.Button
+                        }
+                    ) {
                         Text(
-                            text = "$selectedChapter",
+                            text = "$selectedChapter ▾",
                             style = MaterialTheme.typography.labelLarge
                         )
                     }
@@ -240,7 +256,11 @@ fun BibleScreen(
                                 ttsController.speak(verseTexts)
                             }
                         },
-                        enabled = ttsState.isAvailable && verses.isNotEmpty()
+                        enabled = ttsState.isAvailable && verses.isNotEmpty(),
+                        modifier = Modifier.semantics {
+                            contentDescription = if (ttsState.isPlaying) "Stop reading aloud" else "Read chapter aloud"
+                            role = Role.Button
+                        }
                     ) {
                         Text(
                             text = if (ttsState.isPlaying) "\u266B" else "\u266A",
@@ -259,6 +279,10 @@ fun BibleScreen(
                                 } else {
                                     showComparePicker = true
                                 }
+                            },
+                            modifier = Modifier.semantics {
+                                contentDescription = if (isCompareMode) "Close comparison pane" else "Compare translations side by side"
+                                role = Role.Button
                             }
                         ) {
                             Text(
@@ -355,8 +379,11 @@ fun BibleScreen(
         ) {
             Box(
                 modifier = Modifier
+                    // ponytail: widthIn FIRST — fillMaxSize is tight and would
+                    // swallow a later cap (this was full-width on tablets).
+                    // ~72ch at 16sp; compare gets 2× for side-by-side panes.
+                    .widthIn(max = if (isCompareMode) 1200.dp else 800.dp)
                     .fillMaxSize()
-                    .widthIn(max = 800.dp)  // ponytail: ~72ch at 16sp. Adjust if needed.
                     .graphicsLayer {
                         translationX = swipeOffset.value
                     }
@@ -378,6 +405,8 @@ fun BibleScreen(
                             crossReferenceMap = crossReferenceMap,
                             onBookmarkToggle = { viewModel.toggleBookmark(it) },
                             onHighlightToggle = { id, color -> viewModel.toggleHighlight(id, color) },
+                            onAddNote = onAddNote,
+                            onStudyMode = { onStudyMode(selectedTranslationId, selectedBookId, selectedChapter) },
                             onStrongsClick = onStrongsClick,
                             speakingVerseIndex = ttsState.currentVerseIndex,
                             wordRange = ttsState.currentWordRange,
@@ -438,6 +467,8 @@ fun BibleScreen(
                             crossReferenceMap = crossReferenceMap,
                             onBookmarkToggle = { viewModel.toggleBookmark(it) },
                             onHighlightToggle = { id, color -> viewModel.toggleHighlight(id, color) },
+                            onAddNote = onAddNote,
+                            onStudyMode = { onStudyMode(selectedTranslationId, selectedBookId, selectedChapter) },
                             onStrongsClick = onStrongsClick,
                             speakingVerseIndex = ttsState.currentVerseIndex,
                             wordRange = ttsState.currentWordRange,
@@ -458,6 +489,8 @@ fun BibleScreen(
                     crossReferenceMap = crossReferenceMap,
                     onBookmarkToggle = { viewModel.toggleBookmark(it) },
                     onHighlightToggle = { id, color -> viewModel.toggleHighlight(id, color) },
+                    onAddNote = onAddNote,
+                    onStudyMode = { onStudyMode(selectedTranslationId, selectedBookId, selectedChapter) },
                     onStrongsClick = onStrongsClick,
                     speakingVerseIndex = ttsState.currentVerseIndex,
                     listState = primaryListState
@@ -551,6 +584,7 @@ private fun StandardBibleContent(
     onBookmarkToggle: (Long) -> Unit,
     onHighlightToggle: (Long, HighlightColor) -> Unit,
     onAddNote: (verseNumber: Int) -> Unit = {},
+    onStudyMode: () -> Unit = {},
     onStrongsClick: (verseId: Long) -> Unit = {},
     speakingVerseIndex: Int = -1,
     wordRange: IntRange? = null,
@@ -590,6 +624,7 @@ private fun StandardBibleContent(
                 onBookmarkToggle = { onBookmarkToggle(verse.id) },
                 onHighlightToggle = { color -> onHighlightToggle(verse.id, color) },
                 onAddNote = onAddNote,
+                onStudyMode = onStudyMode,
                 onStrongsClick = { onStrongsClick(verse.id) }
             )
         }
@@ -680,6 +715,7 @@ private fun VerseLine(
     onBookmarkToggle: () -> Unit = {},
     onHighlightToggle: (HighlightColor) -> Unit = {},
     onAddNote: (verseNumber: Int) -> Unit = {},
+    onStudyMode: () -> Unit = {},
     onStrongsClick: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -921,6 +957,15 @@ private fun VerseLine(
                 text = { Text("Add Note") },
                 onClick = {
                     onAddNote(verseNumber)
+                    showMenu = false
+                }
+            )
+
+            // Study Mode (Bible + notes for this chapter)
+            DropdownMenuItem(
+                text = { Text("Study this chapter") },
+                onClick = {
+                    onStudyMode()
                     showMenu = false
                 }
             )

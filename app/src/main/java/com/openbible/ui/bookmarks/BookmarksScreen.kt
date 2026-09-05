@@ -34,7 +34,7 @@ fun BookmarksScreen(
     ) {
         // Header
         Text(
-            text = "Bookmarks",
+            text = "Saved",
             style = MaterialTheme.typography.headlineLarge,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(start = 24.dp, top = 24.dp, end = 24.dp, bottom = 8.dp)

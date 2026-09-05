@@ -19,6 +19,7 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationRail
@@ -129,7 +130,7 @@ val bottomNavItems = listOf(
     BottomNavItem(Routes.HOME, "Home", Icons.Filled.Home, Icons.Outlined.Home),
     BottomNavItem(Routes.BIBLE, "Bible", Icons.Filled.Book, Icons.Outlined.Book),
     BottomNavItem(Routes.SEARCH, "Search", Icons.Filled.Search, Icons.Outlined.Search),
-    BottomNavItem(Routes.BOOKMARKS, "Bookmarks", Icons.Filled.Bookmarks, Icons.Outlined.Bookmarks),
+    BottomNavItem(Routes.BOOKMARKS, "Saved", Icons.Filled.Bookmarks, Icons.Outlined.Bookmarks),
     BottomNavItem(Routes.NOTES, "Notes", Icons.Filled.EditNote, Icons.Outlined.EditNote),
     BottomNavItem(Routes.SETTINGS, "Settings", Icons.Filled.Settings, Icons.Outlined.Settings)
 )
@@ -220,7 +221,10 @@ private fun NavContent(
                 onOpenReadingPlans = { navController.navigate(Routes.READING_PLANS) },
                 onOpenStrongs = { navController.navigate(Routes.STRONG_SEARCH) },
                 onOpenLocations = { navController.navigate(Routes.LOCATION_MAP) },
-                onOpenParallelTraditions = { navController.navigate(Routes.PARALLEL_TRADITIONS) }
+                onOpenParallelTraditions = { navController.navigate(Routes.PARALLEL_TRADITIONS) },
+                onOpenStudyMode = { t, b, c ->
+                    navController.navigate(Routes.bibleWithNotes(t, b, c))
+                }
             )
         }
 
@@ -483,7 +487,14 @@ private fun OpenBibleNavRail(navController: NavHostController) {
                         contentDescription = item.label
                     )
                 },
-                label = { Text(item.label) }
+                label = {
+                    Text(
+                        item.label,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
             )
         }
         Spacer(Modifier.weight(1f))
@@ -515,7 +526,14 @@ private fun OpenBibleBottomBar(navController: NavHostController) {
                         contentDescription = item.label
                     )
                 },
-                label = { Text(item.label) }
+                label = {
+                    Text(
+                        item.label,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
             )
         }
     }
