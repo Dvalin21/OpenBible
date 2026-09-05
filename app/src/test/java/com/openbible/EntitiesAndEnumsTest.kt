@@ -1,6 +1,9 @@
 package com.openbible
 
 import com.openbible.data.db.converter.Converters
+import com.openbible.data.db.dao.escapeLike
+import com.openbible.data.db.dao.normalizeForSearch
+import com.openbible.data.db.dao.normalizeStrongNumber
 import com.openbible.data.db.entity.*
 import com.openbible.data.model.HighlightColor
 import com.openbible.data.model.PenMode
@@ -399,5 +402,33 @@ class EntitiesAndEnumsTest {
         val link = VerseLocationLinkEntity(locationId = "jerusalem", verseId = 1001001L)
         assertEquals("jerusalem", link.locationId)
         assertEquals(1001001L, link.verseId)
+    }
+
+    @Test
+    fun normalizeForSearch_folds_accents() {
+        assertEquals("agape", normalizeForSearch("agápē"))
+        assertEquals("αγαπαω", normalizeForSearch("ἀγαπάω"))
+        assertEquals("love", normalizeForSearch("Love"))
+        assertEquals("yehovah", normalizeForSearch("Yᵉhôvâh"))
+        assertEquals("ahab", normalizeForSearch("ʼâhab"))
+    }
+
+    @Test
+    fun normalizeStrongNumber_canon() {
+        assertEquals("G26", normalizeStrongNumber("G26"))
+        assertEquals("G26", normalizeStrongNumber("g26"))
+        assertEquals("G26", normalizeStrongNumber("G026"))
+        assertEquals("G26", normalizeStrongNumber("g 026"))
+        assertEquals("H157", normalizeStrongNumber("H157"))
+        assertNull(normalizeStrongNumber("love"))
+        assertNull(normalizeStrongNumber("G"))
+        assertNull(normalizeStrongNumber(""))
+    }
+
+    @Test
+    fun escapeLike_escapes_wildcards() {
+        assertEquals("100\\%", escapeLike("100%"))
+        assertEquals("a\\_b", escapeLike("a_b"))
+        assertEquals("plain", escapeLike("plain"))
     }
 }

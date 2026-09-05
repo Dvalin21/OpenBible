@@ -10,6 +10,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -42,35 +45,31 @@ class StrongViewModel @Inject constructor(
      *  matches on definitions that make results seem random. */
     private val MIN_QUERY_LENGTH = 2
 
+    private var searchJob: Job? = null
+
     fun search(query: String) {
         if (query.isBlank()) {
+            searchJob?.cancel()
             _searchResults.value = emptyList()
             _isSearching.value = false
             return
         }
         val q = query.trim()
         if (q.length < MIN_QUERY_LENGTH) {
+            searchJob?.cancel()
             _searchResults.value = emptyList()
             _isSearching.value = false
             return
         }
         _isSearching.value = true
-        viewModelScope.launch {
-            // If query looks like a Strong's number (G1234, H5, etc),
-            // prefer prefix match on number — follows BlueLetterBible pattern
-            if (q.matches(Regex("^[GHgh]?\\d+$"))) {
-                val prefixResults = strongDao.searchStrongNumbersByPrefix(q)
-                if (prefixResults.isNotEmpty()) {
-                    _searchResults.value = prefixResults
-                    _isSearching.value = false
-                    return@launch
-                }
-            }
-            // Search across number, lemma, transliteration, AND definition.
-            // Definition is included intentionally — matches Blue Letter Bible
-            // behavior where searching "love" returns G26 (agape), H157 (ahab), etc.
-            // Min query length prevents single-char definition noise.
-            _searchResults.value = strongDao.searchStrongNumbers(q)
+        // ponytail: debounce like Bible search; drop stale completions so a
+        // slow query can't overwrite newer keystrokes
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            delay(300)
+            val results = strongDao.searchStrongNumbers(q)
+            ensureActive()
+            _searchResults.value = results
             _isSearching.value = false
         }
     }

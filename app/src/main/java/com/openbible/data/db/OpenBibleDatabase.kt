@@ -71,6 +71,9 @@ import com.openbible.data.db.entity.VerseStrongLinkEntity
  *            highlights(verseId,color), reading_progress(planId,dayNumber),
  *            note_verse_links(noteId,verseId)) so REPLACE/IGNORE inserts are
  *            real upserts/no-ops instead of silent duplicate accumulators.
+ * Version 15: ASCII-folded search columns on strong_numbers
+ *            (lemmaNorm/transliterationNorm) for accent-insensitive lookup.
+ *            Backfilled at runtime by StrongImporter (SQLite can't fold).
  */
 @Database(
     entities = [
@@ -96,7 +99,7 @@ import com.openbible.data.db.entity.VerseStrongLinkEntity
         LocationEventEntity::class,
         ParallelTraditionEntity::class
     ],
-    version = 14,
+    version = 15,
     exportSchema = true
 )@TypeConverters(Converters::class)
 abstract class OpenBibleDatabase : RoomDatabase() {
@@ -149,7 +152,7 @@ abstract class OpenBibleDatabase : RoomDatabase() {
             }
 
             // Explicit migrations — never destroy user data.
-            builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
+            builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15)
 
             return builder.build()
         }
@@ -540,6 +543,17 @@ abstract class OpenBibleDatabase : RoomDatabase() {
 
             db.execSQL("DELETE FROM note_verse_links WHERE id NOT IN (SELECT MIN(id) FROM note_verse_links GROUP BY noteId, verseId)")
             db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_note_verse_links_noteId_verseId ON note_verse_links(noteId, verseId)")
+        }
+
+        /**
+         * Version 14 → 15: accent-insensitive Strong's search columns.
+         * ADD COLUMN with NOT NULL DEFAULT is backward compatible and safe
+         * to re-run; StrongImporter backfills existing rows (SQLite has no
+         * diacritic folding, so it can't be done here).
+         */
+        private val MIGRATION_14_15 = Migration(14, 15) { db ->
+            db.execSQL("ALTER TABLE strong_numbers ADD COLUMN lemmaNorm TEXT NOT NULL DEFAULT ''")
+            db.execSQL("ALTER TABLE strong_numbers ADD COLUMN transliterationNorm TEXT NOT NULL DEFAULT ''")
         }
 
         private val MIGRATION_5_6 = Migration(5, 6) { db ->

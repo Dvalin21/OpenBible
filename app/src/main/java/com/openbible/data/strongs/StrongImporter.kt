@@ -2,6 +2,7 @@ package com.openbible.data.strongs
 
 import android.content.Context
 import com.openbible.data.db.dao.StrongDao
+import com.openbible.data.db.dao.normalizeForSearch
 import com.openbible.data.db.entity.StrongNumberEntity
 import com.openbible.data.db.entity.VerseStrongLinkEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -31,6 +32,9 @@ class StrongImporter @Inject constructor(
 
     /** Returns true if import was completed (now or previously). */
     suspend fun importIfNeeded(): Boolean {
+        // ponytail: norm backfill runs on every path — v15 added the columns
+        // after many installs (and prepop DBs already hold the rows)
+        backfillNormsIfNeeded()
         if (prefs.getBoolean(PREFS_KEY_IMPORTED, false)) return true
         return withContext(Dispatchers.IO) {
             try {
@@ -93,17 +97,50 @@ class StrongImporter @Inject constructor(
         }
     }
 
+    /**
+     * One-time backfill of the v15 search columns for rows that predate them
+     * (prepop DBs, older imports). 14K rows in 500-chunks; no-op when done.
+     */
+    private suspend fun backfillNormsIfNeeded() = withContext(Dispatchers.IO) {
+        try {
+            if (strongDao.countMissingNorms() == 0) return@withContext
+            // ponytail: always re-read from offset 0 — filled rows drop out of
+            // the query, so the set shrinks to empty with no bookkeeping
+            var done = 0
+            var rounds = 0
+            while (true) {
+                // ponytail: hard cap — a stuck page must not hot-loop the disk
+                if (++rounds > 100) break
+                val batch = strongDao.getMissingNormsBatch(limit = 500, offset = 0)
+                if (batch.isEmpty()) break
+                batch.forEach { e ->
+                    strongDao.updateNorms(
+                        e.number,
+                        normalizeForSearch(e.lemma),
+                        normalizeForSearch(e.transliteration)
+                    )
+                }
+                done += batch.size
+            }
+            android.util.Log.i(TAG, "Backfilled search norms for $done entries")
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "Norm backfill failed, search stays accent-sensitive")
+        }
+    }
+
     private fun parseStrongNumbers(arr: JSONArray): List<StrongNumberEntity> {
         val result = mutableListOf<StrongNumberEntity>()
         for (i in 0 until arr.length()) {
             try {
                 val obj = arr.getJSONObject(i)
                 val number = obj.getString("number")
+                val lemma = obj.optString("lemma", "")
+                val transliteration = obj.optString("transliteration", "")
                 result.add(
                     StrongNumberEntity(
                         number = number,
-                        lemma = obj.optString("lemma", ""),
-                        transliteration = obj.optString("transliteration", ""),
+                        lemma = lemma,
+                        transliteration = transliteration,
                         pronunciation = if (obj.has("pronunciation")) obj.getString("pronunciation") else null,
                         partOfSpeech = if (obj.has("partOfSpeech")) obj.getString("partOfSpeech") else null,
                         definition = obj.optString("definition", ""),
@@ -111,7 +148,9 @@ class StrongImporter @Inject constructor(
                         usageCount = obj.optInt("usageCount", 0),
                         // ponytail: G… = Greek, H… = Hebrew — don't mislabel gaps as Greek
                         language = obj.optString("language", null)
-                            ?: if (number.startsWith("H")) "Hebrew" else "Greek"
+                            ?: if (number.startsWith("H")) "Hebrew" else "Greek",
+                        lemmaNorm = normalizeForSearch(lemma),
+                        transliterationNorm = normalizeForSearch(transliteration)
                     )
                 )
             } catch (_: Exception) {

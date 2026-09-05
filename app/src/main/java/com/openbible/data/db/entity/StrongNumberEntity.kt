@@ -31,5 +31,9 @@ data class StrongNumberEntity(
     val definition: String,             // full definition / gloss
     val derivation: String?,            // etymology / derivation notes
     val usageCount: Int = 0,            // how many times this word appears
-    val language: String                // "Greek" or "Hebrew"
+    val language: String,               // "Greek" or "Hebrew"
+    // ponytail: ASCII-folded lowercase copies for accent-insensitive search
+    // ("agape" must match "agápē"). Filled by StrongImporter + v15 backfill.
+    val lemmaNorm: String = "",
+    val transliterationNorm: String = ""
 )
