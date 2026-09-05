@@ -22,23 +22,34 @@ the stable structural issues below.
 - Full findings history: REVIEW-FINDINGS.md; prior session log: OPENSOURCE_HANDOFF.md §15
 
 ## Next actions (in order)
-1. Tablet layout (from HANDOFF §15.3-15.4 — partially stale now):
-   - NavigationRail EXISTS in NavGraph.kt:463 (HANDOFF's "bottom-bar only" claim
-     is outdated) — verify it renders on a tablet AVD, don't rebuild it
-   - Still open: content max-width on reading screens (only 2 `widthIn` uses in
-     BibleScreen.kt); create 10"+ AVD and re-capture screenshots/tablet/
-2. Structural items from HANDOFF §11 that still apply (verified this session):
-   - exported=true receivers in AndroidManifest.xml (daily verse + widget) — no
-     permission gate (§11.7)
-   - runBlocking in DailyVerseReceiver — NOT found in current code; re-grep
-     before acting (§11.4 may be resolved)
-   - No CI (.github/workflows missing) (§11.9)
-   - Prepopulated DB lifecycle: try/catch assets check still present at
-     OpenBibleDatabase.kt:133-139; explicit migrations now exist for v1→v12 so
-     fallbackToDestructiveMigration is GONE (§11.1/§11.3 partially resolved)
-   - ReadingPlanSeeder JSON readings column (§11.6) — low priority
-   - VerseEntity.id stability contract undocumented (§11.2) — matters more now
-     that import_translations.py shares the id space
+1. Tablet layout — DONE 2026-09-05 (emulator-5556, 2960x1848 landscape, this tree):
+   - NavigationRail renders with all 6 labels (Home/Bible/Search/Saved/Notes/Settings);
+     tablet-only compare ⇔ button present in reader header
+   - Fixed defeated max-width: BibleScreen inner Box had
+     fillMaxSize().widthIn(800.dp) — tight fill swallows a later cap, reader ran
+     full-width (~200ch). Reordered to widthIn().fillMaxSize() (compare: 1200.dp),
+     matching BibleReaderScreen.kt:43. Verified centered ~72ch column on-device.
+   - Fresh shots: screenshots/phone/{home,bible,search}.png,
+     screenshots/tablet/{home,bible}.png
+2. Structural items from HANDOFF §11 — CLOSED 2026-09-05 (all verified, no images needed):
+   - exported=true receivers (§11.7): KEPT, contained by construction. Alarm uses
+     explicit immutable PendingIntents (DailyVerseScheduler.kt:38-67); the custom
+     SHOW_DAILY_VERSE action has no intent-filter so only our own explicit intent
+     fires it; onReceive ignores any other action; widget reads only public verse
+     text via immutable tap intents. Manifest comment already documents this.
+   - runBlocking in DailyVerseReceiver (§11.4): RESOLVED — zero hits repo-wide;
+     receiver uses goAsync + IO coroutine.
+   - No CI (§11.9): ADDED .github/workflows/android.yml (JDK 17, unit tests +
+     assembleDebug — the same tasks verified green locally).
+   - Prepopulated DB lifecycle (§11.1/§11.3): RESOLVED — try/catch assets probe +
+     createFromAsset with full explicit migration chain (now 1→15), no
+     fallbackToDestructiveMigration anywhere in the tree.
+   - ReadingPlanSeeder JSON readings (§11.6): RESOLVED by existing code — reader
+     accepts both shapes (ReadingPlanViewModel.kt:136-137), seeder writes the
+     documented one (ReadingPlanDayEntity KDoc).
+   - VerseEntity.id stability (§11.2): DOCUMENTED on the entity — append-only ids
+     (import_bible.py sequential from 1; import_translations.py MAX+1), six
+     verseId dependents listed; never regenerate.
 3. Pending decision: map tile source for English labels — LEFT AS-IS per
    the owner ("will live with it or find another avenue")
 
