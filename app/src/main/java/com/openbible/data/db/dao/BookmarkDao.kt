@@ -39,7 +39,11 @@ interface BookmarkDao {
     fun getCount(): Flow<Int>
 
     @Query("SELECT * FROM bookmarks WHERE verseId IN (:verseIds)")
-    fun observeBookmarksForVerses(verseIds: List<Long>): Flow<List<BookmarkEntity>>
+    fun observeBookmarksForVersesInternal(verseIds: List<Long>): Flow<List<BookmarkEntity>>
+
+    fun observeBookmarksForVerses(verseIds: List<Long>): Flow<List<BookmarkEntity>> =
+        if (verseIds.isEmpty()) kotlinx.coroutines.flow.flowOf(emptyList())
+        else observeBookmarksForVersesInternal(verseIds)
 
     // -- Joined queries for UI display --
 

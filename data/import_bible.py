@@ -359,9 +359,10 @@ def create_database(output_path: str):
     """)
 
     # ── Room version ───────────────────────────────────────────────
-    # Must match @Database(version = 9) in OpenBibleDatabase.kt
+    # Intermediate stamp only — data/fix_schema.py rebuilds against the newest
+    # exported Room schema JSON and stamps the FINAL user_version from it.
     cursor.execute("PRAGMA user_version = 10")
-    print("  PRAGMA user_version = 10")
+    print("  PRAGMA user_version = 10 (intermediate; fix_schema.py stamps final)")
 
     conn.close()
 
@@ -408,7 +409,7 @@ def create_tables(cursor):
         ),
         # ── Strong's Concordance ────────────────────────────────────
         "strong_numbers": (
-            "CREATE TABLE IF NOT EXISTS `strong_numbers` (`number` TEXT NOT NULL, `lemma` TEXT NOT NULL, `transliteration` TEXT NOT NULL, `pronunciation` TEXT, `part_of_speech` TEXT, `definition` TEXT NOT NULL, `derivation` TEXT, `usageCount` INTEGER NOT NULL, `language` TEXT NOT NULL, PRIMARY KEY(`number`))",
+            "CREATE TABLE IF NOT EXISTS `strong_numbers` (`number` TEXT NOT NULL, `lemma` TEXT NOT NULL, `transliteration` TEXT NOT NULL, `pronunciation` TEXT, `part_of_speech` TEXT, `definition` TEXT NOT NULL, `kjvDef` TEXT NOT NULL, `derivation` TEXT, `usageCount` INTEGER NOT NULL, `language` TEXT NOT NULL, PRIMARY KEY(`number`))",
             [
                 "CREATE INDEX IF NOT EXISTS `index_strong_numbers_lemma` ON `strong_numbers` (`lemma`)",
                 "CREATE INDEX IF NOT EXISTS `index_strong_numbers_transliteration` ON `strong_numbers` (`transliteration`)",
@@ -728,44 +729,13 @@ def import_redempti_json(cursor, tid: str, data: bytes, start_verse_id: int) -> 
 
 
 def insert_reading_plans(cursor):
-    """Insert prebuilt reading plans."""
-    cursor.execute(
-        "INSERT INTO reading_plans (name, description, durationDays, isPrebuilt) VALUES (?, ?, ?, 1)",
-        ("1-Year Bible", "Read the entire Bible in one year", 365))
-    plan_id = cursor.lastrowid
-    day = 1
-    for book_num, name, _, chapters, _ in BOOKS:
-        for ch in range(1, chapters + 1, 4):
-            if day > 365:
-                break
-            ch_end = min(ch + 3, chapters)
-            cursor.execute(
-                "INSERT INTO reading_plan_days (planId, dayNumber, title, readings) VALUES (?, ?, ?, ?)",
-                (plan_id, day, f"{name} {ch}-{ch_end}",
-                 json.dumps([{"bookId": book_num, "chapterStart": ch, "chapterEnd": ch_end}])))
-            day += 1
-        if day > 365:
-            break
+    """Reading plans are owned by the runtime seeder (ReadingPlanSeeder.kt).
 
-    cursor.execute(
-        "INSERT INTO reading_plans (name, description, durationDays, isPrebuilt) VALUES (?, ?, ?, 1)",
-        ("90-Day New Testament", "Read the New Testament in 90 days", 90))
-    nt_id = cursor.lastrowid
-    nt_day = 1
-    for book_num, name, _, chapters, test in BOOKS:
-        if test != "NEW":
-            continue
-        for ch in range(1, chapters + 1, 2):
-            if nt_day > 90:
-                break
-            ch_end = min(ch + 1, chapters)
-            cursor.execute(
-                "INSERT INTO reading_plan_days (planId, dayNumber, title, readings) VALUES (?, ?, ?, ?)",
-                (nt_id, nt_day, f"{name} {ch}-{ch_end}",
-                 json.dumps([{"bookId": book_num, "chapterStart": ch, "chapterEnd": ch_end}])))
-            nt_day += 1
-        if nt_day > 90:
-            break
+    A pipeline-stamped plan drifted from the seeder's shape (321 days stamped
+    365) and the seeder deleted any first-position plan it didn't own. So the
+    pipeline ships zero plans; first launch seeds exactly one correct plan.
+    """
+    return
 
 
 def import_cross_references(cursor):
@@ -865,6 +835,7 @@ def import_strongs_data(cursor):
                 entry.get("pron", entry.get("pronunciation", "")),
                 None,
                 entry.get("strongs_def", entry.get("definition", "")),
+                entry.get("kjv_def", ""),
                 entry.get("derivation", ""),
                 0,
                 lang,
@@ -873,13 +844,13 @@ def import_strongs_data(cursor):
                 cursor.executemany(
                     "INSERT OR IGNORE INTO strong_numbers "
                     "(number, lemma, transliteration, pronunciation, part_of_speech, "
-                    "definition, derivation, usageCount, language) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", batch)
+                    "definition, kjvDef, derivation, usageCount, language) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", batch)
                 batch = []
         if batch:
             cursor.executemany(
                 "INSERT OR IGNORE INTO strong_numbers "
                 "(number, lemma, transliteration, pronunciation, part_of_speech, "
-                "definition, derivation, usageCount, language) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", batch)
+                "definition, kjvDef, derivation, usageCount, language) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", batch)
         print(f"  {label}: {len(entries):,} entries")
 
     # ── Verse-Strong Links from interlinear data ───────────────

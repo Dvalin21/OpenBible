@@ -17,21 +17,27 @@ import org.json.JSONObject
 object ReadingPlanSeeder {
 
     private const val PLAN_NAME = "Bible in a Year"
+    /** Name used by the old prepop pipeline ("1-Year Bible", 321 days, not 365). */
+    private const val LEGACY_PLAN_NAME = "1-Year Bible"
     private const val PLAN_DESCRIPTION = "Read through the entire Bible in 365 days"
     private const val PLAN_DURATION = 365
 
     /**
-     * Seed if no plans exist. Safe to call repeatedly — checks first.
-     * A half-seeded plan from a crashed first launch is wiped and rebuilt
-     * (days/progress CASCADE off the plan row).
+     * Seed if no healthy plan exists. Safe to call repeatedly.
+     *
+     * Only a plan WE own (by name) is ever rebuilt, and only when it has no
+     * progress rows — other plans (user-created, legacy prepop) are never
+     * touched. A half-seeded own plan from a crashed first launch is wiped
+     * and rebuilt (days/progress CASCADE off the plan row).
      */
     suspend fun ensureSeeded(dao: ReadingPlanDao, bibleDao: BibleDao) {
-        // Check if already seeded
+        // Check if already seeded — match by name, never by position.
         val existing = dao.getAllPlansOnce()
-        if (existing.isNotEmpty()) {
-            val plan = existing.first()
-            if (dao.getPlanDayCount(plan.id) >= PLAN_DURATION) return
-            dao.deletePlanById(plan.id)
+        val ours = existing.firstOrNull { it.name == PLAN_NAME || it.name == LEGACY_PLAN_NAME }
+        if (ours != null) {
+            if (dao.getPlanDayCount(ours.id) >= PLAN_DURATION) return
+            // Partial own/legacy plan: rebuild only if nobody started it.
+            if (dao.getProgressOnce(ours.id).isNotEmpty()) return
         }
 
         // Get chapter counts per book (canonical order)
@@ -45,7 +51,10 @@ object ReadingPlanSeeder {
             }
         }
 
-        if (allChapters.isEmpty()) return  // no data yet
+        if (allChapters.isEmpty()) return  // no data yet — retry next launch, delete nothing
+
+        // Data is good: now it is safe to drop the partial own plan.
+        if (ours != null) dao.deletePlanById(ours.id)
 
         // Create the plan
         val planId = dao.insertPlan(

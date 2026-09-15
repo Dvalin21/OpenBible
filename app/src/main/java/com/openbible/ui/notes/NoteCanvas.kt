@@ -324,16 +324,23 @@ fun eraseElements(elements: List<NoteElement>, path: List<Offset>, eraserSize: F
                     }
                 }
                 if (!strokeTouched) { result.add(el); continue }
-                // Rebuild surviving runs as new strokes (transform baked in)
+                // Rebuild each contiguous surviving run as its own stroke
+                // (transform baked in). A gap starts a new run — chaining all
+                // segments into one stroke would redraw a line across the
+                // erased region.
                 var run = mutableListOf<Offset>()
                 fun flush() {
+                    // Single surviving points can't render (drawInk needs 2+)
                     if (run.size >= 2) {
                         result.add(el.copy(points = run.toList(), transform = ElementTransform()))
                     }
                     run = mutableListOf()
                 }
-                if (segments.isNotEmpty()) run.add(segments.first().first)
-                for ((a, b) in segments) { run.add(b) }
+                for ((a, b) in segments) {
+                    if (run.isEmpty()) run.add(a)
+                    else if (run.last() != a) { flush(); run.add(a) }
+                    run.add(b)
+                }
                 flush()
             }
             is ShapeElement -> {
@@ -434,7 +441,7 @@ private fun drawTemplate(
             var y = step
             while (y < size.height) { scope.drawLine(lineColor, Offset(0f, y), Offset(size.width, y), strokeWidth = 0.8f); y += step }
             var x = step
-            while (x < size.width) { scope.drawLine(lineColor, Offset(x, 0f), Offset(x, size.width), strokeWidth = 0.8f); x += step }
+            while (x < size.width) { scope.drawLine(lineColor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 0.8f); x += step }
         }
         PageTemplate.DOTTED -> {
             var y = step

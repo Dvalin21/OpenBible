@@ -133,10 +133,18 @@ def main(data_root: str, db_path: str) -> None:
                 batch,
             )
 
-        # Update chapter counts on the books rows from actual data.
+        # Update chapter counts AND verse totals from actual data. COALESCE:
+        # a book with zero imported rows must not NULL a NOT NULL column.
         cur.execute(
-            """UPDATE books SET chapterCount =
-               (SELECT MAX(chapter) FROM verses WHERE verses.bookId = books.id
+            """UPDATE books SET chapterCount = COALESCE(
+                (SELECT MAX(chapter) FROM verses WHERE verses.bookId = books.id
+                 AND verses.translationId = books.translationId), 0)
+                WHERE translationId = ?""",
+            (ver,),
+        )
+        cur.execute(
+            """UPDATE books SET totalVerses =
+               (SELECT COUNT(*) FROM verses WHERE verses.bookId = books.id
                 AND verses.translationId = books.translationId)
                WHERE translationId = ?""",
             (ver,),

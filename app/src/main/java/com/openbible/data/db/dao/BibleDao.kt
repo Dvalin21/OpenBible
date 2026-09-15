@@ -77,26 +77,32 @@ interface BibleDao {
     @RawQuery(observedEntities = [VerseEntity::class])
     suspend fun searchFtsWithBookRaw(query: SupportSQLiteQuery): List<SearchResult>
 
-    /** Search verses in a single translation using FTS5 full-text search. */
+    /** Search verses in a single translation.
+     *  ponytail: plain LIKE, not FTS5. Two reasons, both verified on-device:
+     *  (1) FTS5 MATCH needs the real table name, never an alias;
+     *  (2) framework SQLite ships WITHOUT the FTS5 module
+     *  ("no such module: fts5" on prepare). LIKE on 31K rows is milliseconds —
+     *  no native SQLite dep, no second code path. Rank: prefix hits first. */
     suspend fun searchVerses(
         translationId: String,
         query: String,
         limit: Int = 100
     ): List<VerseEntity> {
         if (translationId !in FTS_TRANSLATIONS) return emptyList()
-        val q = sanitizeFtsQuery(query)
+        val q = escapeLike(query.trim())
         if (q.isEmpty()) return emptyList()
         val sql = """
             SELECT v.* FROM verses v
-            INNER JOIN verses_fts_${translationId} fts ON v.id = fts.rowid
-            WHERE fts MATCH ?
-            ORDER BY fts.rank
+            WHERE v.translationId = ?
+              AND v.text LIKE '%' || ? || '%' ESCAPE '\'
+            ORDER BY CASE WHEN v.text LIKE ? || '%' ESCAPE '\' THEN 0 ELSE 1 END,
+                     v.bookId, v.chapter, v.verse
             LIMIT ?
         """.trimIndent()
-        return searchFtsRaw(SimpleSQLiteQuery(sql, arrayOf(q, limit)))
+        return searchFtsRaw(SimpleSQLiteQuery(sql, arrayOf(translationId, q, q, limit)))
     }
 
-    /** Search verses in a single book using FTS5. */
+    /** Search verses in a single book. See [searchVerses] for why LIKE. */
     suspend fun searchVersesInBook(
         translationId: String,
         bookId: Int,
@@ -104,26 +110,28 @@ interface BibleDao {
         limit: Int = 50
     ): List<VerseEntity> {
         if (translationId !in FTS_TRANSLATIONS) return emptyList()
-        val q = sanitizeFtsQuery(query)
+        val q = escapeLike(query.trim())
         if (q.isEmpty()) return emptyList()
         val sql = """
             SELECT v.* FROM verses v
-            INNER JOIN verses_fts_${translationId} fts ON v.id = fts.rowid
-            WHERE fts MATCH ? AND v.bookId = ?
-            ORDER BY fts.rank
+            WHERE v.translationId = ?
+              AND v.bookId = ?
+              AND v.text LIKE '%' || ? || '%' ESCAPE '\'
+            ORDER BY CASE WHEN v.text LIKE ? || '%' ESCAPE '\' THEN 0 ELSE 1 END,
+                     v.chapter, v.verse
             LIMIT ?
         """.trimIndent()
-        return searchFtsRaw(SimpleSQLiteQuery(sql, arrayOf(q, bookId, limit)))
+        return searchFtsRaw(SimpleSQLiteQuery(sql, arrayOf(translationId, bookId, q, q, limit)))
     }
 
-    /** Search with book abbreviation and verse info using FTS5. */
+    /** Search with book abbreviation and verse info. See [searchVerses] for why LIKE. */
     suspend fun searchVersesWithBook(
         translationId: String,
         query: String,
         limit: Int = 100
     ): List<SearchResult> {
         if (translationId !in FTS_TRANSLATIONS) return emptyList()
-        val q = sanitizeFtsQuery(query)
+        val q = escapeLike(query.trim())
         if (q.isEmpty()) return emptyList()
         val sql = """
             SELECT v.id AS verseId, v.translationId, v.bookId,
@@ -131,31 +139,31 @@ interface BibleDao {
                    v.chapter, v.verse, v.text
             FROM verses v
             INNER JOIN books b ON b.id = v.bookId AND b.translationId = v.translationId
-            INNER JOIN verses_fts_${translationId} fts ON v.id = fts.rowid
-            WHERE fts MATCH ?
-            ORDER BY fts.rank
+            WHERE v.translationId = ?
+              AND v.text LIKE '%' || ? || '%' ESCAPE '\'
+            ORDER BY CASE WHEN v.text LIKE ? || '%' ESCAPE '\' THEN 0 ELSE 1 END,
+                     v.bookId, v.chapter, v.verse
             LIMIT ?
         """.trimIndent()
-        return searchFtsWithBookRaw(SimpleSQLiteQuery(sql, arrayOf(q, limit)))
+        return searchFtsWithBookRaw(SimpleSQLiteQuery(sql, arrayOf(translationId, q, q, limit)))
     }
 
-    /** Search all bundled translations using FTS5 via UNION ALL. */
+    /** Search all bundled translations via UNION ALL. See [searchVerses] for why LIKE. */
     suspend fun searchAllTranslations(
         query: String,
         limit: Int = 100
     ): List<SearchResult> {
-        val q = sanitizeFtsQuery(query)
+        val q = escapeLike(query.trim())
         if (q.isEmpty()) return emptyList()
-        val parts = FTS_TRANSLATIONS.mapIndexed { i, t ->
-            val param = "?"  // each translation gets its own ? bind
+        val parts = FTS_TRANSLATIONS.map { t ->
             """
             SELECT v.id AS verseId, v.translationId, v.bookId,
                    b.abbreviation AS bookAbbreviation,
                    v.chapter, v.verse, v.text
             FROM verses v
             INNER JOIN books b ON b.id = v.bookId AND b.translationId = v.translationId
-            INNER JOIN verses_fts_${t} fts ON v.id = fts.rowid
-            WHERE fts MATCH ?
+            WHERE v.translationId = '$t'
+              AND v.text LIKE '%' || ? || '%' ESCAPE '\'
             """.trimIndent()
         }
         val sql = """
@@ -163,7 +171,7 @@ interface BibleDao {
             ORDER BY translationId, bookId, chapter, verse
             LIMIT ?
         """.trimIndent()
-        // bind the query arg for each UNION branch + limit at end
+        // bind the escaped query for each UNION branch + limit at end
         val args = arrayOfNulls<Any>(FTS_TRANSLATIONS.size + 1)
         for (i in FTS_TRANSLATIONS.indices) args[i] = q
         args[FTS_TRANSLATIONS.size] = limit
@@ -218,15 +226,4 @@ interface BibleDao {
         verses: List<Int>
     ): List<VerseEntity> =
         if (verses.isEmpty()) emptyList() else getVersesByRefsInternal(translationId, bookId, chapter, verses)
-
-    companion object {
-        /** Strip FTS5 special characters from a user query string.
-         *  FTS5 MATCH syntax uses: " * ( ) + - | ^ ! : ~ < > = [ ] { }
-         *  We remove these so the input becomes space-separated words (FTS5 implicit AND). */
-        fun sanitizeFtsQuery(query: String): String {
-            return query.replace(Regex("""['"*():+\-|^!<>=~\[\]{}]"""), " ")
-                .replace(Regex("\\s+"), " ")
-                .trim()
-        }
-    }
 }

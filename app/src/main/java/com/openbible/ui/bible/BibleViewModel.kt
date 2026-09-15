@@ -305,17 +305,14 @@ class BibleViewModel(application: Application) : AndroidViewModel(application) {
     // ── Default Translation from Preferences ────────────────────
 
     init {
-        // ponytail: apply prefs ONCE at init. Continuous collectors fought with
-        // explicit route navigation — lastReadingPosition re-emits on every
-        // recordReading() and would clobber a just-selected book/chapter.
-        viewModelScope.launch {
-            val default = preferences.defaultTranslation.first()
-            _selectedTranslationId.value = default
-        }
+        // ponytail: ONE read, deterministic order — last-read position wins,
+        // falling back to the default translation. Two racing collectors both
+        // wrote _selectedTranslationId and the winner was scheduling luck.
         viewModelScope.launch {
             val last = preferences.lastReadingPosition.first()
             val (translationId, bookId, chapter) = last
-            translationId?.let { _selectedTranslationId.value = it }
+            _selectedTranslationId.value =
+                translationId ?: preferences.defaultTranslation.first()
             _selectedBookId.value = bookId
             _selectedChapter.value = chapter
         }

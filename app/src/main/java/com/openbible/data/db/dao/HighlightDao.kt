@@ -15,10 +15,17 @@ interface HighlightDao {
     fun getHighlightsForVerse(verseId: Long): Flow<List<HighlightEntity>>
 
     @Query("SELECT * FROM highlights WHERE verseId IN (:verseIds)")
-    suspend fun getHighlightsForVerses(verseIds: List<Long>): List<HighlightEntity>
+    suspend fun getHighlightsForVersesInternal(verseIds: List<Long>): List<HighlightEntity>
+
+    suspend fun getHighlightsForVerses(verseIds: List<Long>): List<HighlightEntity> =
+        if (verseIds.isEmpty()) emptyList() else getHighlightsForVersesInternal(verseIds)
 
     @Query("SELECT * FROM highlights WHERE verseId IN (:verseIds)")
-    fun observeHighlightsForVerses(verseIds: List<Long>): Flow<List<HighlightEntity>>
+    fun observeHighlightsForVersesInternal(verseIds: List<Long>): Flow<List<HighlightEntity>>
+
+    fun observeHighlightsForVerses(verseIds: List<Long>): Flow<List<HighlightEntity>> =
+        if (verseIds.isEmpty()) kotlinx.coroutines.flow.flowOf(emptyList())
+        else observeHighlightsForVersesInternal(verseIds)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(highlight: HighlightEntity): Long

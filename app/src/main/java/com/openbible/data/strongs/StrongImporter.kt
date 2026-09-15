@@ -35,6 +35,10 @@ class StrongImporter @Inject constructor(
         // ponytail: norm backfill runs on every path — v15 added the columns
         // after many installs (and prepop DBs already hold the rows)
         backfillNormsIfNeeded()
+        // ponytail: kjvDef backfill is one-shot by flag, not by row count —
+        // rows with no KJV gloss keep '' forever, so a count gate would
+        // re-run 14K no-op UPDATEs on every cold start
+        backfillKjvDefIfNeeded()
         if (prefs.getBoolean(PREFS_KEY_IMPORTED, false)) return true
         return withContext(Dispatchers.IO) {
             try {
@@ -128,6 +132,38 @@ class StrongImporter @Inject constructor(
         }
     }
 
+    /**
+     * One-shot backfill of the v16 KJV-gloss column for rows that predate it
+     * (prepop DBs, older imports). Source is the bundled JSON, so it works
+     * fully offline. Flag-gated: rows without a gloss keep '' by design.
+     */
+    private suspend fun backfillKjvDefIfNeeded() = withContext(Dispatchers.IO) {
+        try {
+            if (prefs.getBoolean(PREFS_KEY_KJV_BACKFILLED, false)) return@withContext
+            val raw = loadAsset("strongs/strong_numbers.json") ?: return@withContext
+            val arr = JSONArray(raw)
+            var done = 0
+            val batch = mutableListOf<Pair<String, String>>()
+            suspend fun flush() {
+                batch.forEach { (number, kjv) -> strongDao.updateKjvDef(number, kjv) }
+                done += batch.size
+                batch.clear()
+            }
+            for (i in 0 until arr.length()) {
+                val obj = arr.getJSONObject(i)
+                val kjv = obj.optString("kjv_def", "")
+                if (kjv.isEmpty()) continue
+                batch.add(obj.getString("number") to kjv)
+                if (batch.size >= 500) flush()
+            }
+            if (batch.isNotEmpty()) flush()
+            prefs.edit().putBoolean(PREFS_KEY_KJV_BACKFILLED, true).apply()
+            android.util.Log.i(TAG, "Backfilled KJV glosses for $done entries")
+        } catch (e: Exception) {
+            android.util.Log.w(TAG, "KJV gloss backfill failed, English-word search stays definition-only")
+        }
+    }
+
     private fun parseStrongNumbers(arr: JSONArray): List<StrongNumberEntity> {
         val result = mutableListOf<StrongNumberEntity>()
         for (i in 0 until arr.length()) {
@@ -144,6 +180,7 @@ class StrongImporter @Inject constructor(
                         pronunciation = if (obj.has("pronunciation")) obj.getString("pronunciation") else null,
                         partOfSpeech = if (obj.has("partOfSpeech")) obj.getString("partOfSpeech") else null,
                         definition = obj.optString("definition", ""),
+                        kjvDef = obj.optString("kjv_def", ""),
                         derivation = if (obj.has("derivation")) obj.getString("derivation") else null,
                         usageCount = obj.optInt("usageCount", 0),
                         // ponytail: G… = Greek, H… = Hebrew — don't mislabel gaps as Greek
@@ -185,5 +222,6 @@ class StrongImporter @Inject constructor(
         private const val TAG = "StrongImporter"
         private const val PREFS_NAME = "strongs_import"
         private const val PREFS_KEY_IMPORTED = "imported"
+        private const val PREFS_KEY_KJV_BACKFILLED = "kjv_backfilled"
     }
 }

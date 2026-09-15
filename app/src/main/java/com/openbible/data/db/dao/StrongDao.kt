@@ -81,6 +81,7 @@ interface StrongDao {
            OR lemmaNorm LIKE ('%' || :norm || '%') ESCAPE '\'
            OR transliterationNorm LIKE ('%' || :norm || '%') ESCAPE '\'
            OR definition LIKE ('%' || :query || '%') ESCAPE '\' COLLATE NOCASE
+           OR kjvDef LIKE ('%' || :query || '%') ESCAPE '\' COLLATE NOCASE
         ORDER BY
             CASE WHEN number = :exact COLLATE NOCASE THEN 0
                  WHEN number LIKE (:exact || '%') COLLATE NOCASE THEN 1
@@ -98,8 +99,10 @@ interface StrongDao {
     ): List<StrongNumberEntity>
 
     /**
-     * Search by number ("G26", "g 026"), word ("love", "agape") or definition.
-     * Accent-insensitive via the Norm columns; exact number always ranks first.
+     * Search by number ("G26", "g 026"), word ("love", "agape", "charity")
+     * or definition. "charity" hits via the KJV gloss (kjvDef) — definitions
+     * alone don't contain every English rendering. Accent-insensitive via
+     * the Norm columns; exact number always ranks first.
      */
     suspend fun searchStrongNumbers(query: String, limit: Int = 50): List<StrongNumberEntity> {
         val exact = escapeLike(normalizeStrongNumber(query) ?: query.trim())
@@ -134,6 +137,9 @@ interface StrongDao {
 
     @Query("UPDATE strong_numbers SET lemmaNorm = :lemmaNorm, transliterationNorm = :transliterationNorm WHERE number = :number")
     suspend fun updateNorms(number: String, lemmaNorm: String, transliterationNorm: String)
+
+    @Query("UPDATE strong_numbers SET kjvDef = :kjvDef WHERE number = :number")
+    suspend fun updateKjvDef(number: String, kjvDef: String)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAllStrongNumbers(numbers: List<StrongNumberEntity>)

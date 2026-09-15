@@ -127,7 +127,7 @@ class ViewModelTest {
 
         // First populate with results
         coEvery { dao.searchStrongNumbers("love") } returns listOf(
-            StrongNumberEntity("G26", "ἀγάπη", "agapē", null, null, "love", null, 0, "Greek")
+            StrongNumberEntity("G26", "ἀγάπη", "agapē", null, null, "love", "(feast of) charity(-ably), dear, love", null, 0, "Greek")
         )
         vm.search("love")
         testDispatcher.scheduler.advanceUntilIdle()
@@ -155,7 +155,7 @@ class ViewModelTest {
     fun `StrongViewModel search toggles isSearching`() {
         val dao = mockk<StrongDao>()
         coEvery { dao.searchStrongNumbers("word") } returns listOf(
-            StrongNumberEntity("H1697", "דָּבָר", "dabar", null, "noun", "word", null, 0, "Hebrew")
+            StrongNumberEntity("H1697", "דָּבָר", "dabar", null, "noun", "word", "", null, 0, "Hebrew")
         )
 
         val vm = StrongViewModel(dao, mockk())
@@ -177,7 +177,7 @@ class ViewModelTest {
         val dao = mockk<StrongDao>()
         val entity = StrongNumberEntity(
             "G3056", "λόγος", "logos", "log'-os", "noun",
-            "a word, speech, divine utterance", "from G3004", 330, "Greek"
+            "a word, speech, divine utterance", "", "from G3004", 330, "Greek"
         )
         val links = listOf(
             VerseLinkWithReference(1001001L, "G3056", 0, "Λόγος", "Logos", "kjv", 1, 1, 1, "In the beginning was the Word", "Gen"),
@@ -216,8 +216,8 @@ class ViewModelTest {
         val dao = mockk<StrongDao>()
         val verseId = 1001001L
         val strongNumbers = listOf(
-            StrongNumberEntity("G3056", "λόγος", "logos", null, "noun", "word", null, 0, "Greek"),
-            StrongNumberEntity("G3588", "ὁ", "ho", null, "article", "the", null, 0, "Greek")
+            StrongNumberEntity("G3056", "λόγος", "logos", null, "noun", "word", "", null, 0, "Greek"),
+            StrongNumberEntity("G3588", "ὁ", "ho", null, "article", "the", "", null, 0, "Greek")
         )
         val links = listOf(
             VerseStrongLinkEntity(verseId, "G3056", 0, "Λόγος", "Logos"),

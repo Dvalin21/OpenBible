@@ -342,6 +342,23 @@ class EntitiesAndEnumsTest {
     }
 
     @Test
+    fun strongNumberEntity_kjvDef_defaultsEmpty_searchable() {
+        val s = StrongNumberEntity(
+            number = "G26", lemma = "ἀγάπη", transliteration = "agápē",
+            pronunciation = "", partOfSpeech = null,
+            definition = " love, i.e. affection or benevolence",
+            kjvDef = "(feast of) charity(-ably), dear, love",
+            derivation = "from G25 (ἀγαπάω);", usageCount = 0, language = "Greek"
+        )
+        assertTrue(s.kjvDef.contains("charity"))
+        assertEquals("", StrongNumberEntity(
+            number = "G1", lemma = "a", transliteration = "a",
+            pronunciation = null, partOfSpeech = null,
+            definition = "d", derivation = null, usageCount = 0, language = "Greek"
+        ).kjvDef)
+    }
+
+    @Test
     fun strongNumberEntity_construct_hebrew() {
         val s = StrongNumberEntity(
             number = "H7225", lemma = "רֵאשִׁית", transliteration = "reshith",

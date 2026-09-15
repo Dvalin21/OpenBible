@@ -74,6 +74,9 @@ import com.openbible.data.db.entity.VerseStrongLinkEntity
  * Version 15: ASCII-folded search columns on strong_numbers
  *            (lemmaNorm/transliterationNorm) for accent-insensitive lookup.
  *            Backfilled at runtime by StrongImporter (SQLite can't fold).
+ * Version 16: KJV-gloss column on strong_numbers (kjvDef) so every English
+ *            Bible word resolves to its number ("charity" → G26). Searched
+ *            by StrongDao; backfilled at runtime from the bundled JSON.
  */
 @Database(
     entities = [
@@ -99,7 +102,7 @@ import com.openbible.data.db.entity.VerseStrongLinkEntity
         LocationEventEntity::class,
         ParallelTraditionEntity::class
     ],
-    version = 15,
+    version = 16,
     exportSchema = true
 )@TypeConverters(Converters::class)
 abstract class OpenBibleDatabase : RoomDatabase() {
@@ -152,7 +155,7 @@ abstract class OpenBibleDatabase : RoomDatabase() {
             }
 
             // Explicit migrations — never destroy user data.
-            builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15)
+            builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
 
             return builder.build()
         }
@@ -554,6 +557,15 @@ abstract class OpenBibleDatabase : RoomDatabase() {
         private val MIGRATION_14_15 = Migration(14, 15) { db ->
             db.execSQL("ALTER TABLE strong_numbers ADD COLUMN lemmaNorm TEXT NOT NULL DEFAULT ''")
             db.execSQL("ALTER TABLE strong_numbers ADD COLUMN transliterationNorm TEXT NOT NULL DEFAULT ''")
+        }
+
+        /**
+         * KJV-gloss column for English→number search. ADD COLUMN with NOT NULL
+         * DEFAULT is backward compatible and safe to re-run; StrongImporter
+         * backfills existing rows from the bundled JSON.
+         */
+        private val MIGRATION_15_16 = Migration(15, 16) { db ->
+            db.execSQL("ALTER TABLE strong_numbers ADD COLUMN kjvDef TEXT NOT NULL DEFAULT ''")
         }
 
         private val MIGRATION_5_6 = Migration(5, 6) { db ->

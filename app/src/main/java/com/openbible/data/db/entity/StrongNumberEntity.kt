@@ -29,6 +29,9 @@ data class StrongNumberEntity(
     @ColumnInfo(name = "part_of_speech")
     val partOfSpeech: String?,          // e.g. "noun", "verb", "preposition"
     val definition: String,             // full definition / gloss
+    /** KJV gloss ("(feast of) charity(-ably), dear, love"). The ONLY bridge
+     *  from an English Bible word to its number — search matches it. */
+    val kjvDef: String = "",
     val derivation: String?,            // etymology / derivation notes
     val usageCount: Int = 0,            // how many times this word appears
     val language: String,               // "Greek" or "Hebrew"

@@ -82,10 +82,14 @@ def convert_lexicon_entry(key: str, entry: dict, language: str) -> dict:
       "pronunciation": "awb",
       "partOfSpeech": null,
       "definition": "father",
+      "kjv_def": "father, chief, ...",
       "derivation": "from primitive root",
       "usageCount": 0,
       "language": "Hebrew"
     }
+    kjv_def is the KJV gloss — the English renderings ("charity", "firmament").
+    It is the ONLY bridge from an English Bible word to its Strong's number;
+    dropping it makes words like "charity" unsearchable.
     """
     # Parse Strong's number - ensure 4-digit format with leading zeros
     raw_num = entry.get("strongs", key)
@@ -115,6 +119,7 @@ def convert_lexicon_entry(key: str, entry: dict, language: str) -> dict:
         "pronunciation": entry.get("pron", entry.get("pronunciation", "")),
         "partOfSpeech": None,  # Not in kjvstudy data, would need morph data
         "definition": definition,
+        "kjv_def": entry.get("kjv_def", ""),
         "derivation": entry.get("derivation", ""),
         "usageCount": 0,  # Not in kjvstudy data
         "language": language

@@ -292,13 +292,15 @@ class NoteEditorViewModel @Inject constructor(
 
     // ── Save ──
 
-    /** Save the note and return the note ID. Suspend — call from a coroutine. */
+    /** Save the note and return the note ID. Suspend — call from a coroutine.
+     *  The created id is written back into state: without it a second save()
+     *  takes the update path with a null note and silently saves nothing. */
     suspend fun save(): Long? {
         val s = _state.value
         if (s.pages.isEmpty()) return null
         _state.update { it.copy(isSaving = true) }
-        return try {
-            withContext(Dispatchers.IO) {
+        try {
+            return withContext(Dispatchers.IO) {
                 val pagesJson = pagesToJson(s.pages)
                 // Mirror page 0 text into contentText for list previews / legacy readers.
                 val previewText = s.pages.first().text.takeIf { it.isNotBlank() }
@@ -314,6 +316,26 @@ class NoteEditorViewModel @Inject constructor(
                         pagesJson = pagesJson,
                         isFavorite = s.isFavorite
                     )
+                    // ponytail: adopt the row so retry/second-save updates it
+                    _state.update { st ->
+                        st.copy(
+                            isNew = false,
+                            note = com.openbible.data.db.entity.NoteEntity(
+                                id = noteId,
+                                notebookId = s.activeNotebookId,
+                                title = s.title.ifBlank { "Untitled" },
+                                contentText = previewText,
+                                penStrokes = null,
+                                penMode = s.penMode,
+                                createdAt = System.currentTimeMillis(),
+                                updatedAt = System.currentTimeMillis(),
+                                tags = s.tags.joinToString(","),
+                                color = null,
+                                pagesJson = pagesJson,
+                                isFavorite = s.isFavorite
+                            )
+                        )
+                    }
                 } else {
                     s.note?.let { note ->
                         noteRepository.updateNote(
@@ -336,10 +358,26 @@ class NoteEditorViewModel @Inject constructor(
                     for (v in s.linkedVerseIds) if (v !in existing) noteRepository.linkVerse(id, v)
                     for (v in existing) if (v !in s.linkedVerseIds) noteRepository.unlinkVerse(id, v)
                 }
+                // ponytail: keep the adopted row's snapshot fresh for the next save
+                if (!s.isNew) {
+                    _state.update { st ->
+                        st.copy(note = st.note?.copy(
+                            title = s.title.ifBlank { "Untitled" },
+                            contentText = previewText,
+                            penMode = s.penMode,
+                            notebookId = s.activeNotebookId,
+                            tags = s.tags.joinToString(","),
+                            isFavorite = s.isFavorite,
+                            pagesJson = pagesJson
+                        ))
+                    }
+                }
                 noteId
             }
         } finally {
-            _state.update { it.copy(isSaving = false, isNew = false) }
+            // ponytail: isNew flips only on success above — a failed first save
+            // must stay new so retry re-takes the create path
+            _state.update { it.copy(isSaving = false) }
         }
     }
 

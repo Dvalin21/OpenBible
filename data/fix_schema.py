@@ -103,16 +103,33 @@ def main():
 
         # Get column names (exclude rowid for INTEGER PRIMARY KEY tables).
         # ponytail: columns missing in the old DB are omitted from the INSERT
-        # so the new table's DEFAULTs apply (e.g. isFavorite → 0).
-        col_names = [d[1] for d in new_cursor.execute(f"PRAGMA table_info(\"{table_name}\")").fetchall()]
+        # so the new table's DEFAULTs apply (e.g. isFavorite → 0) — EXCEPT
+        # NOT NULL columns without a DEFAULT (Room drops ADD COLUMN defaults
+        # from the canonical createSql, e.g. strong_numbers.lemmaNorm): those
+        # are backfilled by affinity (''/0) or the copy dies on NOT NULL.
+        new_info = new_cursor.execute(f"PRAGMA table_info(\"{table_name}\")").fetchall()
+        col_names = [d[1] for d in new_info]
+        notnull_nodefault = {
+            d[1] for d in new_info if d[3] and d[4] is None
+        }
         old_cols = {d[1] for d in old_cursor.execute(f"PRAGMA table_info(\"{table_name}\")").fetchall()}
         insert_cols = [c for c in col_names if c in old_cols]
-        placeholders = ", ".join(["?" for _ in insert_cols])
-        col_list = ", ".join(f"\"{c}\"" for c in insert_cols)
+        fill_cols = [c for c in col_names if c not in old_cols and c in notnull_nodefault]
+        placeholders = ", ".join(["?" for _ in insert_cols + fill_cols])
+        col_list = ", ".join(f"\"{c}\"" for c in insert_cols + fill_cols)
 
         batch = []
         for row in rows:
-            batch.append(tuple(row[c] for c in insert_cols))
+            vals = tuple(row[c] for c in insert_cols)
+            if fill_cols:
+                # affinity guess from the new table's declared type
+                types = {d[1]: (d[2] or "") for d in new_info}
+                vals += tuple(
+                    0 if "INT" in types[c].upper() or "REAL" in types[c].upper()
+                      or "FLOA" in types[c].upper() or "DOUB" in types[c].upper()
+                    else "" for c in fill_cols
+                )
+            batch.append(vals)
             if len(batch) >= 500:
                 new_cursor.executemany(
                     f"INSERT INTO \"{table_name}\" ({col_list}) VALUES ({placeholders})", batch)

@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -91,7 +92,7 @@ private fun VerseLine(
     isExpanded: Boolean = false,
     onToggleRefs: () -> Unit = {}
 ) {
-    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val verseColor = if (isRedLetter) Color(RedLetterData.redLetterColor(isDark))
                      else MaterialTheme.colorScheme.onSurface
     Column {

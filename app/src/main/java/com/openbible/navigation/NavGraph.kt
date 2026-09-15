@@ -473,12 +473,20 @@ private fun OpenBibleNavRail(navController: NavHostController) {
             NavigationRailItem(
                 selected = selected,
                 onClick = {
-                    navController.navigate(item.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
+                    if (item.route == navController.graph.startDestinationRoute) {
+                        // ponytail: plain pop for the start target — popUpTo +
+                        // saveState + restoreState silently resurrects a stashed
+                        // screen instead of landing home (repro: plans → Home
+                        // left reading_plans on top, verified via back-stack log)
+                        navController.popBackStack(item.route, inclusive = false)
+                    } else {
+                        navController.navigate(item.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
                         }
-                        launchSingleTop = true
-                        restoreState = true
                     }
                 },
                 icon = {
@@ -512,12 +520,18 @@ private fun OpenBibleBottomBar(navController: NavHostController) {
             NavigationBarItem(
                 selected = selected,
                 onClick = {
-                    navController.navigate(item.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
+                    if (item.route == navController.graph.startDestinationRoute) {
+                        // ponytail: same start-target workaround as the rail —
+                        // plain pop, never the saveState/restoreState combo
+                        navController.popBackStack(item.route, inclusive = false)
+                    } else {
+                        navController.navigate(item.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
                         }
-                        launchSingleTop = true
-                        restoreState = true
                     }
                 },
                 icon = {

@@ -97,7 +97,12 @@ fun BookChapterSelector(
                             else Color.Transparent,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { state.selectedBookId = book.id }
+                        .clickable {
+                            // ponytail: switching books clears the chapter highlight —
+                            // the old chapter number is meaningless in the new book
+                            state.selectedBookId = book.id
+                            state.selectedChapter = -1
+                        }
                 ) {
                     Text(
                         text = book.name,
@@ -134,7 +139,6 @@ fun BookChapterSelector(
             ) {
                 gridItems(chapters, key = { it }) { chapter ->
                     val isSelected = chapter == state.selectedChapter
-                            && state.selectedBookId == state.selectedBookId
                     val selectedBg = if (isSelected) MaterialTheme.colorScheme.primary
                                      else Color.Transparent
 

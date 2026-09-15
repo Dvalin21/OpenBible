@@ -170,7 +170,7 @@ class DataLayerTest {
         val bibleDao = mockk<BibleDao>()
 
         coEvery { planDao.getAllPlansOnce() } returns listOf(
-            ReadingPlanEntity(name = "Existing", description = null, durationDays = 365, isPrebuilt = true)
+            ReadingPlanEntity(name = "Bible in a Year", description = null, durationDays = 365, isPrebuilt = true)
         )
         coEvery { planDao.getPlanDayCount(any()) } returns 365
 
@@ -182,14 +182,37 @@ class DataLayerTest {
     }
 
     @Test
+    fun `ReadingPlanSeeder ignores other plans it does not own`() {
+        val planDao = mockk<ReadingPlanDao>()
+        val bibleDao = mockk<BibleDao>()
+
+        coEvery { planDao.getAllPlansOnce() } returns listOf(
+            ReadingPlanEntity(id = 3, name = "My Custom Plan", description = null, durationDays = 30, isPrebuilt = false)
+        )
+        coEvery { bibleDao.getBookChapterCounts("kjv") } returns listOf(
+            com.openbible.data.db.dao.BookChapterCount(bookId = 1, chapterCount = 50)
+        )
+        coEvery { planDao.insertPlan(any()) } returns 9
+        coEvery { planDao.insertDays(any()) } returns Unit
+
+        runBlocking {
+            ReadingPlanSeeder.ensureSeeded(planDao, bibleDao)
+        }
+        // Foreign plan is never deleted; ours is seeded alongside it
+        coVerify(exactly = 0) { planDao.deletePlanById(any()) }
+        coVerify { planDao.insertDays(match { it.size == 365 }) }
+    }
+
+    @Test
     fun `ReadingPlanSeeder rebuilds half-seeded plan`() {
         val planDao = mockk<ReadingPlanDao>(relaxed = true)
         val bibleDao = mockk<BibleDao>()
 
         coEvery { planDao.getAllPlansOnce() } returns listOf(
-            ReadingPlanEntity(id = 7, name = "Partial", description = null, durationDays = 365, isPrebuilt = true)
+            ReadingPlanEntity(id = 7, name = "Bible in a Year", description = null, durationDays = 365, isPrebuilt = true)
         )
         coEvery { planDao.getPlanDayCount(7) } returns 12
+        coEvery { planDao.getProgressOnce(7) } returns emptyList()
         coEvery { bibleDao.getBookChapterCounts("kjv") } returns listOf(
             com.openbible.data.db.dao.BookChapterCount(bookId = 1, chapterCount = 50)
         )

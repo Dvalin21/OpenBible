@@ -395,8 +395,10 @@ fun BibleScreen(
                     Box(modifier = Modifier.weight(1f)) {
                         StandardBibleContent(
                             verses = verses,
+                            bookName = currentBook?.name ?: "Bible",
                             bookNumber = bookNumber,
                             chapter = selectedChapter,
+                            translationLabel = selectedTranslationId.uppercase(),
                             fontSizeNumbers = fontSizeVerseNumbers,
                             fontSizeText = fontSizeVerseText,
                             lineSpacing = lineSpacing,
@@ -457,8 +459,10 @@ fun BibleScreen(
                     Box(modifier = Modifier.fillMaxSize()) {
                         StandardBibleContent(
                             verses = verses,
+                            bookName = currentBook?.name ?: "Bible",
                             bookNumber = bookNumber,
                             chapter = targetChapter,
+                            translationLabel = selectedTranslationId.uppercase(),
                             fontSizeNumbers = fontSizeVerseNumbers,
                             fontSizeText = fontSizeVerseText,
                             lineSpacing = lineSpacing,
@@ -479,8 +483,10 @@ fun BibleScreen(
             } else {
                 StandardBibleContent(
                     verses = verses,
+                    bookName = currentBook?.name ?: "Bible",
                     bookNumber = bookNumber,
                     chapter = selectedChapter,
+                    translationLabel = selectedTranslationId.uppercase(),
                     fontSizeNumbers = fontSizeVerseNumbers,
                     fontSizeText = fontSizeVerseText,
                     lineSpacing = lineSpacing,
@@ -573,8 +579,10 @@ fun BibleScreen(
 @Composable
 private fun StandardBibleContent(
     verses: List<VerseEntity>,
+    bookName: String,
     bookNumber: Int,
     chapter: Int,
+    translationLabel: String,
     fontSizeNumbers: Float,
     fontSizeText: Float,
     lineSpacing: Float,
@@ -606,6 +614,8 @@ private fun StandardBibleContent(
             VerseLine(
                 verseNumber = verse.verse,
                 text = verse.text,
+                bookName = bookName,
+                translationLabel = translationLabel,
                 isRedLetter = redLetter,
                 fontSizeNumber = fontSizeNumbers,
                 fontSizeText = fontSizeText,
@@ -699,6 +709,8 @@ private fun SimpleBibleContent(
 private fun VerseLine(
     verseNumber: Int,
     text: String,
+    bookName: String = "Bible",
+    translationLabel: String = "",
     fontSizeNumber: Float = 18f,
     fontSizeText: Float = 16f,
     lineSpacing: Float = 1.6f,
@@ -979,8 +991,8 @@ private fun VerseLine(
                 }
             )
 
-            // Copy verse
-            val citationText = "$verseNumber $text"
+            // Copy verse with full citation ("John 3:16 (KJV)")
+            val citationText = "$bookName $currentChapter:$verseNumber ($translationLabel)\n$text"
             DropdownMenuItem(
                 text = { Text("Copy Verse") },
                 onClick = {

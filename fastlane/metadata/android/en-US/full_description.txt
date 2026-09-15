@@ -1,12 +1,11 @@
 OpenBible — Offline Bible Reader with Study Tools
 
-A fully offline, privacy-respecting Bible app for Android. No accounts, no tracking, no network required.
+An offline-first, privacy-respecting Bible app for Android. No accounts, no tracking. Bible text, notes and study tools work with no network; only the geography map downloads tiles.
 
 FEATURES
 • Multiple translations: KJV, WEB, ASV, YLT, BBE (all public domain), plus NKJV import
 • Full-text search across all translations (FTS5 powered for speed)
 • Dark / Light / Sepia themes with adjustable font sizes and line spacing
-• Retro pixel Bible theme on tablets (7"+) — parchment texture, ornamental borders, page-flip animation with sound
 • Bookmarks with tags, highlights (5 colors), reading history with resume-per-book
 • Daily verse notification + home screen widget (configurable time)
 • Reading plans: "Bible in a Year" (365 days) with progress tracking
@@ -21,13 +20,13 @@ FEATURES
 • Export-ready data model (Room database, normalized schema)
 
 PRIVACY
-• Zero telemetry, zero analytics, zero network calls
-• All data stored locally in encrypted SQLite (Room)
+• Zero telemetry, zero analytics
+• All data stored locally in a Room SQLite database
 • No accounts, no sign-in, no cloud sync
 • GPL-3.0 licensed — source at https://github.com/yourusername/openbible
 
 PERMISSIONS
 • POST_NOTIFICATIONS — daily verse notification
 • RECEIVE_BOOT_COMPLETED — reschedule daily verse after reboot
-• VIBRATE — haptic feedback on chapter change
-• FOREGROUND_SERVICE — TTS playback (Android 14+)
+• RECORD_AUDIO — voice memos in notes (only when you tap record)
+• INTERNET + ACCESS_NETWORK_STATE — OpenStreetMap tiles for Bible Geography (Bible text itself is fully offline)
