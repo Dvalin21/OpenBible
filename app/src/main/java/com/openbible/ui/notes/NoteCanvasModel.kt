@@ -19,19 +19,26 @@ enum class DrawTool { SELECT, PEN, HIGHLIGHTER, SHAPE, ERASER }
 enum class ShapeType { LINE, RECTANGLE, OVAL, ARROW }
 enum class PageTemplate { BLANK, RULED, GRID, DOTTED }
 
-/** Pen type variants — each renders differently on the canvas. */
+/** Pen type variants — ballpoint for writing, brush for soft strokes.
+ *  (Fountain/pencil/marker were cut: fountain rendered identically to
+ *  ballpoint, pencil jitter was sub-pixel, marker duplicated the
+ *  highlighter tool. Old rows with those names fall back to BALLPOINT
+ *  in elementFromJson.) */
 enum class PenType {
     /** Uniform width, full opacity. Classic ballpoint. */
     BALLPOINT,
-    /** Pressure-responsive width (thick on hard press, thin on light). */
-    FOUNTAIN,
     /** Wide, semi-transparent, soft edges. */
-    BRUSH,
-    /** Thin, slightly rough texture via jittered points. */
-    PENCIL,
-    /** Wide, flat, semi-transparent marker. */
-    MARKER
+    BRUSH
 }
+
+/** Single source for committed AND preview stroke widths — the size readout
+ *  shows this too, so the slider can never lie about what gets drawn. */
+fun effectiveStrokeWidth(penType: PenType, penSize: Float, highlighter: Boolean): Float =
+    when {
+        highlighter -> maxOf(penSize, 14f)
+        penType == PenType.BRUSH -> maxOf(penSize, 8f)
+        else -> penSize
+    }
 
 data class ElementTransform(
     val tx: Float = 0f,

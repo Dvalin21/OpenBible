@@ -60,6 +60,14 @@ fun NoteEditorScreen(
     initialLinkedVerseId: Long? = null,
     onNavigateBack: () -> Unit,
     onNotebooksClick: () -> Unit = {},
+    // ponytail: compact drops the 64dp title bar + chip rows for 48dp and
+    // dropdown equivalents — same actions, canvas starts higher
+    compact: Boolean = false,
+    // ponytail: study-mode split embeds the editor barless under one shared
+    // row — swap toggle joins it instead of a second top bar
+    showSideSwap: Boolean = false,
+    notesOnLeft: Boolean = false,
+    onToggleSide: () -> Unit = {},
     viewModel: NoteEditorViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -69,6 +77,9 @@ fun NoteEditorScreen(
     var showAdvanced by remember { mutableStateOf(false) }
     var showColorPicker by remember { mutableStateOf(false) }
     var showTemplateMenu by remember { mutableStateOf(false) }
+    // ponytail: tags/audio/page rows collapse when empty — the canvas is the
+    // point of this screen, not the metadata around it
+    var tagsExpanded by remember { mutableStateOf(false) }
 
     // ── Audio memo recorder / player state ──
     var isRecording by remember { mutableStateOf(false) }
@@ -199,6 +210,7 @@ fun NoteEditorScreen(
 
     Scaffold(
         topBar = {
+            if (!compact) {
             TopAppBar(
                 title = { Text(if (state.isNew) "New Note" else "Edit Note") },
                 navigationIcon = {
@@ -265,6 +277,68 @@ fun NoteEditorScreen(
                     }
                 }
             )
+            } else {
+                // ponytail: same actions, no 64dp title bar — Back still saves
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 4.dp)
+                ) {
+                    IconButton(onClick = {
+                        scope.launch {
+                            if (viewModel.save() != null) onNavigateBack()
+                        }
+                    }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                    IconButton(onClick = {
+                        viewModel.setPenMode(
+                            when (state.penMode) {
+                                PenMode.TEXT -> PenMode.INK
+                                PenMode.INK -> PenMode.BOTH
+                                PenMode.BOTH -> PenMode.TEXT
+                            }
+                        )
+                    }) {
+                        Icon(
+                            when (state.penMode) {
+                                PenMode.TEXT -> Icons.Outlined.EditNote
+                                PenMode.INK -> Icons.Outlined.Draw
+                                PenMode.BOTH -> Icons.Outlined.Brush
+                            },
+                            contentDescription = "Pen mode"
+                        )
+                    }
+                    if (state.penMode != PenMode.TEXT) {
+                        IconButton(onClick = { showAdvanced = !showAdvanced }) {
+                            Icon(Icons.Default.FormatPaint, contentDescription = "Pen settings")
+                        }
+                    }
+                    IconButton(onClick = { scope.launch { viewModel.save() } }) {
+                        Icon(Icons.Default.Save, contentDescription = "Save")
+                    }
+                    IconButton(onClick = viewModel::toggleFavorite) {
+                        Icon(
+                            if (state.isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
+                            contentDescription = "Favorite",
+                            tint = if (state.isFavorite) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (!state.isNew) {
+                        IconButton(onClick = {
+                            viewModel.deleteNote()
+                            onNavigateBack()
+                        }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete")
+                        }
+                    }
+                    if (showSideSwap) {
+                        IconButton(onClick = onToggleSide) {
+                            Icon(Icons.Default.SwapHoriz, contentDescription = "Swap sides")
+                        }
+                    }
+                }
+            }
         }
     ) { padding ->
         Column(
@@ -277,42 +351,71 @@ fun NoteEditorScreen(
                 notebooks = state.notebooks,
                 selectedId = state.activeNotebookId,
                 onSelect = { viewModel.setActiveNotebook(it) },
-                onCreateClick = onNotebooksClick
+                onCreateClick = onNotebooksClick,
+                compact = compact
             )
             Spacer(modifier = Modifier.height(8.dp))
-            BasicTextField(
-                value = state.title,
-                onValueChange = { viewModel.setTitle(it) },
-                textStyle = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground),
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                modifier = Modifier.fillMaxWidth(),
-                decorationBox = { inner ->
-                    Box {
-                        if (state.title.isEmpty()) Text("Note title...", style = TextStyle(fontSize = 20.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)))
-                        inner()
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                BasicTextField(
+                    value = state.title,
+                    onValueChange = { viewModel.setTitle(it) },
+                    textStyle = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground),
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    modifier = Modifier.weight(1f),
+                    decorationBox = { inner ->
+                        Box {
+                            if (state.title.isEmpty()) Text("Note title...", style = TextStyle(fontSize = 20.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)))
+                            inner()
+                        }
                     }
+                )
+                // ponytail: mic lives here so the audio section below can hide
+                // when empty — reachable in every pen mode, not just ink
+                IconButton(
+                    onClick = { if (isRecording) stopRecording() else startRecording() },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        if (isRecording) Icons.Default.Stop else Icons.Default.Mic,
+                        contentDescription = if (isRecording) "Stop recording" else "Record audio",
+                        tint = if (isRecording) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // ── Tags (chips) ──
-            TagEditor(
-                tags = state.tags,
-                onAdd = viewModel::addTag,
-                onRemove = viewModel::removeTag
-            )
+            }
             Spacer(modifier = Modifier.height(4.dp))
 
-            // ── Audio memos ──
-            AudioMemoSection(
-                audios = state.audios,
-                isRecording = isRecording,
-                currentlyPlayingId = playingAudioId,
-                onToggleRecord = { if (isRecording) stopRecording() else startRecording() },
-                onPlay = ::togglePlay,
-                onDelete = viewModel::removeAudio
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+            // ── Tags (chips): one button until used ──
+            if (state.tags.isNotEmpty() || tagsExpanded) {
+                TagEditor(
+                    tags = state.tags,
+                    onAdd = viewModel::addTag,
+                    onRemove = viewModel::removeTag
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            } else {
+                TextButton(
+                    onClick = { tagsExpanded = true },
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                ) {
+                    Icon(Icons.Outlined.Sell, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Tags", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+
+            // ── Audio memos: list only, mic is in the title row ──
+            if (state.audios.isNotEmpty() || isRecording) {
+                AudioMemoSection(
+                    audios = state.audios,
+                    isRecording = isRecording,
+                    currentlyPlayingId = playingAudioId,
+                    onToggleRecord = { if (isRecording) stopRecording() else startRecording() },
+                    onPlay = ::togglePlay,
+                    onDelete = viewModel::removeAudio
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
 
             // ── Drawing toolbar (INK / BOTH) ──
             if (state.penMode != PenMode.TEXT) {
@@ -326,36 +429,45 @@ fun NoteEditorScreen(
                     templateMenuExpanded = showTemplateMenu,
                     onDismissTemplate = { showTemplateMenu = false },
                     currentTemplate = state.activePage.template,
-                    onPickTemplate = viewModel::setTemplate
+                    onPickTemplate = viewModel::setTemplate,
+                    showAddPage = state.pages.size <= 1,
+                    onAddPage = viewModel::addPage
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                PageRow(
-                    pageCount = state.pages.size,
-                    activeIndex = state.activePageIndex,
-                    canDelete = state.canDeletePage,
-                    onPrev = { viewModel.gotoPage(state.activePageIndex - 1) },
-                    onNext = { viewModel.gotoPage(state.activePageIndex + 1) },
-                    onAdd = viewModel::addPage,
-                    onDelete = viewModel::deleteActivePage
-                )
-                Spacer(modifier = Modifier.height(4.dp))
+                // ponytail: single page needs no pager chrome — just the add
+                // button above; full pager appears with page two
+                if (state.pages.size > 1) {
+                    PageRow(
+                        pageCount = state.pages.size,
+                        activeIndex = state.activePageIndex,
+                        canDelete = state.canDeletePage,
+                        onPrev = { viewModel.gotoPage(state.activePageIndex - 1) },
+                        onNext = { viewModel.gotoPage(state.activePageIndex + 1) },
+                        onAdd = viewModel::addPage,
+                        onDelete = viewModel::deleteActivePage
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
             }
 
             // ── Advanced panel: size / color / undo / redo ──
             if (showAdvanced && state.penMode != PenMode.TEXT) {
                 ToolSettingsRow(
+                    activeTool = state.activeTool,
                     penSize = state.penSize,
                     penColor = state.penColor,
                     penType = state.penType,
+                    eraserSize = state.eraserSize,
                     showColorPicker = showColorPicker,
                     onSizeChange = viewModel::setPenSize,
+                    onEraserSizeChange = viewModel::setEraserSize,
                     onColorChange = viewModel::setPenColor,
                     onPenTypeChange = viewModel::setPenType,
                     onToggleColorPicker = { showColorPicker = !showColorPicker },
                     onUndo = viewModel::undo,
                     onRedo = viewModel::redo
                 )
-                if (showColorPicker) {
+                if (showColorPicker && state.activeTool != DrawTool.ERASER) {
                     ColorPicker(currentColor = state.penColor, onColorChanged = viewModel::setPenColor, modifier = Modifier.padding(top = 8.dp))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -375,6 +487,7 @@ fun NoteEditorScreen(
                     penColor = state.penColor,
                     penSize = state.penSize,
                     penType = state.penType,
+                    eraserSize = state.eraserSize,
                     selectedElementId = state.selectedElementId,
                     onPageChanged = viewModel::commitActivePage,
                     onSelectedElementChanged = viewModel::setSelectedElement,
@@ -394,6 +507,7 @@ fun NoteEditorScreen(
                         penColor = state.penColor,
                         penSize = state.penSize,
                         penType = state.penType,
+                        eraserSize = state.eraserSize,
                         selectedElementId = state.selectedElementId,
                         onPageChanged = viewModel::commitActivePage,
                         onSelectedElementChanged = viewModel::setSelectedElement,
@@ -420,7 +534,9 @@ private fun ToolRow(
     templateMenuExpanded: Boolean,
     onDismissTemplate: () -> Unit,
     currentTemplate: PageTemplate,
-    onPickTemplate: (PageTemplate) -> Unit
+    onPickTemplate: (PageTemplate) -> Unit,
+    showAddPage: Boolean = false,
+    onAddPage: () -> Unit = {}
 ) {
     val tools = listOf(
         Triple(Icons.Default.OpenWith, "Select", DrawTool.SELECT),
@@ -443,6 +559,9 @@ private fun ToolRow(
         Spacer(modifier = Modifier.weight(1f))
         IconButton(onClick = onTemplateClick) { Icon(Icons.Outlined.GridOn, contentDescription = "Page template") }
         IconButton(onClick = onImageClick) { Icon(Icons.Outlined.Image, contentDescription = "Insert image") }
+        if (showAddPage) {
+            IconButton(onClick = onAddPage) { Icon(Icons.Default.Add, contentDescription = "Add page") }
+        }
     }
 
     // Shape sub-picker
@@ -496,23 +615,33 @@ private fun PageRow(
 
 @Composable
 private fun ToolSettingsRow(
+    activeTool: DrawTool,
     penSize: Float,
     penColor: Long,
     penType: PenType,
+    eraserSize: Float,
     showColorPicker: Boolean,
     onSizeChange: (Float) -> Unit,
+    onEraserSizeChange: (Float) -> Unit,
     onColorChange: (Long) -> Unit,
     onPenTypeChange: (PenType) -> Unit,
     onToggleColorPicker: () -> Unit,
     onUndo: () -> Unit,
     onRedo: () -> Unit
 ) {
+    // ponytail: eraser owns its size and skips pen type/color — it erased with
+    // penSize*3 before, so switching pens silently resized it
+    val isEraser = activeTool == DrawTool.ERASER
+    val shownSize = if (isEraser) eraserSize else effectiveStrokeWidth(penType, penSize, activeTool == DrawTool.HIGHLIGHTER)
+    val onShownSizeChange = if (isEraser) onEraserSizeChange else onSizeChange
+    val sizeRange = if (isEraser) 4f..120f else 0.5f..40f
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
             .padding(12.dp)
     ) {
+        if (!isEraser) {
         // ── Pen type selector ──
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -523,17 +652,11 @@ private fun ToolSettingsRow(
                 val isSelected = type == penType
                 val icon = when (type) {
                     PenType.BALLPOINT -> Icons.Default.Edit
-                    PenType.FOUNTAIN -> Icons.Default.Create
                     PenType.BRUSH -> Icons.Default.Brush
-                    PenType.PENCIL -> Icons.Outlined.ModeEdit
-                    PenType.MARKER -> Icons.Default.Highlight
                 }
                 val label = when (type) {
                     PenType.BALLPOINT -> "Ball"
-                    PenType.FOUNTAIN -> "Fountain"
                     PenType.BRUSH -> "Brush"
-                    PenType.PENCIL -> "Pencil"
-                    PenType.MARKER -> "Marker"
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     IconButton(
@@ -551,9 +674,10 @@ private fun ToolSettingsRow(
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
+        }
 
         // ── Quick size presets ──
-        val sizePresets = listOf(2f, 5f, 10f, 20f, 35f)
+        val sizePresets = if (isEraser) listOf(8f, 16f, 24f, 48f, 80f) else listOf(2f, 5f, 10f, 20f, 35f)
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -561,15 +685,15 @@ private fun ToolSettingsRow(
         ) {
             Text("Size", style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(32.dp))
             sizePresets.forEach { preset ->
-                val isSelected = kotlin.math.abs(penSize - preset) < 1f
-                val dotSize = (preset / 40f * 20f).coerceIn(4f, 20f)
+                val isSelected = kotlin.math.abs(shownSize - preset) < (if (isEraser) 4f else 1f)
+                val dotSize = ((preset - sizeRange.start) / (sizeRange.endInclusive - sizeRange.start) * 16f).coerceIn(4f, 20f)
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .size(28.dp)
                         .clip(CircleShape)
                         .then(if (isSelected) Modifier.background(MaterialTheme.colorScheme.primaryContainer) else Modifier)
-                        .clickable { onSizeChange(preset) }
+                        .clickable { onShownSizeChange(preset) }
                 ) {
                     Box(
                         modifier = Modifier
@@ -580,16 +704,17 @@ private fun ToolSettingsRow(
             }
             // Custom slider
             Slider(
-                value = penSize, onValueChange = onSizeChange,
-                valueRange = 0.5f..40f,
+                value = shownSize, onValueChange = onShownSizeChange,
+                valueRange = sizeRange,
                 modifier = Modifier.weight(1f)
             )
-            Text("%.1f".format(penSize), style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(32.dp))
+            Text("%.1f".format(shownSize), style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(36.dp))
         }
         Spacer(modifier = Modifier.height(4.dp))
 
         // ── Color / Undo / Redo ──
         Row(verticalAlignment = Alignment.CenterVertically) {
+            if (!isEraser) {
             Box(
                 modifier = Modifier
                     .size(28.dp)
@@ -597,6 +722,7 @@ private fun ToolSettingsRow(
                     .background(Color(penColor))
                     .clickable { onToggleColorPicker() }
             )
+            }
             Spacer(modifier = Modifier.weight(1f))
             IconButton(onClick = onUndo, modifier = Modifier.size(32.dp)) {
                 Icon(Icons.Filled.Undo, contentDescription = "Undo", modifier = Modifier.size(18.dp))
@@ -613,8 +739,33 @@ private fun NotebookSelector(
     notebooks: List<NotebookEntity>,
     selectedId: Long?,
     onSelect: (Long?) -> Unit,
-    onCreateClick: () -> Unit
+    onCreateClick: () -> Unit,
+    compact: Boolean = false
 ) {
+    if (compact) {
+        // ponytail: one dropdown row instead of a chip carousel — the note's
+        // notebook rarely changes mid-edit
+        var expanded by remember { mutableStateOf(false) }
+        val name = notebooks.find { it.id == selectedId }?.name ?: "All"
+        Box {
+            TextButton(
+                onClick = { expanded = true },
+                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+            ) {
+                Icon(Icons.Outlined.Book, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(name, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(Icons.Default.ArrowDropDown, contentDescription = "Change notebook", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+            }
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                DropdownMenuItem(text = { Text("All") }, onClick = { onSelect(null); expanded = false })
+                notebooks.forEach { nb ->
+                    DropdownMenuItem(text = { Text(nb.name) }, onClick = { onSelect(nb.id); expanded = false })
+                }
+            }
+        }
+        return
+    }
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         if (notebooks.isEmpty()) {
             Text("No notebooks — ", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)

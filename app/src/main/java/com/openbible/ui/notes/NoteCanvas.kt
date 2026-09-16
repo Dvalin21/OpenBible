@@ -39,6 +39,7 @@ fun NoteCanvas(
     penColor: Long,
     penSize: Float,
     penType: PenType,
+    eraserSize: Float = 24f,
     selectedElementId: String?,
     onPageChanged: (NotePage) -> Unit,
     onSelectedElementChanged: (String?) -> Unit,
@@ -92,7 +93,7 @@ fun NoteCanvas(
         modifier = modifier
             .fillMaxSize()
             .background(bgColor)
-            .pointerInput(activeTool, penColor, penSize, page) {
+            .pointerInput(activeTool, penColor, penSize, eraserSize, page) {
                 awaitPointerEventScope {
                     canvasSize = size
                     while (true) {
@@ -118,13 +119,9 @@ fun NoteCanvas(
                                                 id = UUID.randomUUID().toString(),
                                                 points = penPoints,
                                                 color = penColor,
-                                                width = when (penType) {
-                                                    PenType.MARKER -> maxOf(penSize, 14f)
-                                                    PenType.BRUSH -> maxOf(penSize, 8f)
-                                                    PenType.PENCIL -> penSize * 0.6f
-                                                    PenType.FOUNTAIN -> penSize * touch.pressure.coerceIn(0.25f, 1f)
-                                                    else -> penSize * touch.pressure.coerceIn(0.25f, 1f)
-                                                },
+                                                // ponytail: width is final at commit — no
+                                                // lift-pressure theater, preview matches
+                                                width = effectiveStrokeWidth(penType, penSize, isHl),
                                                 highlighter = isHl,
                                                 penType = penType
                                             )
@@ -182,7 +179,7 @@ fun NoteCanvas(
                                     touch.changedToUp() || !pointerIsDown -> {
                                         pointerIsDown = false
                                         if (eraserPath.isNotEmpty()) {
-                                            commit(eraseElements(elements, eraserPath, penSize * 3f))
+                                            commit(eraseElements(elements, eraserPath, eraserSize))
                                         }
                                         eraserPath = emptyList()
                                     }
@@ -278,7 +275,7 @@ fun NoteCanvas(
 
         // Draft pen stroke
         if (penPoints.size > 1) {
-            drawPathFromPoints(this, penPoints, Color(penColor), if (activeTool == DrawTool.HIGHLIGHTER) maxOf(penSize, 14f) else penSize, activeTool == DrawTool.HIGHLIGHTER)
+            drawPathFromPoints(this, penPoints, Color(penColor), effectiveStrokeWidth(penType, penSize, activeTool == DrawTool.HIGHLIGHTER), activeTool == DrawTool.HIGHLIGHTER)
         }
         // Draft shape preview
         if (activeTool == DrawTool.SHAPE && shapeStart != null && shapeEnd != null) {
@@ -286,7 +283,7 @@ fun NoteCanvas(
         }
         // Eraser path
         if (eraserPath.size > 1) {
-            drawPathFromPoints(this, eraserPath, Color(0x40000000), penSize * 3f, false)
+            drawPathFromPoints(this, eraserPath, Color(0x40000000), eraserSize, false)
         }
         // Selection overlay
         selectedElementId?.let { id -> elements.firstOrNull { it.id == id }?.let { drawSelection(this, it.transformedBounds()) } }
@@ -468,15 +465,6 @@ private fun drawInk(scope: DrawScope, el: InkElement, highlight: Boolean) {
             scope.drawPath(path, color.copy(alpha = 0.4f),
                 style = Stroke(width = el.width, cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
-        el.penType == PenType.MARKER -> {
-            // Marker: wide, semi-transparent, flat tip
-            val path = Path().apply {
-                moveTo(pts[0].x, pts[0].y)
-                for (i in 1 until pts.size) lineTo(pts[i].x, pts[i].y)
-            }
-            scope.drawPath(path, color.copy(alpha = 0.6f),
-                style = Stroke(width = el.width, cap = StrokeCap.Square, join = StrokeJoin.Round))
-        }
         el.penType == PenType.BRUSH -> {
             // Brush: soft edges via double-pass (wide + narrow)
             val path = Path().apply {
@@ -487,28 +475,6 @@ private fun drawInk(scope: DrawScope, el: InkElement, highlight: Boolean) {
                 style = Stroke(width = el.width * 1.5f, cap = StrokeCap.Round, join = StrokeJoin.Round))
             scope.drawPath(path, color,
                 style = Stroke(width = el.width * 0.7f, cap = StrokeCap.Round, join = StrokeJoin.Round))
-        }
-        el.penType == PenType.PENCIL -> {
-            // Pencil: thin, slightly rough via jittered offsets
-            val path = Path().apply {
-                moveTo(pts[0].x, pts[0].y)
-                for (i in 1 until pts.size) {
-                    val jitter = (i % 3 - 1) * 0.5f
-                    lineTo(pts[i].x + jitter, pts[i].y + jitter)
-                }
-            }
-            scope.drawPath(path, color.copy(alpha = 0.85f),
-                style = Stroke(width = el.width, cap = StrokeCap.Round, join = StrokeJoin.Round))
-        }
-        el.penType == PenType.FOUNTAIN -> {
-            // Fountain: pressure-responsive width (already baked into width per-point,
-            // but we render a clean path with round caps)
-            val path = Path().apply {
-                moveTo(pts[0].x, pts[0].y)
-                for (i in 1 until pts.size) lineTo(pts[i].x, pts[i].y)
-            }
-            scope.drawPath(path, color,
-                style = Stroke(width = el.width, cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
         else -> {
             // Ballpoint: uniform, solid

@@ -3,8 +3,8 @@ package com.openbible.ui.notes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.openbible.ui.bible.BibleReaderScreen
@@ -24,7 +25,6 @@ import com.openbible.ui.bible.BibleViewModel
  * The divider is draggable to adjust the split ratio.
  * Adapts to screen width — on narrow phones it shows one at a time.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BibleWithNotesScreen(
     initialTranslationId: String = "kjv",
@@ -33,12 +33,19 @@ fun BibleWithNotesScreen(
     noteId: Long? = null,
     isNewNote: Boolean = false,
     notesOnLeft: Boolean = false,
+    hasRail: Boolean = true,
     onToggleNotesSide: () -> Unit = {},
     onNavigateBack: () -> Unit,
     bibleViewModel: BibleViewModel = viewModel(),
     modifier: Modifier = Modifier
 ) {
     val screenWidthDp = LocalConfiguration.current.screenWidthDp.dp
+    // ponytail: drag math needs PIXELS — dragAmount arrives in px, but the old
+    // code divided by dp, so the bar outran the finger ~1.9x on this tablet
+    val density = LocalDensity.current
+    val contentWidthPx = with(density) {
+        screenWidthDp.toPx() - (if (hasRail) 160.dp.toPx() else 0f)
+    }
 
     // Side-swap is owned here so the top-bar button and divider chevron share one state.
     var notesOnLeftState by remember { mutableStateOf(notesOnLeft) }
@@ -83,7 +90,8 @@ fun BibleWithNotesScreen(
                             noteId = noteId,
                             initialTitle = if (noteId == null) currentRef else null,
                             initialLinkedVerseId = if (noteId == null) linkedVerseId else null,
-                            onNavigateBack = { showNotes = false }
+                            onNavigateBack = { showNotes = false },
+                            compact = true
                         )
                     }
                 } else {
@@ -111,34 +119,11 @@ fun BibleWithNotesScreen(
             }
         }
     } else {
-        // Wide screen: side-by-side split
+        // Wide screen: side-by-side split. One shared 48dp action row lives
+        // in the notes pane (Back saves, then swap) — no second top bar.
         var splitRatio by remember { mutableStateOf(0.5f) }
 
-        // Top bar with the side-swap toggle (explicit, always visible)
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("Study Mode", style = MaterialTheme.typography.titleMedium) },
-                    navigationIcon = {
-                        IconButton(onClick = onNavigateBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                    },
-                    actions = {
-                        TextButton(onClick = toggleSide) {
-                            Icon(
-                                Icons.Default.SwapHoriz,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(if (notesOnLeftState) "Notes left" else "Notes right")
-                        }
-                    }
-                )
-            }
-        ) { scaffoldPadding ->
-            Row(modifier = Modifier.fillMaxSize().padding(scaffoldPadding)) {
+        Row(modifier = Modifier.fillMaxSize()) {
             val biblePane = @Composable {
                 BibleReaderScreen(
                     verses = verses,
@@ -160,33 +145,60 @@ fun BibleWithNotesScreen(
                         noteId = noteId,
                         initialTitle = if (noteId == null) currentRef else null,
                         initialLinkedVerseId = if (noteId == null) linkedVerseId else null,
-                        onNavigateBack = onNavigateBack
+                        onNavigateBack = onNavigateBack,
+                        compact = true,
+                        showSideSwap = true,
+                        notesOnLeft = notesOnLeftState,
+                        onToggleSide = toggleSide
                     )
                 }
             }
 
             val divider = @Composable {
+                var stripPressed by remember { mutableStateOf(false) }
                 Box(modifier = Modifier.width(8.dp).fillMaxHeight()) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.outlineVariant)
-                            .pointerInput(Unit) {
-                                detectHorizontalDragGestures { _, dragAmount ->
-                                    val delta = dragAmount / screenWidthDp.value
-                                    splitRatio = (splitRatio + delta).coerceIn(0.15f, 0.85f)
+                            .background(if (stripPressed) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.outlineVariant)
+                            .pointerInput(notesOnLeftState) {
+                                detectHorizontalDragGestures(
+                                    onDragStart = { stripPressed = true },
+                                    onDragEnd = { stripPressed = false },
+                                    onDragCancel = { stripPressed = false }
+                                ) { _, dragAmount ->
+                                    val delta = dragAmount / contentWidthPx
+                                    // ponytail: bar follows the finger — drag right
+                                    // grows the LEFT pane (was inverted: the bar
+                                    // fled from the finger on the notes-right side)
+                                    val dir = if (notesOnLeftState) 1f else -1f
+                                    splitRatio = (splitRatio + dir * delta).coerceIn(0.15f, 0.85f)
                                 }
                             }
                     )
-                    IconButton(
-                        onClick = toggleSide,
-                        modifier = Modifier.align(Alignment.Center)
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(
-                            if (notesOnLeftState) Icons.Default.ChevronRight else Icons.Default.ChevronLeft,
-                            contentDescription = "Swap sides",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        // ponytail: grip dots — the strip already drags, but
+                        // nothing signalled that. Dots sit OUTSIDE the button
+                        // so a grab starts a drag, not a side-swap.
+                        repeat(3) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .background(MaterialTheme.colorScheme.onSurfaceVariant, CircleShape)
+                            )
+                            if (it < 2) Spacer(modifier = Modifier.height(5.dp))
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        IconButton(onClick = toggleSide) {
+                            Icon(
+                                if (notesOnLeftState) Icons.Default.ChevronRight else Icons.Default.ChevronLeft,
+                                contentDescription = "Swap sides",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
@@ -199,7 +211,6 @@ fun BibleWithNotesScreen(
                 Box(modifier = Modifier.weight(1f - splitRatio)) { biblePane() }
                 divider()
                 Box(modifier = Modifier.weight(splitRatio)) { notesPane() }
-            }
             }
         }
     }

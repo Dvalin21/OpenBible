@@ -13,6 +13,8 @@
 - **Grid notebook template cut off on portrait canvases**; **Study-Mode red-letter used system theme** instead of app theme; **chapter highlight went stale after switching books**; **translation init race**; **`IN ()` crashes** on empty highlight/bookmark lists guarded; **`chapterCount` NULL risk** in translation import.
 - **Store listing**: removed retro-theme/encrypted-SQLite claims, permissions now match the manifest.
 - **Home rail button silently stayed put from some screens**: `navigate(home)` with popUpTo+saveState+restoreState resurrected a stashed screen instead of landing Home (repro: plans → Home). Start target now pops straight back; other tabs keep state save/restore. Verified Home from all 6 rail screens live on tablet.
+- **Study Mode gave the canvas ~440px back**: divider has grip dots (drag already worked), drag direction fixed (was inverted) with true 1:1 px tracking, whole Study top bar merged into the notes action row, empty tags/audio/pager rows collapse, notebook chips became one dropdown.
+- **Pen set cut to what exists**: Fountain rendered identically to Ballpoint, Pencil jitter was sub-pixel, Marker duplicated the Highlighter tool — pens are Ballpoint + Brush now (old notes fall back safely). Size readout shows effective width, eraser owns its size (was silently `penSize*3`), ballpoint width is exact (lift-pressure theater removed).
 
 ## [1.2.9] - 2026-09-04 — DB v13/v14: data-layer correctness
 ### Fixed

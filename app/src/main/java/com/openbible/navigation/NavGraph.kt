@@ -348,6 +348,7 @@ private fun NavContent(
                 initialBookId = bookId,
                 initialChapter = chapter,
                 noteId = noteId,
+                hasRail = isTablet,
                 onNavigateBack = { navController.popBackStack() }
             )
             // ponytail: side-swap is fully local to BibleWithNotesScreen;

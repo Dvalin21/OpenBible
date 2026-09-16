@@ -42,6 +42,9 @@ data class NoteEditorState(
     val penSize: Float = 3f,
     val penColor: Long = 0xFF000000,
     val penType: PenType = PenType.BALLPOINT,
+    // ponytail: eraser owns its size — it used to ride penSize*3, so changing
+    // pens silently changed the eraser
+    val eraserSize: Float = 24f,
     val isEraser: Boolean = false
 ) {
     val activePage: NotePage get() = pages.getOrNull(activePageIndex) ?: NotePage()
@@ -136,6 +139,7 @@ class NoteEditorViewModel @Inject constructor(
 
     fun setPenMode(mode: PenMode) = _state.update { it.copy(penMode = mode) }
     fun setPenSize(size: Float) = _state.update { it.copy(penSize = size.coerceIn(0.5f, 40f)) }
+    fun setEraserSize(size: Float) = _state.update { it.copy(eraserSize = size.coerceIn(4f, 120f)) }
     fun setPenColor(color: Long) = _state.update { it.copy(penColor = color, isEraser = false, activeTool = if (_state.value.activeTool == DrawTool.ERASER) DrawTool.PEN else _state.value.activeTool) }
     fun setPenType(type: PenType) = _state.update { it.copy(penType = type) }
 
