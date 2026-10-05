@@ -110,9 +110,9 @@ class BibleViewModel(application: Application) : AndroidViewModel(application) {
 
     // -- Current book metadata --
 
-    val currentBook: StateFlow<BookEntity?> = _selectedBookId
-        .flatMapLatest { bookId ->
-            flow { emit(bibleDao.getBook(bookId)) }
+    val currentBook: StateFlow<BookEntity?> = combine(_selectedTranslationId, _selectedBookId) { tid, bid -> Pair(tid, bid) }
+        .flatMapLatest { (tid, bid) ->
+            flow { emit(bibleDao.getBook(tid, bid)) }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
@@ -326,7 +326,9 @@ class BibleViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /** Set true after a BIBLE_CHAPTER route applies its arguments, so pref
-     *  collectors can no longer override explicit navigation. */
+     *  collectors can no longer override explicit navigation.
+     *  Process-lived by design: prefs re-apply on the next cold start; a
+     *  future route-keyed ViewModel must make this per-instance. */
     var initialNavConsumed = false
         private set
 

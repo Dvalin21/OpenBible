@@ -27,11 +27,32 @@ android {
 
     signingConfigs {
         create("release") {
+            // ponytail: fail loudly rather than silently ship a debug-keystore
+            // build. Set RELEASE_STORE_FILE/RELEASE_STORE_PASSWORD/
+            // RELEASE_KEY_ALIAS/RELEASE_KEY_PASSWORD in local.properties or
+            // env vars before building a release.
             val storeFileProp = project.findProperty("RELEASE_STORE_FILE") as String?
+            val storePasswordProp = project.findProperty("RELEASE_STORE_PASSWORD") as String?
+            val keyAliasProp = project.findProperty("RELEASE_KEY_ALIAS") as String?
+            val keyPasswordProp = project.findProperty("RELEASE_KEY_PASSWORD") as String?
+            val missing = storeFileProp == null || storePasswordProp == null || keyAliasProp == null || keyPasswordProp == null
+            if (missing) {
+                // personal-use convenience: keep debug-keystore defaults for
+                // assembleDebug; only hard-fail an explicit release build.
+                afterEvaluate {
+                    tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }.configureEach {
+                        doFirst {
+                            throw GradleException(
+                                "Release signing props missing. Set RELEASE_STORE_FILE, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS, RELEASE_KEY_PASSWORD (local.properties/env) to build for release."
+                            )
+                        }
+                    }
+                }
+            }
             storeFile = file(storeFileProp ?: "debug.keystore")
-            storePassword = project.findProperty("RELEASE_STORE_PASSWORD") as String? ?: "android"
-            keyAlias = project.findProperty("RELEASE_KEY_ALIAS") as String? ?: "debug"
-            keyPassword = project.findProperty("RELEASE_KEY_PASSWORD") as String? ?: "android"
+            storePassword = storePasswordProp ?: "android"
+            keyAlias = keyAliasProp ?: "debug"
+            keyPassword = keyPasswordProp ?: "android"
         }
     }
 

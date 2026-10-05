@@ -42,8 +42,8 @@ interface BibleDao {
     @Query("SELECT * FROM books WHERE translationId = :translationId ORDER BY number")
     fun getBooks(translationId: String): Flow<List<BookEntity>>
 
-    @Query("SELECT * FROM books WHERE id = :bookId")
-    suspend fun getBook(bookId: Int): BookEntity?
+    @Query("SELECT * FROM books WHERE translationId = :translationId AND id = :bookId")
+    suspend fun getBook(translationId: String, bookId: Int): BookEntity?
 
     @Query("SELECT * FROM books WHERE translationId = :translationId AND abbreviation = :abbr")
     suspend fun getBookByAbbreviation(translationId: String, abbr: String): BookEntity?

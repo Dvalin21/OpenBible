@@ -60,7 +60,7 @@ class DailyVerseReceiver : BroadcastReceiver() {
             return
         }
 
-        val bookName = app.database.bibleDao().getBook(verse.bookId)?.name ?: "Bible"
+        val bookName = app.database.bibleDao().getBook(translationId, verse.bookId)?.name ?: "Bible"
 
         val reference = "$bookName ${verse.chapter}:${verse.verse}"
 

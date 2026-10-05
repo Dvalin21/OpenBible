@@ -77,6 +77,9 @@ import com.openbible.data.db.entity.VerseStrongLinkEntity
  * Version 16: KJV-gloss column on strong_numbers (kjvDef) so every English
  *            Bible word resolves to its number ("charity" → G26). Searched
  *            by StrongDao; backfilled at runtime from the bundled JSON.
+ * Version 17: drop the runtime verses_fts_* tables and triggers. Search uses
+ *           LIKE (framework SQLite ships without the FTS5 module), so they
+ *           were dead storage. Asset DBs are migrated through v16 then this.
  */
 @Database(
     entities = [
@@ -102,7 +105,7 @@ import com.openbible.data.db.entity.VerseStrongLinkEntity
         LocationEventEntity::class,
         ParallelTraditionEntity::class
     ],
-    version = 16,
+    version = 17,
     exportSchema = true
 )@TypeConverters(Converters::class)
 abstract class OpenBibleDatabase : RoomDatabase() {
@@ -155,7 +158,7 @@ abstract class OpenBibleDatabase : RoomDatabase() {
             }
 
             // Explicit migrations — never destroy user data.
-            builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
+            builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
 
             return builder.build()
         }
@@ -245,11 +248,6 @@ abstract class OpenBibleDatabase : RoomDatabase() {
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_vsl_verse ON verse_strong_links(verseId)")
         }
 
-        /**
-         * Version 5 → 6: Added FTS5 virtual tables for full-text search per translation.
-         * These tables provide fast, ranked full-text search across verses.
-         * Safe to run multiple times (CREATE VIRTUAL TABLE IF NOT EXISTS).
-         */
         /**
          * Version 6 → 7: Added location_events table for biblical events.
          * Each event is tied to a location and has a narrative description,
@@ -566,6 +564,29 @@ abstract class OpenBibleDatabase : RoomDatabase() {
          */
         private val MIGRATION_15_16 = Migration(15, 16) { db ->
             db.execSQL("ALTER TABLE strong_numbers ADD COLUMN kjvDef TEXT NOT NULL DEFAULT ''")
+        }
+
+        /**
+         * Version 5 → 6: Added FTS5 virtual tables for full-text search per translation.
+         * These tables provide fast, ranked full-text search across verses.
+         * Safe to run multiple times (CREATE VIRTUAL TABLE IF NOT EXISTS).
+         */
+        /**
+         * Version 16 → 17: drop runtime verses_fts_* tables + triggers.
+         * Search uses LIKE (framework SQLite lacks the FTS5 module), so the
+         * tables were never queried — only maintained. DROP removes them on
+         * every device at v17 open. VACUUM cannot run inside a migration
+         * transaction; reclaimed space is on the SQLite freelist until the
+         * asset DB is regenerated without the FTS tables.
+         */
+        private val MIGRATION_16_17 = Migration(16, 17) { db ->
+            db.execSQL("DROP TRIGGER IF EXISTS verses_ai")
+            db.execSQL("DROP TRIGGER IF EXISTS verses_ad")
+            db.execSQL("DROP TRIGGER IF EXISTS verses_au")
+            for (t in FTS_ALL) {
+                db.execSQL("DROP TABLE IF EXISTS verses_fts_${t}")
+            }
+            db.execSQL("DROP TABLE IF EXISTS verses_fts_nkjv")
         }
 
         private val MIGRATION_5_6 = Migration(5, 6) { db ->

@@ -153,9 +153,17 @@ class TtsController(private val appContext: Context) {
         val s = _state.value
         _state.value = s.copy(speed = clamped)
         tts?.setSpeechRate(clamped)
-        // If currently playing, re-queue from current position with new speed
+        // If currently playing, re-queue from the current WORD, not the verse
+        // start. ponytail: word offsets from onRangeStart are char offsets in
+        // the spoken text; speaking the remainder skips re-reading the word we
+        // were mid-way through.
         if (s.isPlaying && verses.isNotEmpty() && resumeIndex < verses.size) {
-            speak(verses, resumeIndex)
+            val wordStart = s.currentWordRange?.first ?: 0
+            val currentText = verses[resumeIndex]
+            val sliced = currentText.substring(wordStart.coerceIn(0, currentText.length))
+            // Keep the full list so verse indices stay aligned with the UI.
+            val adjusted = verses.toMutableList().also { it[resumeIndex] = sliced }
+            speak(adjusted, resumeIndex)
         }
     }
 
