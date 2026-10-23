@@ -22,6 +22,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -573,7 +578,7 @@ private fun ToolRow(
                     ShapeType.LINE -> Icons.Outlined.Remove
                     ShapeType.RECTANGLE -> Icons.Default.CropSquare
                     ShapeType.OVAL -> Icons.Outlined.RadioButtonUnchecked
-                    ShapeType.ARROW -> Icons.Outlined.ArrowForward
+                    ShapeType.ARROW -> Icons.AutoMirrored.Outlined.ArrowForward
                 }
                 IconButton(
                     onClick = { onShape(s) },
@@ -605,9 +610,9 @@ private fun PageRow(
     onDelete: () -> Unit
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        IconButton(onClick = onPrev, enabled = activeIndex > 0) { Icon(Icons.Filled.KeyboardArrowLeft, contentDescription = "Previous page") }
+        IconButton(onClick = onPrev, enabled = activeIndex > 0) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Previous page") }
         Text("${activeIndex + 1}/$pageCount", style = MaterialTheme.typography.labelMedium)
-        IconButton(onClick = onNext, enabled = activeIndex < pageCount - 1) { Icon(Icons.Filled.KeyboardArrowRight, contentDescription = "Next page") }
+        IconButton(onClick = onNext, enabled = activeIndex < pageCount - 1) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Next page") }
         IconButton(onClick = onAdd) { Icon(Icons.Default.Add, contentDescription = "Add page") }
         IconButton(onClick = onDelete, enabled = canDelete) { Icon(Icons.Default.DeleteOutline, contentDescription = "Delete page") }
     }
@@ -725,10 +730,10 @@ private fun ToolSettingsRow(
             }
             Spacer(modifier = Modifier.weight(1f))
             IconButton(onClick = onUndo, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Filled.Undo, contentDescription = "Undo", modifier = Modifier.size(18.dp))
+                Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo", modifier = Modifier.size(18.dp))
             }
             IconButton(onClick = onRedo, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Filled.Redo, contentDescription = "Redo", modifier = Modifier.size(18.dp))
+                Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Redo", modifier = Modifier.size(18.dp))
             }
         }
     }

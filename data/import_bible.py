@@ -853,6 +853,16 @@ def import_strongs_data(cursor):
                 "definition, kjvDef, derivation, usageCount, language) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", batch)
         print(f"  {label}: {len(entries):,} entries")
 
+    # ponytail: guard against the 2026-08-24 regression where Greek entries
+    # were imported with empty lemma/transliteration because the source fields
+    # were misread. Fail the pipeline rather than ship a crippled DB.
+    bad = cursor.execute(
+        "SELECT COUNT(*) FROM strong_numbers WHERE lemma = '' OR transliteration = ''"
+    ).fetchone()[0]
+    total = cursor.execute("SELECT COUNT(*) FROM strong_numbers").fetchone()[0]
+    assert bad == 0, f"Strong's import produced {bad}/{total} rows with empty lemma/transliteration"
+    print(f"  Strong's integrity: {total:,} rows, all populated")
+
     # ── Verse-Strong Links from interlinear data ───────────────
     print("  Downloading interlinear data for verse links...")
     raw = download_file(INTERLINEAR_URL, "interlinear (gzip)")

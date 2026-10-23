@@ -15,6 +15,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -820,10 +821,9 @@ private fun VerseLine(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(speakingBg, shape = RoundedCornerShape(4.dp))
-                .combinedClickable(
-                    onClick = { /* scroll or select — future use */ },
-                    onLongClick = { showMenu = true }
-                )
+                .pointerInput(Unit) {
+                    detectTapGestures(onLongPress = { showMenu = true })
+                }
                 .padding(vertical = 1.dp)
         )
 

@@ -12,6 +12,7 @@ import com.openbible.notification.DailyVerseScheduler
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Settings screen state — wraps UserPreferences flows as StateFlows.
@@ -105,12 +106,14 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun setDailyVerseTime(hour: Int, minute: Int) {
         viewModelScope.launch {
-            prefs.setDailyVerseTime(hour, minute)
-            // Reschedule if currently enabled
-            val enabled = prefs.dailyVerseEnabled.first()
-            if (enabled) {
-                val context = getApplication<OpenBibleApp>()
-                DailyVerseScheduler.schedule(context, hour, minute)
+            withContext(kotlinx.coroutines.NonCancellable) {
+                prefs.setDailyVerseTime(hour, minute)
+                // Reschedule if currently enabled
+                val enabled = prefs.dailyVerseEnabled.first()
+                if (enabled) {
+                    val context = getApplication<OpenBibleApp>()
+                    DailyVerseScheduler.schedule(context, hour, minute)
+                }
             }
         }
     }

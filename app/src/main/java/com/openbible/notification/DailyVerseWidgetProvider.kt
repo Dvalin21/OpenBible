@@ -59,6 +59,7 @@ class DailyVerseWidgetProvider : AppWidgetProvider() {
 
             // Tap opens the Bible app to the verse shown on the widget
             val intent = Intent(context, MainActivity::class.java).apply {
+                action = "com.openbible.ACTION_OPEN_VERSE"
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra("translationId", translationId)
                 putExtra("bookId", bookId)

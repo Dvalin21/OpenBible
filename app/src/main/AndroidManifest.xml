@@ -22,13 +22,12 @@
 
     <application
         android:name=".OpenBibleApp"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.OpenBible"
-        android:configChanges="orientation|screenSize|screenLayout|keyboardHidden">
+        android:theme="@style/Theme.OpenBible">
 
         <activity
             android:name=".MainActivity"

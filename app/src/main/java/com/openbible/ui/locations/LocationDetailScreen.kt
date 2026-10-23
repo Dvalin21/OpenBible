@@ -166,7 +166,7 @@ private fun LocationDetailContent(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "${"%.4f".format(location.latitude)}°N, ${"%.4f".format(location.longitude)}°E",
+                text = "${"%.4f".format(kotlin.math.abs(location.latitude))}°${if (location.latitude >= 0) "N" else "S"}, ${"%.4f".format(kotlin.math.abs(location.longitude))}°${if (location.longitude >= 0) "E" else "W"}",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

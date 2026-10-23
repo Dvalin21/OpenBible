@@ -91,12 +91,12 @@ class LocationImporter @Inject constructor(
                     BibleLocationEntity(
                         id = obj.getString("id"),
                         name = obj.getString("name"),
-                        modernName = obj.optString("modernName", null),
+                        modernName = obj.optString("modernName").takeIf { it.isNotEmpty() },
                         latitude = obj.getDouble("latitude"),
                         longitude = obj.getDouble("longitude"),
                         description = obj.getString("description"),
                         category = obj.getString("category"),
-                        significance = obj.optString("significance", null)
+                        significance = obj.optString("significance").takeIf { it.isNotEmpty() }
                     )
                 )
             } catch (_: Exception) {

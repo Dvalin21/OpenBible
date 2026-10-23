@@ -184,7 +184,7 @@ class StrongImporter @Inject constructor(
                         derivation = if (obj.has("derivation")) obj.getString("derivation") else null,
                         usageCount = obj.optInt("usageCount", 0),
                         // ponytail: G… = Greek, H… = Hebrew — don't mislabel gaps as Greek
-                        language = obj.optString("language", null)
+                        language = obj.optString("language").takeIf { it.isNotEmpty() }
                             ?: if (number.startsWith("H")) "Hebrew" else "Greek",
                         lemmaNorm = normalizeForSearch(lemma),
                         transliterationNorm = normalizeForSearch(transliteration)

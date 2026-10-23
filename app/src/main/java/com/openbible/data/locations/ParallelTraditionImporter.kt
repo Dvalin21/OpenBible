@@ -89,8 +89,8 @@ class ParallelTraditionImporter @Inject constructor(
                         description = obj.getString("description"),
                         similarities = obj.getString("similarities"),
                         differences = obj.getString("differences"),
-                        scholarlyNote = obj.optString("scholarlyNote", null),
-                        dateRange = obj.optString("dateRange", null),
+                        scholarlyNote = obj.optString("scholarlyNote").takeIf { it.isNotEmpty() },
+                        dateRange = obj.optString("dateRange").takeIf { it.isNotEmpty() },
                         category = obj.getString("category"),
                         sortOrder = obj.optInt("sortOrder", 0)
                     )
