@@ -6,7 +6,7 @@ Kotlin + Jetpack Compose + Material 3. API 29+.
 
 ## Features
 
-- **Bible Reader** — KJV, WEB, ASV, YLT bundled. BBE + NKJV import on first launch. Split-pane (10"+). Page flip animation (7"+). Interlinear Strong's numbers. Cross-references inline.
+- **Bible Reader** — 10 translations bundled (KJV, WEB, ASV, YLT, BBE, CSB, DRA, ESV, Geneva, NASB). NKJV supported via user-supplied import (not bundled — licensed). Split-pane (10"+). Page flip animation (7"+). Interlinear Strong's numbers. Cross-references inline.
 - **Search** — Full-text across all translations. Strong's concordance search.
 - **Study Tools** — Strong's Greek/Hebrew definitions, verse-linked bottom sheet. Bible geography with coordinates. Cross-references (Treasury of Scripture Knowledge).
 - **Personalization** — Bookmarks with tags. 5-color highlights. Reading history with resume. Dark/Light/Sepia themes. Font size controls (verse numbers + text).
@@ -62,11 +62,11 @@ APK at `app/build/outputs/apk/debug/app-debug.apk` (~74MB)
 ./gradlew test
 ```
 
-58 unit tests across 3 test classes:
+70 unit tests across 3 test classes:
 
 | File | Count | What |
 |------|-------|------|
-| `EntitiesAndEnumsTest.kt` | 31 | 18 entities, enums, type converters |
+| `EntitiesAndEnumsTest.kt` | 31 | 21 entities, enums, type converters |
 | `DataLayerTest.kt` | 15 | ReadingPlanSeeder, InkStroke JSON, import patterns, NoteEntity |
 | `ViewModelTest.kt` | 12 | HomeViewModel, StrongViewModel (MockK) |
 
@@ -83,14 +83,14 @@ APK at `app/build/outputs/apk/debug/app-debug.apk` (~74MB)
 ```
 UI Layer          → Compose Screens → ViewModels → StateFlow
 Data Layer        → Room DB + DataStore + JSON importers
-                   Note: 18 entities, 9 DAOs, v5 schema
+                   Note: 21 entities, 11 DAOs, v17 schema
 Storage           → SQLite (prepopulated) + local files (note images)
 Network           → None. Fully offline.
 ```
 
 ## Data
 
-- Bible text: KJV + WEB + ASV + YLT (~93,286 verses) preloaded in prepopulated SQLite DB
+- Bible text: 10 translations (KJV, WEB, ASV, YLT, BBE, CSB, DRA, ESV, Geneva, NASB) preloaded in prepopulated SQLite DB
 - Strong's Concordance: ~5,600 Greek + ~8,600 Hebrew entries + ~560K verse links from JSON assets
 - Bible Geography: ~500 locations with coordinates + ~30K verse links
 - Import scripts: Python (`data/import_bible.py`) fetches from scrollmapper
@@ -104,10 +104,10 @@ Network           → None. Fully offline.
 
 ## Project Status
 
-All 6 development phases complete. 58 tests passing. Phase 6 (Polish & Ship) in progress.
+All 6 development phases complete. 70 tests passing. Phase 6 (Polish & Ship) in progress.
 
 See [PROJECT_REGISTRY.md](PROJECT_REGISTRY.md) for full work plan and [OPENSOURCE_HANDOFF.md](OPENSOURCE_HANDOFF.md) for production handoff.
 
 ## License
 
-GPL-3.0. Bible translations have their own licenses (see Translation Licensing Matrix in PROJECT_REGISTRY.md). Public domain texts (KJV, WEB, ASV, YLT, BBE) are freely redistributable. NKJV is included for import only — © Thomas Nelson.
+GPL-3.0. Bible translations have their own licenses (see Translation Licensing Matrix in PROJECT_REGISTRY.md). Public domain texts (KJV, WEB, ASV, YLT, BBE) are freely redistributable. NKJV is not bundled — import requires a user-supplied, licensed copy (© Thomas Nelson).

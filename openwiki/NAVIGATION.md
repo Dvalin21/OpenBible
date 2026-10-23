@@ -9,7 +9,7 @@
 | `BIBLE_WITH_NOTES/{translationId}/{bookId}/{chapter}` | BibleReaderScreen | Same but with notes panel open |
 | `SEARCH` | SearchScreen | FTS5-powered full-text search |
 | `NOTES` | NotesListScreen | Browse/create/edit notes + notebooks |
-| `NOTE/{noteId}` | NoteDetailScreen | Single note with verse links, images |
+| `NOTE_EDITOR?noteId={noteId}` | NoteEditorScreen | Create/edit a note (noteId optional) |
 | `READING_PLANS` | ReadingPlanListScreen | Bible reading plans |
 | `READING_PLAN/{planId}` | ReadingPlanDetailScreen | Day-by-day plan view |
 | `STRONG_SEARCH` | StrongSearchScreen | Search Strong's numbers |
