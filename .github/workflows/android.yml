@@ -15,3 +15,9 @@ jobs:
           java-version: 17
           cache: gradle
       - run: ./gradlew :app:testDebugUnitTest :app:assembleDebug
+      - name: Verify Room schema snapshot is up to date
+        run: |
+          if ! git diff --exit-code -- app/schemas/ ; then
+            echo "Room schema snapshot drifted — regenerate and commit app/schemas/"
+            exit 1
+          fi

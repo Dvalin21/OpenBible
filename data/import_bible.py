@@ -288,75 +288,11 @@ def create_database(output_path: str):
         count = cursor.fetchone()[0]
         print(f"  {table}: {count:,}")
 
-    # ── Room v6: FTS5 virtual tables for full-text search ──────────
-    print("\n  Creating FTS5 virtual tables...")
-    for tid in ["kjv", "web", "asv", "ylt", "bbe", "nkjv"]:
-        cursor.execute(f"""
-            CREATE VIRTUAL TABLE IF NOT EXISTS verses_fts_{tid} USING fts5(
-                text,
-                bookId UNINDEXED,
-                chapter UNINDEXED,
-                verse UNINDEXED,
-                verseId UNINDEXED,
-                tokenize='porter unicode61'
-            )
-        """)
-        cursor.execute(f"""
-            INSERT INTO verses_fts_{tid}(rowid, text, bookId, chapter, verse, verseId)
-            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE translationId = ?
-        """, (tid,))
-        cnt = cursor.execute(f"SELECT COUNT(*) FROM verses_fts_{tid}").fetchone()[0]
-        print(f"    verses_fts_{tid}: {cnt:,} rows")
-
-    # Triggers to keep FTS in sync if verses are modified
-    cursor.execute("""
-        CREATE TRIGGER IF NOT EXISTS verses_ai AFTER INSERT ON verses BEGIN
-            INSERT INTO verses_fts_kjv(rowid, text, bookId, chapter, verse, verseId)
-            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'kjv';
-            INSERT INTO verses_fts_web(rowid, text, bookId, chapter, verse, verseId)
-            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'web';
-            INSERT INTO verses_fts_asv(rowid, text, bookId, chapter, verse, verseId)
-            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'asv';
-            INSERT INTO verses_fts_ylt(rowid, text, bookId, chapter, verse, verseId)
-            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'ylt';
-            INSERT INTO verses_fts_bbe(rowid, text, bookId, chapter, verse, verseId)
-            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'bbe';
-            INSERT INTO verses_fts_nkjv(rowid, text, bookId, chapter, verse, verseId)
-            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'nkjv';
-        END
-    """)
-    cursor.execute("""
-        CREATE TRIGGER IF NOT EXISTS verses_ad AFTER DELETE ON verses BEGIN
-            DELETE FROM verses_fts_kjv WHERE rowid = old.id;
-            DELETE FROM verses_fts_web WHERE rowid = old.id;
-            DELETE FROM verses_fts_asv WHERE rowid = old.id;
-            DELETE FROM verses_fts_ylt WHERE rowid = old.id;
-            DELETE FROM verses_fts_bbe WHERE rowid = old.id;
-            DELETE FROM verses_fts_nkjv WHERE rowid = old.id;
-        END
-    """)
-    cursor.execute("""
-        CREATE TRIGGER IF NOT EXISTS verses_au AFTER UPDATE ON verses BEGIN
-            DELETE FROM verses_fts_kjv WHERE rowid = old.id;
-            DELETE FROM verses_fts_web WHERE rowid = old.id;
-            DELETE FROM verses_fts_asv WHERE rowid = old.id;
-            DELETE FROM verses_fts_ylt WHERE rowid = old.id;
-            DELETE FROM verses_fts_bbe WHERE rowid = old.id;
-            DELETE FROM verses_fts_nkjv WHERE rowid = old.id;
-            INSERT INTO verses_fts_kjv(rowid, text, bookId, chapter, verse, verseId)
-            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'kjv';
-            INSERT INTO verses_fts_web(rowid, text, bookId, chapter, verse, verseId)
-            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'web';
-            INSERT INTO verses_fts_asv(rowid, text, bookId, chapter, verse, verseId)
-            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'asv';
-            INSERT INTO verses_fts_ylt(rowid, text, bookId, chapter, verse, verseId)
-            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'ylt';
-            INSERT INTO verses_fts_bbe(rowid, text, bookId, chapter, verse, verseId)
-            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'bbe';
-            INSERT INTO verses_fts_nkjv(rowid, text, bookId, chapter, verse, verseId)
-            SELECT id, text, bookId, chapter, verse, id FROM verses WHERE id = new.id AND translationId = 'nkjv';
-        END
-    """)
+    # ── FTS5 virtual tables: NOT created here ─────────────────────
+    # Search uses LIKE (framework SQLite ships without the FTS5 module),
+    # so runtime FTS tables are dropped at v17 (MIGRATION_16_17).
+    # Skipping creation keeps the asset DB smaller and avoids dead
+    # trigger maintenance on every verse insert.
 
     # ── Room version ───────────────────────────────────────────────
     # Intermediate stamp only — data/fix_schema.py rebuilds against the newest
